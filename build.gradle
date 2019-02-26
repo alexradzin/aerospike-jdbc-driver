@@ -1,0 +1,53 @@
+ext.junitJupiterVersion  = '5.0.0-M4'
+
+
+apply plugin: 'java'
+apply plugin: 'jacoco'
+
+sourceCompatibility = 1.8
+version = '1.0-SNAPSHOT'
+
+compileTestJava {
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+    options.compilerArgs += '-parameters'
+}
+
+repositories {
+    if (project.hasProperty("local_repository") || System.getProperty("local_repository") != null) {
+        mavenLocal()
+    } else {
+        mavenCentral()
+    }
+}
+
+dependencies {
+    compile group: 'com.github.jsqlparser', name: 'jsqlparser', version: '1.4'
+    compile group: 'com.aerospike', name: 'aerospike-client', version: '4.3.1'
+
+
+    testCompileOnly(
+            'junit:junit:4.12'
+    )
+    testImplementation(
+            'org.junit.jupiter:junit-jupiter-api:5.1.0'
+    )
+    testRuntimeOnly(
+            'org.junit.jupiter:junit-jupiter-engine:5.1.0',
+            'org.junit.vintage:junit-vintage-engine:5.1.0'
+    )
+}
+
+test {
+    testLogging {
+        events 'PASSED', 'FAILED', 'SKIPPED'
+    }
+    useJUnitPlatform()
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        html.enabled false
+    }
+}
