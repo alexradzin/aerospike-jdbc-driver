@@ -1,0 +1,24 @@
+language: java
+jdk:
+  - oraclejdk8
+install:
+  - wget -O aerospike-server.tgz https://www.aerospike.com/download/server/latest/artifact/tgz
+  - tar xvzf aerospike-server.tgz
+  - cp -f .travis/aerospike.conf ./aerospike-server/share/etc
+  - cd aerospike-server
+  - mkdir instance1
+  - mkdir instance2
+  - ./bin/aerospike init --home instance1 --instance 1 --service-port 3000
+  - ./bin/aerospike init --home instance2 --instance 2 --service-port 3010
+  - cd instance1
+  - sudo ./bin/aerospike start
+  - ../../.travis/wait_for_node.sh var/log/aerospike.log
+  - cd ../..
+  - pwd
+before_script:
+  - chmod +x gradlew
+script:
+  - ./gradlew clean build
+  - ./gradlew jacocoTestReport
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
