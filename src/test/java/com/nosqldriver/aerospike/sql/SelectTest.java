@@ -33,16 +33,11 @@ class SelectTest {
 
 
     @Test
-    void select() throws SQLException {
+    void selectAll() throws SQLException {
         Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test");
         assertNotNull(conn);
 
-        WritePolicy writePolicy = new WritePolicy();
-        write(writePolicy, 1, person(1, "John", "Lennon", 1940));
-        write(writePolicy, 2, person(2, "Paul", "McCartney", 1942));
-        write(writePolicy, 3, person(3, "George", "Harrison", 1943));
-        write(writePolicy, 4, person(4, "Ringo", "Starr", 1940));
-
+        writeBeatles();
         ResultSet rs = conn.createStatement().executeQuery("select * from people");
 
         Map<Integer, String> selectedPeople = new HashMap<>();
@@ -57,6 +52,26 @@ class SelectTest {
     }
 
 
+    @Test
+    void selectSpecificFields() throws SQLException {
+        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test");
+        assertNotNull(conn);
+
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select first_name, year_of_birth from people");
+
+        Map<String, Integer> selectedPeople = new HashMap<>();
+        while (rs.next()) {
+            selectedPeople.put(rs.getString("first_name"), rs.getInt("year_of_birth"));
+        }
+
+        assertEquals(1940, selectedPeople.get("John").intValue());
+        assertEquals(1942, selectedPeople.get("Paul").intValue());
+        assertEquals(1943, selectedPeople.get("George").intValue());
+        assertEquals(1940, selectedPeople.get("Ringo").intValue());
+    }
+
+
     private Bin[] person(int id, String firstName, String lastName, int yearOfBirth) {
         return new Bin[] {new Bin("id", id), new Bin("first_name", firstName), new Bin("last_name", lastName), new Bin("year_of_birth", yearOfBirth)};
     }
@@ -68,4 +83,13 @@ class SelectTest {
     private void write(WritePolicy writePolicy, int id, Bin ... bins) {
         write(writePolicy, new Key(NAMESPACE, SET, id), bins);
     }
+
+    private void writeBeatles() {
+        WritePolicy writePolicy = new WritePolicy();
+        write(writePolicy, 1, person(1, "John", "Lennon", 1940));
+        write(writePolicy, 2, person(2, "Paul", "McCartney", 1942));
+        write(writePolicy, 3, person(3, "George", "Harrison", 1943));
+        write(writePolicy, 4, person(4, "Ringo", "Starr", 1940));
+    }
+
 }

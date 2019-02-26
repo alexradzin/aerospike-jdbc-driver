@@ -2,9 +2,13 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.query.Statement;
 import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.expression.ExpressionVisitorAdapter;
 import net.sf.jsqlparser.parser.CCJSqlParserManager;
+import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
+import net.sf.jsqlparser.statement.select.AllColumns;
+import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.FromItemVisitorAdapter;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
@@ -47,7 +51,7 @@ class AerospikeStatementFactory {
                             plainSelect.getSelectItems().forEach(si -> si.accept(new SelectItemVisitorAdapter() {
                                 @Override
                                 public void visit(SelectExpressionItem selectExpressionItem) {
-                                    selectedColumns.add(selectExpressionItem.getAlias().getName());
+                                    selectedColumns.add(((Column) selectExpressionItem.getExpression()).getColumnName());
                                 }
                             }));
                         }
