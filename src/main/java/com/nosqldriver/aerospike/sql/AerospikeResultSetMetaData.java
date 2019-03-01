@@ -4,9 +4,18 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 public class AerospikeResultSetMetaData implements ResultSetMetaData {
+    private final String schema;
+    private final String [] names;
+
+    public AerospikeResultSetMetaData(String schema, String[] names) {
+        this.schema = schema;
+        this.names = names;
+    }
+
+
     @Override
     public int getColumnCount() throws SQLException {
-        return 0;
+        return names.length;
     }
 
     @Override
@@ -21,7 +30,7 @@ public class AerospikeResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public boolean isSearchable(int column) throws SQLException {
-        return false;
+        return false; //TODO: if indexed
     }
 
     @Override
@@ -31,7 +40,7 @@ public class AerospikeResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int isNullable(int column) throws SQLException {
-        return 0;
+        return columnNullable; // any column in aerospike is nullable
     }
 
     @Override
@@ -46,17 +55,17 @@ public class AerospikeResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnLabel(int column) throws SQLException {
-        return null;
+        return getColumnName(column);
     }
 
     @Override
     public String getColumnName(int column) throws SQLException {
-        return null;
+        return names[column - 1];
     }
 
     @Override
     public String getSchemaName(int column) throws SQLException {
-        return null;
+        return schema;
     }
 
     @Override
@@ -96,7 +105,7 @@ public class AerospikeResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public boolean isWritable(int column) throws SQLException {
-        return false;
+        return true;
     }
 
     @Override

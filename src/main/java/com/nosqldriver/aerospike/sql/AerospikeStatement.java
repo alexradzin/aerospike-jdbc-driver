@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
+import java.util.function.Function;
 
 public class AerospikeStatement implements java.sql.Statement {
     private final IAerospikeClient client;
@@ -29,14 +30,23 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
-        Statement statement = new AerospikeStatementFactory().createStatement(sql);
-        if (statement.getNamespace() == null) {
-            statement.setNamespace(schema);
-        }
-        QueryPolicy policy = new QueryPolicy();
-        policy.setTimeout(queryTimeout);
-        RecordSet rs = client.query(null, statement);
-        return new ResultSetOverAerospikeRecordSet(this, null, rs);
+//        Statement statement = new AerospikeStatementFactory(schema).createStatement(sql);
+//
+//        if (statement.getNamespace() == null) {
+//            statement.setNamespace(schema);
+//        }
+//        QueryPolicy policy = new QueryPolicy();
+//        policy.setTimeout(queryTimeout);
+//        RecordSet rs = client.query(policy, statement);
+//        statement.getFilter();
+
+        //return new ResultSetOverAerospikeRecordSet(schema, this, statement.getBinNames(), rs);
+
+        return new AerospikeQueryFactory(schema).createQuery(sql).apply(client);
+
+//        Function<IAerospikeClient, ResultSet> f = null;
+//        return f.apply(client);
+
     }
 
     @Override
