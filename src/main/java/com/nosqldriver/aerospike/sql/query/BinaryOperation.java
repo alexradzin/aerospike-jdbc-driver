@@ -112,6 +112,10 @@ public class BinaryOperation {
         this.column = column;
     }
 
+    public String getColumn() {
+        return column;
+    }
+
     public void addValue(Object value) {
         values.add(value);
     }

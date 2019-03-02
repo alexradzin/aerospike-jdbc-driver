@@ -94,7 +94,11 @@ class AerospikeQueryFactory {
 
                                     public void visit(Column column) {
                                         System.out.println(column.getColumnName());
-                                        operation.setColumn(column.getColumnName());
+                                        if (operation.getColumn() == null) {
+                                            operation.setColumn(column.getColumnName());
+                                        } else {
+                                            operation.addValue(column.getColumnName());
+                                        }
                                     }
 
                                     @Override
