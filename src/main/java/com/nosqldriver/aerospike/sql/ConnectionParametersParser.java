@@ -4,9 +4,11 @@ import com.aerospike.client.Host;
 import com.aerospike.client.policy.ClientPolicy;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 class ConnectionParametersParser {
     private static final Pattern AS_JDBC_URL = Pattern.compile("^jdbc:aerospike:([^/?]+)");
@@ -63,4 +65,29 @@ class ConnectionParametersParser {
         }
         return all;
     }
+
+    <T> T initProperties(T object, Properties props) {
+        @SuppressWarnings("unchecked")
+        Class<T> clazz = (Class<T>)object.getClass();
+        props.forEach((key, value) -> {
+            try {
+                clazz.getField((String)key).set(object, value);
+            } catch (ReflectiveOperationException e1) {
+                // ignore it; this property does not belong to ClientPolicy
+            }
+        });
+
+        return object;
+    }
+
+    Properties subProperties(Properties properties, String prefix) {
+        String filter = prefix.endsWith(".") ? prefix : prefix + ".";
+        int prefixLength = filter.length();
+        Properties result = new Properties();
+        result.putAll(properties.entrySet().stream()
+                .filter(e -> ((String)e.getKey()).startsWith(filter))
+                .collect(Collectors.toMap(e -> ((String)e.getKey()).substring(prefixLength), Map.Entry::getValue)));
+        return result;
+    }
+
 }

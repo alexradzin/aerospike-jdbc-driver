@@ -39,18 +39,20 @@ public class AerospikeConnection implements Connection {
     private volatile int holdability = HOLD_CURSORS_OVER_COMMIT;
     private final Properties clientInfo = new Properties();
     private volatile String schema;
+    private final AerospikePolicyProvider policyProvider;
 
     public AerospikeConnection(String url, Properties info) {
         this.url = url;
         this.info = info;
         client = new AerospikeClient(parser.policy(url, info), parser.hosts(url));
         schema = parser.schema(url);
+        policyProvider = new AerospikePolicyProvider(parser.clientInfo(url, info));
 
     }
 
     @Override
     public Statement createStatement() throws SQLException {
-        return new AerospikeStatement(client, this, schema);
+        return new AerospikeStatement(client, this, schema, policyProvider);
     }
 
     @Override

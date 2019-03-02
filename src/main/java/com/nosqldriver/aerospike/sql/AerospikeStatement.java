@@ -19,13 +19,15 @@ public class AerospikeStatement implements java.sql.Statement {
     private int maxRows = Integer.MAX_VALUE;
     private int queryTimeout = 0;
     private volatile SQLWarning sqlWarning;
+    private final AerospikePolicyProvider policyProvider;
 
     private CCJSqlParserManager parserManager = new CCJSqlParserManager();
 
-    public AerospikeStatement(IAerospikeClient client, Connection connection, String schema) {
+    public AerospikeStatement(IAerospikeClient client, Connection connection, String schema, AerospikePolicyProvider policyProvider) {
         this.client = client;
         this.connection = connection;
         this.schema = schema;
+        this.policyProvider = policyProvider;
     }
 
     @Override
@@ -42,7 +44,7 @@ public class AerospikeStatement implements java.sql.Statement {
 
         //return new ResultSetOverAerospikeRecordSet(schema, this, statement.getBinNames(), rs);
 
-        return new AerospikeQueryFactory(schema).createQuery(sql).apply(client);
+        return new AerospikeQueryFactory(schema, policyProvider).createQuery(sql).apply(client);
 
 //        Function<IAerospikeClient, ResultSet> f = null;
 //        return f.apply(client);
