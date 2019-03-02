@@ -228,6 +228,22 @@ class SelectTest {
         select(conn, "select * from people where year_of_birth between 1941 and 1944", 2, 3);
     }
 
+
+    @Test
+    @DisplayName("PK IN (2, 3) -> [Paul, George]")
+    void selectSeveralRecordsByPkIn() throws SQLException {
+        writeBeatles();
+        select(conn, "select * from people where PK in (2, 3)", 2, 3);
+    }
+
+    @Test
+    @DisplayName("PK IN (20, 30) -> [Paul, George]")
+    void selectNoRecordsByPkIn() throws SQLException {
+        writeBeatles();
+        select(conn, "select * from people where PK in (20, 30)");
+    }
+
+
     @Test
     @DisplayName("year_of_birth<1939 -> nothing")
     void selectNothingRecordsByOneNumericIndexedFieldLt() throws SQLException {

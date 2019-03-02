@@ -39,22 +39,6 @@ public class BinaryOperation {
                 return queries;
             }
 
-            private Key createKey(Object value, QueryHolder queries) {
-                final Key key;
-                final String schema = queries.getSchema();
-                if (value instanceof Long) {
-                    key = new Key(schema, queries.getSetName(), (Long)value);
-                } else if (value instanceof Integer) {
-                    key = new Key(schema, queries.getSetName(), (Integer)value);
-                } else if (value instanceof Number) {
-                    key = new Key(schema, queries.getSetName(), ((Number)value).intValue());
-                } else if (value instanceof String) {
-                    key = new Key(schema, queries.getSetName(), (String)value);
-                } else {
-                    throw new IllegalArgumentException(format("Filter by %s is not supported right now. Use either number or string", value == null ? null : value.getClass()));
-                }
-                return key;
-            }
 
             private Filter createFilter(Object value, String column) {
                 final Filter filter;
@@ -103,6 +87,18 @@ public class BinaryOperation {
                 return queries;
             }
         },
+        IN("IN") {
+            @Override
+            public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
+                if ("PK".equals(operation.column)) {
+                    queries.createPkBatchQuery(operation.values.stream().map(v -> createKey(v, queries)).toArray(Key[]::new));
+                } else {
+                    throw new IllegalArgumentException("select ... from ... where IN is not supported with secondary index");
+                    // TODO: think how to support this anyway.
+                }
+                return queries;
+            }
+        },
         ;
 
         private static Map<String, Operator> operators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -120,6 +116,22 @@ public class BinaryOperation {
             return Optional.ofNullable(operators.get(op)).orElseThrow(() -> new IllegalArgumentException(op));
         }
 
+        protected Key createKey(Object value, QueryHolder queries) {
+            final Key key;
+            final String schema = queries.getSchema();
+            if (value instanceof Long) {
+                key = new Key(schema, queries.getSetName(), (Long)value);
+            } else if (value instanceof Integer) {
+                key = new Key(schema, queries.getSetName(), (Integer)value);
+            } else if (value instanceof Number) {
+                key = new Key(schema, queries.getSetName(), ((Number)value).intValue());
+            } else if (value instanceof String) {
+                key = new Key(schema, queries.getSetName(), (String)value);
+            } else {
+                throw new IllegalArgumentException(format("Filter by %s is not supported right now. Use either number or string", value == null ? null : value.getClass()));
+            }
+            return key;
+        }
     }
 
     public void setColumn(String column) {

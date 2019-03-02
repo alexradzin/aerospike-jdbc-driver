@@ -80,7 +80,8 @@ class AerospikeQueryFactory {
                                         expr.getRightItemsList().accept(new ItemsListVisitorAdapter() {
                                             @Override
                                             public void visit(ExpressionList expressionList) {
-                                                System.out.println("llllllllllllllllllllllllllll" + expressionList);
+                                                BinaryOperation.Operator.IN.update(queries, operation);
+
                                             }
                                         });
                                     }
@@ -93,7 +94,6 @@ class AerospikeQueryFactory {
                                     }
 
                                     public void visit(Column column) {
-                                        System.out.println(column.getColumnName());
                                         if (operation.getColumn() == null) {
                                             operation.setColumn(column.getColumnName());
                                         } else {
@@ -103,13 +103,11 @@ class AerospikeQueryFactory {
 
                                     @Override
                                     public void visit(LongValue value) {
-                                        System.out.println(value.getValue());
                                         operation.addValue(value.getValue());
                                     }
 
                                     @Override
                                     public void visit(StringValue value) {
-                                        System.out.println(value.getValue());
                                         operation.addValue(value.getValue());
                                     }
                                 });
