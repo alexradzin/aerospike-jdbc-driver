@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SelectTest {
     private static final String NAMESPACE = "test";
     private static final String SET = "people";
+    private static final String SELECT_ALL = "select * from people";
 
     private final AerospikeClient client = new AerospikeClient("localhost", 3000);
     private Connection conn;
@@ -50,7 +51,7 @@ class SelectTest {
         private final String lastName;
         private final int yearOfBirth;
 
-        public Person(int id, String firstName, String lastName, int yearOfBirth) {
+        private Person(int id, String firstName, String lastName, int yearOfBirth) {
             this.id = id;
             this.firstName = firstName;
             this.lastName = lastName;
@@ -84,7 +85,7 @@ class SelectTest {
 
     @Test
     void selectEmpty() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery("select * from people");
+        ResultSet rs = conn.createStatement().executeQuery(SELECT_ALL);
         assertFalse(rs.next());
     }
 
@@ -92,7 +93,7 @@ class SelectTest {
     @Test
     void selectAll() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select * from people");
+        ResultSet rs = conn.createStatement().executeQuery(SELECT_ALL);
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
         Map<Integer, String> selectedPeople = new HashMap<>();
@@ -134,7 +135,7 @@ class SelectTest {
         writeBeatles();
         for (int i = 0; i < 4; i++) {
             int id = i + 1;
-            ResultSet rs = conn.createStatement().executeQuery("select * from people where PK=" + id);
+            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where PK=%d", id));
             assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
             assertTrue(rs.next());
@@ -209,6 +210,22 @@ class SelectTest {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
         selectByOneNumericIndexedField(conn, ">", 1940, 2, 3);
+    }
+
+    @Test
+    @DisplayName("year_of_birth between 1942 and 1943 -> [Paul, George]")
+    void selectSeveralRecordsByOneNumericIndexedFieldBetween() throws SQLException {
+        writeBeatles();
+        createIndex("year_of_birth", IndexType.NUMERIC);
+        select(conn, "select * from people where year_of_birth between 1942 and 1943", 2, 3);
+    }
+
+    @Test
+    @DisplayName("year_of_birth between 1941 and 1944 -> [Paul, George]")
+    void selectSeveralRecordsByOneNumericIndexedFieldBetween2() throws SQLException {
+        writeBeatles();
+        createIndex("year_of_birth", IndexType.NUMERIC);
+        select(conn, "select * from people where year_of_birth between 1941 and 1944", 2, 3);
     }
 
     @Test
