@@ -71,11 +71,25 @@ public class BinaryOperation {
         GT(">") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
+                List<Object> values = Arrays.asList(((Number)operation.values.get(0)).longValue() + 1, Long.MAX_VALUE);
+                return BETWEEN.update(queries, new BinaryOperation(operation.column, values));
+            }
+        },
+        GE(">=") {
+            @Override
+            public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 List<Object> values = Arrays.asList(operation.values.get(0), Long.MAX_VALUE);
                 return BETWEEN.update(queries, new BinaryOperation(operation.column, values));
             }
         },
         LT("<") {
+            @Override
+            public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
+                List<Object> values = Arrays.asList(Long.MIN_VALUE, ((Number)operation.values.get(0)).longValue() - 1);
+                return BETWEEN.update(queries, new BinaryOperation(operation.column, values));
+            }
+        },
+        LE("<=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 List<Object> values = Arrays.asList(Long.MIN_VALUE, operation.values.get(0));

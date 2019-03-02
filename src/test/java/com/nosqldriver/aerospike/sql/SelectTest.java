@@ -188,7 +188,7 @@ class SelectTest {
     }
 
     @Test
-    @DisplayName("year_of_birth>1939 -> John, Paul, George, Ringo")
+    @DisplayName("year_of_birth>1939 -> [John, Paul, George, Ringo]")
     void selectAllRecordsByOneNumericIndexedFieldGt() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
@@ -196,18 +196,56 @@ class SelectTest {
     }
 
     @Test
-    @DisplayName("year_of_birth>1939 -> John, Paul, George, Ringo")
+    @DisplayName("year_of_birth>=1940 -> [John, Paul, George, Ringo]")
+    void selectAllRecordsByOneNumericIndexedFieldGe() throws SQLException {
+        writeBeatles();
+        createIndex("year_of_birth", IndexType.NUMERIC);
+        selectByOneNumericIndexedField(conn, ">=", 1940, 1, 2, 3, 4);
+    }
+
+    @Test
+    @DisplayName("year_of_birth>1940 -> [Paul, George]")
+    void selectSeveralRecordsByOneNumericIndexedFieldGe() throws SQLException {
+        writeBeatles();
+        createIndex("year_of_birth", IndexType.NUMERIC);
+        selectByOneNumericIndexedField(conn, ">", 1940, 2, 3);
+    }
+
+    @Test
+    @DisplayName("year_of_birth<1939 -> nothing")
     void selectNothingRecordsByOneNumericIndexedFieldLt() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
         selectByOneNumericIndexedField(conn, "<", 1939);
     }
 
+    @Test
+    @DisplayName("year_of_birth<1940 -> nothing")
+    void selectNothingRecordsByOneNumericIndexedFieldLt2() throws SQLException {
+        writeBeatles();
+        createIndex("year_of_birth", IndexType.NUMERIC);
+        selectByOneNumericIndexedField(conn, "<", 1940);
+    }
+
+    @Test
+    @DisplayName("year_of_birth<=1940 -> [John, Ringo]")
+    void selectNothingRecordsByOneNumericIndexedFieldLe() throws SQLException {
+        writeBeatles();
+        createIndex("year_of_birth", IndexType.NUMERIC);
+        selectByOneNumericIndexedField(conn, "<=", 1940, 1, 4);
+    }
 
     private void selectByOneNumericIndexedField(Connection conn, String operation, int year, int ... expectedIds) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(format("select * from people where year_of_birth%s%s", operation, year));
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        select(conn, format("select * from people where year_of_birth%s%s", operation, year), expectedIds);
+    }
 
+    private void select(Connection conn, String sql, int ... expectedIds) throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertPeople(rs, beatles, expectedIds);
+    }
+
+    private void assertPeople(ResultSet rs, Person[] people, int ... expectedIds) throws SQLException {
         Set<Integer> expectedIdsSet = new HashSet<>();
         Arrays.stream(expectedIds).forEach(expectedIdsSet::add);
 
@@ -217,13 +255,14 @@ class SelectTest {
             int id = rs.getInt("id");
             assertTrue(expectedIdsSet.contains(id));
             int i = id - 1;
-            assertEquals(beatles[i].id, rs.getInt("id"));
-            assertEquals(beatles[i].firstName, rs.getString("first_name"));
-            assertEquals(beatles[i].lastName, rs.getString("last_name"));
-            assertEquals(beatles[i].yearOfBirth, rs.getInt("year_of_birth"));
+            assertEquals(people[i].id, rs.getInt("id"));
+            assertEquals(people[i].firstName, rs.getString("first_name"));
+            assertEquals(people[i].lastName, rs.getString("last_name"));
+            assertEquals(people[i].yearOfBirth, rs.getInt("year_of_birth"));
         }
         assertEquals(expectedIds.length, n);
     }
+
 
     private Bin[] person(int id, String firstName, String lastName, int yearOfBirth) {
         return new Bin[] {new Bin("id", id), new Bin("first_name", firstName), new Bin("last_name", lastName), new Bin("year_of_birth", yearOfBirth)};
