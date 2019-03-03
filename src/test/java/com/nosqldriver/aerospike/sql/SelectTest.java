@@ -209,6 +209,15 @@ class SelectTest {
         select(conn, "select * from people where year_of_birth=1940 and last_name='Lennon'", 1);
     }
 
+
+    @Test
+    @DisplayName("last_name='Lennon' or last_name='Harrison' -> [John, George]")
+    void selectSeveralPersonsByLastNameOr() throws SQLException {
+        writeBeatles();
+        select(conn, "select * from people where last_name='Lennon' or last_name='Harrison'", 1, 3);
+    }
+
+
     @Test
     @DisplayName("year_of_birth=1939 -> nothing")
     void selectNothingByOneNumericIndexedFieldEq() throws SQLException {
