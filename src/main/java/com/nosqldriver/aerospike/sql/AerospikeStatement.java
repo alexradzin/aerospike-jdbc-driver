@@ -1,15 +1,13 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
-import com.aerospike.client.policy.QueryPolicy;
-import com.aerospike.client.query.RecordSet;
-import com.aerospike.client.query.Statement;
-import net.sf.jsqlparser.parser.CCJSqlParserManager;
+import com.aerospike.client.Info;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
+import java.util.Collection;
 
 public class AerospikeStatement implements java.sql.Statement {
     private final IAerospikeClient client;
@@ -18,25 +16,21 @@ public class AerospikeStatement implements java.sql.Statement {
     private int maxRows = Integer.MAX_VALUE;
     private int queryTimeout = 0;
     private volatile SQLWarning sqlWarning;
+    private final AerospikePolicyProvider policyProvider;
+    private final Collection<String> indexes;
+    private final ConnectionParametersParser parametersParser = new ConnectionParametersParser();
 
-    private CCJSqlParserManager parserManager = new CCJSqlParserManager();
-
-    public AerospikeStatement(IAerospikeClient client, Connection connection, String schema) {
+    public AerospikeStatement(IAerospikeClient client, Connection connection, String schema, AerospikePolicyProvider policyProvider) {
         this.client = client;
         this.connection = connection;
         this.schema = schema;
+        this.policyProvider = policyProvider;
+        indexes = parametersParser.indexesParser(Info.request(client.getNodes()[0], "sindex"));
     }
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
-        Statement statement = new AerospikeStatementFactory().createStatement(sql);
-        if (statement.getNamespace() == null) {
-            statement.setNamespace(schema);
-        }
-        QueryPolicy policy = new QueryPolicy();
-        policy.setTimeout(queryTimeout);
-        RecordSet rs = client.query(null, statement);
-        return new ResultSetOverAerospikeRecordSet(this, null, rs);
+        return new AerospikeQueryFactory(schema, policyProvider, indexes).createQuery(sql).apply(client);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.AerospikeClient;
+import com.aerospike.client.Host;
 import com.aerospike.client.IAerospikeClient;
 
 import java.sql.Array;
@@ -30,7 +31,7 @@ import static java.sql.ResultSet.HOLD_CURSORS_OVER_COMMIT;
 
 public class AerospikeConnection implements Connection {
     private final String url;
-    private final Properties info;
+    private final Properties props;
     private static final ConnectionParametersParser parser = new ConnectionParametersParser();
     private final IAerospikeClient client;
     private volatile boolean readOnly = false;
@@ -39,18 +40,22 @@ public class AerospikeConnection implements Connection {
     private volatile int holdability = HOLD_CURSORS_OVER_COMMIT;
     private final Properties clientInfo = new Properties();
     private volatile String schema;
+    private final AerospikePolicyProvider policyProvider;
 
-    public AerospikeConnection(String url, Properties info) {
+    public AerospikeConnection(String url, Properties props) {
         this.url = url;
-        this.info = info;
-        client = new AerospikeClient(parser.policy(url, info), parser.hosts(url));
+        this.props = props;
+        Host[] hosts = parser.hosts(url);
+        client = new AerospikeClient(parser.policy(url, props), hosts);
         schema = parser.schema(url);
+        policyProvider = new AerospikePolicyProvider(parser.clientInfo(url, props));
 
+        getMetaData();
     }
 
     @Override
     public Statement createStatement() throws SQLException {
-        return new AerospikeStatement(client, this, schema);
+        return new AerospikeStatement(client, this, schema, policyProvider);
     }
 
     @Override
@@ -99,8 +104,8 @@ public class AerospikeConnection implements Connection {
     }
 
     @Override
-    public DatabaseMetaData getMetaData() throws SQLException {
-        return new AerospikeDatabaseMetadata(url, info, client); //TODO First thing to implement!
+    public DatabaseMetaData getMetaData() {
+        return new AerospikeDatabaseMetadata(url, props, client); //TODO First thing to implement!
     }
 
     @Override
