@@ -146,6 +146,20 @@ class SelectTest {
         }
     }
 
+    @Test
+    void selectByNotIndexedField() throws SQLException {
+        writeBeatles();
+        for (int i = 0; i < 4; i++) {
+            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where last_name=%s", beatles[i].lastName));
+            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+
+            assertTrue(rs.next());
+            assertEquals(beatles[i].id, rs.getInt("id"));
+            assertEquals(beatles[i].firstName, rs.getString("first_name"));
+            assertEquals(beatles[i].lastName, rs.getString("last_name"));
+            assertEquals(beatles[i].yearOfBirth, rs.getInt("year_of_birth"));
+        }
+    }
 
     @Test
     void selectByOneStringIndexedField() throws SQLException {
@@ -179,6 +193,17 @@ class SelectTest {
         createIndex("year_of_birth", IndexType.NUMERIC);
         selectByOneNumericIndexedField(conn, "=", 1940, 1, 4);
     }
+
+    // TODO: enable and implement
+    //@Test
+    @DisplayName("year_of_birth=1940 and first_name='John'-> [John]")
+    void selectOneRecordByOneNumericIndexedFieldEqAndOneNotIndexedField() throws SQLException {
+        writeBeatles();
+        createIndex("year_of_birth", IndexType.NUMERIC);
+        selectByOneNumericIndexedField(conn, "=", 1940, 1, 4);
+        select(conn, "select * from people where year_of_birth=1940 and first_name='John'", 1);
+    }
+
 
     @Test
     @DisplayName("year_of_birth=1939 -> nothing")

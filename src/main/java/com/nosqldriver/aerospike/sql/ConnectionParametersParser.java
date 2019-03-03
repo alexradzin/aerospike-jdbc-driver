@@ -3,7 +3,10 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.Host;
 import com.aerospike.client.policy.ClientPolicy;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
@@ -90,4 +93,19 @@ class ConnectionParametersParser {
         return result;
     }
 
+    Collection<String> indexesParser(String infos) {
+        return Arrays.stream(infos.split(";")).map(info -> new StringReader(info.replace(":", "\n"))).map(r -> {
+            Properties props = new Properties();
+            try {
+                props.load(r);
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+            return props;
+        }).map(p -> indexKey(p.getProperty("ns"), p.getProperty("set"), p.getProperty("bin"))).collect(Collectors.toSet());
+    }
+
+    private String indexKey(String namespace, String set, String bin) {
+        return String.join(".", namespace, set, bin);
+    }
 }

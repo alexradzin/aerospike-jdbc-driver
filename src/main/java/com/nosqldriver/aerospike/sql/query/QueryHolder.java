@@ -3,18 +3,23 @@ package com.nosqldriver.aerospike.sql.query;
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.query.Filter;
+import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
+import static java.lang.String.join;
+
 public class QueryHolder {
     private String schema;
+    private final Collection<String> indexes;
     private final AerospikePolicyProvider policyProvider;
     private String set;
     private List<String> names = new ArrayList<>();
@@ -23,11 +28,14 @@ public class QueryHolder {
     private AerospikeBatchQueryBySecondaryIndex secondayIndexQuery = null;
     private AerospikeQueryByPk pkQuery = null;
     private AerospikeBatchQueryByPk pkBatchQuery = null;
+    private Filter filter;
+    private List<PredExp> predExps = new ArrayList<>();
 
 
 
-    public QueryHolder(String schema, AerospikePolicyProvider policyProvider) {
+    public QueryHolder(String schema, Collection<String> indexes, AerospikePolicyProvider policyProvider) {
         this.schema = schema;
+        this.indexes = indexes;
         this.policyProvider = policyProvider;
          statement = new Statement();
          if (schema != null) {
@@ -48,7 +56,9 @@ public class QueryHolder {
             assertNull(pkQuery, pkBatchQuery);
             return secondayIndexQuery;
         }
-        return new AerospikeBatchQueryBySecondaryIndex(schema, getNames(), statement, policyProvider.getQueryPolicy());
+
+        return createSecondaryIndexQuery();
+        //return new AerospikeBatchQueryBySecondaryIndex(schema, getNames(), statement, policyProvider.getQueryPolicy());
         //throw new IllegalStateException("Query was not created"); //TODO: pass SQL here to attach it to the exception
     }
 
@@ -82,9 +92,22 @@ public class QueryHolder {
         statement.setBinNames(getNames());
     }
 
-    public void createSecondaryIndexQuery(Filter filter) {
+
+    public Function<IAerospikeClient, java.sql.ResultSet>  createSecondaryIndexQuery() {
+        return createSecondaryIndexQuery(filter, predExps);
+    }
+
+
+    public Function<IAerospikeClient, java.sql.ResultSet>  createSecondaryIndexQuery(Filter filter) {
+        return createSecondaryIndexQuery(filter, predExps);
+    }
+
+    private Function<IAerospikeClient, java.sql.ResultSet>  createSecondaryIndexQuery(Filter filter, List<PredExp> predExps) {
         statement.setFilter(filter);
-        secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, getNames(), statement, policyProvider.getQueryPolicy());
+        if (predExps.size() >= 3) {
+            statement.setPredExp(predExps.toArray(new PredExp[0]));
+        }
+        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, getNames(), statement, policyProvider.getQueryPolicy());
     }
 
     public void createPkQuery(Key key) {
@@ -97,5 +120,15 @@ public class QueryHolder {
 
     public String getSetName() {
         return set;
+    }
+
+    public void addPredExp(PredExp predExp) {
+        predExps.add(predExp);
+    }
+
+    public void setFilter(Filter filter, String binName) {
+        if (indexes.contains(join(".", schema, set, binName))) {
+            this.filter = filter;
+        }
     }
 }

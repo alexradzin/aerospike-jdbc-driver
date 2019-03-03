@@ -34,13 +34,14 @@ public class BinaryOperation {
                     final Key key = createKey(value, queries);
                     queries.createPkQuery(key);
                 } else {
-                    queries.createSecondaryIndexQuery(createFilter(value, operation.column));
+
+                    queries.setFilter(createEqFilter(value, operation.column), operation.column);
                 }
                 return queries;
             }
 
 
-            private Filter createFilter(Object value, String column) {
+            private Filter createEqFilter(Object value, String column) {
                 final Filter filter;
                 if (value instanceof Number) {
                     filter = Filter.equal(column, ((Number) value).longValue());
@@ -83,7 +84,8 @@ public class BinaryOperation {
         BETWEEN("BETWEEN") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                queries.createSecondaryIndexQuery(Filter.range(operation.column, ((Number)operation.values.get(0)).longValue(), ((Number)operation.values.get(1)).longValue()));
+                queries.setFilter(Filter.range(operation.column, ((Number)operation.values.get(0)).longValue(), ((Number)operation.values.get(1)).longValue()), operation.column);
+                // queries.createSecondaryIndexQuery(Filter.range(operation.column, ((Number)operation.values.get(0)).longValue(), ((Number)operation.values.get(1)).longValue()));
                 return queries;
             }
         },

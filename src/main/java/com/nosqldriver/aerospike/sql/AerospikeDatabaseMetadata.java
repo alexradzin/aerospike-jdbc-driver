@@ -2,6 +2,7 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
+import com.aerospike.client.policy.InfoPolicy;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +33,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
         this.client = client;
         clientInfo = parser.clientInfo(url, info);
         manifest = manifest();
-        dbInfo = Info.request(null, client.getNodes()[0]);
+        dbInfo = Info.request(new InfoPolicy(), client.getNodes()[0]);
     }
 
     @Override
