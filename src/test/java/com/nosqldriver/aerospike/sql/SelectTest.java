@@ -194,16 +194,20 @@ class SelectTest {
         selectByOneNumericIndexedField(conn, "=", 1940, 1, 4);
     }
 
-    // TODO: enable and implement
-    //@Test
+    @Test
     @DisplayName("year_of_birth=1940 and first_name='John'-> [John]")
     void selectOneRecordByOneNumericIndexedFieldEqAndOneNotIndexedField() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        selectByOneNumericIndexedField(conn, "=", 1940, 1, 4);
         select(conn, "select * from people where year_of_birth=1940 and first_name='John'", 1);
     }
 
+    @Test
+    @DisplayName("year_of_birth=1940 and last_name='Lennon'-> [John]")
+    void selectOneRecordByOneNumericEqAndOneStringFieldAllNotIndexed() throws SQLException {
+        writeBeatles();
+        select(conn, "select * from people where year_of_birth=1940 and last_name='Lennon'", 1);
+    }
 
     @Test
     @DisplayName("year_of_birth=1939 -> nothing")
