@@ -6,6 +6,8 @@ import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
+import com.nosqldriver.sql.FilteredResultSet;
+import com.nosqldriver.sql.OffsetLimit;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -30,7 +32,8 @@ public class QueryHolder {
     private AerospikeBatchQueryByPk pkBatchQuery = null;
     private Filter filter;
     private List<PredExp> predExps = new ArrayList<>();
-
+    private long offset = -1;
+    private long limit = -1;
 
 
     public QueryHolder(String schema, Collection<String> indexes, AerospikePolicyProvider policyProvider) {
@@ -46,18 +49,18 @@ public class QueryHolder {
     public Function<IAerospikeClient, ResultSet> getQuery() {
         if (pkQuery != null) {
             assertNull(pkBatchQuery, secondayIndexQuery);
-            return pkQuery;
+            return wrap(pkQuery);
         }
         if (pkBatchQuery != null) {
             assertNull(pkQuery, secondayIndexQuery);
-            return pkBatchQuery;
+            return wrap(pkBatchQuery);
         }
         if (secondayIndexQuery != null) {
             assertNull(pkQuery, pkBatchQuery);
-            return secondayIndexQuery;
+            return wrap(secondayIndexQuery);
         }
 
-        return createSecondaryIndexQuery();
+        return wrap(createSecondaryIndexQuery());
         //return new AerospikeBatchQueryBySecondaryIndex(schema, getNames(), statement, policyProvider.getQueryPolicy());
         //throw new IllegalStateException("Query was not created"); //TODO: pass SQL here to attach it to the exception
     }
@@ -98,10 +101,6 @@ public class QueryHolder {
     }
 
 
-    public Function<IAerospikeClient, java.sql.ResultSet>  createSecondaryIndexQuery(Filter filter) {
-        return createSecondaryIndexQuery(filter, predExps);
-    }
-
     private Function<IAerospikeClient, java.sql.ResultSet>  createSecondaryIndexQuery(Filter filter, List<PredExp> predExps) {
         statement.setFilter(filter);
         if (predExps.size() >= 3) {
@@ -130,5 +129,20 @@ public class QueryHolder {
         if (indexes.contains(join(".", schema, set, binName))) {
             this.filter = filter;
         }
+    }
+
+    public void setOffset(long offset) {
+        this.offset = offset;
+    }
+
+    public void setLimit(long limit) {
+        this.limit = limit;
+    }
+
+
+    private Function<IAerospikeClient, java.sql.ResultSet> wrap(Function<IAerospikeClient, java.sql.ResultSet> nakedQuery) {
+        return offset >= 0 || limit >= 0 ?
+                client -> new FilteredResultSet(nakedQuery.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) :
+                nakedQuery;
     }
 }

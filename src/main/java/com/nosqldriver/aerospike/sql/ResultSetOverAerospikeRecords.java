@@ -3,6 +3,8 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.Record;
 
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.Objects;
 
 public class ResultSetOverAerospikeRecords extends AerospikeResultSet {
     private final Record[] records;
@@ -12,7 +14,7 @@ public class ResultSetOverAerospikeRecords extends AerospikeResultSet {
 
     public ResultSetOverAerospikeRecords(String schema, String[] names, Record[] records) {
         super(schema, names);
-        this.records = records;
+        this.records = Arrays.stream(records).filter(Objects::nonNull).toArray(Record[]::new);
     }
 
 

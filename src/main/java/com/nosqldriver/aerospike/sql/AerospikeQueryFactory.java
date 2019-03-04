@@ -196,10 +196,27 @@ class AerospikeQueryFactory {
                                     }
                                 });
                             }
+
+                            if (plainSelect.getOffset() != null) {
+                                queries.setOffset(plainSelect.getOffset().getOffset());
+                            }
+
+                            if (plainSelect.getLimit() != null && plainSelect.getLimit().getRowCount() != null) {
+                                plainSelect.getLimit().getRowCount().accept(new ExpressionVisitorAdapter() {
+                                    @Override
+                                    public void visit(LongValue value) {
+                                        queries.setLimit(value.getValue());
+                                    }
+                                });
+                            }
+
                         }
                     });
                 }
             });
+
+
+
 
             return queries.getQuery();
         } catch (JSQLParserException e) {

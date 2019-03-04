@@ -275,7 +275,7 @@ class SelectTest {
     }
 
     @Test
-    @DisplayName("PK IN (20, 30) -> [Paul, George]")
+    @DisplayName("PK IN (20, 30) -> []")
     void selectNoRecordsByPkIn() throws SQLException {
         writeBeatles();
         select(conn, "select * from people where PK in (20, 30)");
@@ -306,6 +306,38 @@ class SelectTest {
         selectByOneNumericIndexedField(conn, "<=", 1940, 1, 4);
     }
 
+    @Test
+    @DisplayName("limit 2 -> [John, Paul]")
+    void selectAllWithLimit2() throws SQLException {
+        writeBeatles();
+        select(conn, "select * from people limit 2", 1, 2);
+
+        ResultSet rs = conn.createStatement().executeQuery("select * from people limit 2");
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        int n = 0;
+        //noinspection StatementWithEmptyBody // counter
+        for (; rs.next(); n++);
+        assertEquals(2, n);
+    }
+
+    @Test
+    @DisplayName("offset 1 -> [Paul, George, Ringo]")
+    void selectAllWithOffset1() throws SQLException {
+        writeBeatles();
+        String sql = "select * from people offset 1";
+        //select(conn, sql, 2, 3, 4);
+
+        // since order of records returned from the DB is not deterministic unless order by is used we cannot really
+        // validate here the names of people and ought to check the number of rows in record set.
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        int n = 0;
+        //noinspection StatementWithEmptyBody // counter
+        for (; rs.next(); n++);
+        assertEquals(3, n);
+    }
+
+
     private void selectByOneNumericIndexedField(Connection conn, String operation, int year, int ... expectedIds) throws SQLException {
         select(conn, format("select * from people where year_of_birth%s%s", operation, year), expectedIds);
     }
@@ -324,7 +356,7 @@ class SelectTest {
         for (; n < expectedIds.length; n++) {
             assertTrue(rs.next());
             int id = rs.getInt("id");
-            assertTrue(expectedIdsSet.contains(id));
+            assertTrue(expectedIdsSet.contains(id), "ID " + id + " is unexpected" );
             int i = id - 1;
             assertEquals(people[i].id, rs.getInt("id"));
             assertEquals(people[i].firstName, rs.getString("first_name"));
@@ -332,6 +364,7 @@ class SelectTest {
             assertEquals(people[i].yearOfBirth, rs.getInt("year_of_birth"));
         }
         assertEquals(expectedIds.length, n);
+        assertFalse(rs.next());
     }
 
 
