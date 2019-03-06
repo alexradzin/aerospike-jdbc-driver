@@ -131,6 +131,31 @@ class SelectTest {
     }
 
     @Test
+    void selectSpecificFieldsWithAliases() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select first_name as name, year_of_birth as year from people");
+
+        Map<String, Integer> selectedPeople = new HashMap<>();
+
+        assertEquals("first_name", rs.getMetaData().getColumnName(1));
+        assertEquals("year_of_birth", rs.getMetaData().getColumnName(2));
+        assertEquals("name", rs.getMetaData().getColumnLabel(1));
+        assertEquals("year", rs.getMetaData().getColumnLabel(2));
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        while (rs.next()) {
+            selectedPeople.put(rs.getString("name"), rs.getInt("year"));
+            assertNull(rs.getString("last_name"));
+            assertNull(rs.getString("id"));
+        }
+
+        assertEquals(1940, selectedPeople.get("John").intValue());
+        assertEquals(1942, selectedPeople.get("Paul").intValue());
+        assertEquals(1943, selectedPeople.get("George").intValue());
+        assertEquals(1940, selectedPeople.get("Ringo").intValue());
+    }
+
+
+    @Test
     void selectByPk() throws SQLException {
         writeBeatles();
         for (int i = 0; i < 4; i++) {
@@ -398,6 +423,13 @@ class SelectTest {
         write(writePolicy, 2, person(2, "Paul", "McCartney", 1942));
         write(writePolicy, 3, person(3, "George", "Harrison", 1943));
         write(writePolicy, 4, person(4, "Ringo", "Starr", 1940));
+    }
+
+
+    @Test
+    void mytest() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select first_name as fn, year_of_birth  from people");
     }
 
 }

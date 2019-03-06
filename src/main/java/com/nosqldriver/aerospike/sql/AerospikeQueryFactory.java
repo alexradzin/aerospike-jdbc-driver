@@ -5,6 +5,7 @@ import com.aerospike.client.query.PredExp;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation;
 import com.nosqldriver.aerospike.sql.query.QueryHolder;
 import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DateValue;
 import net.sf.jsqlparser.expression.Expression;
@@ -33,6 +34,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -98,7 +100,8 @@ class AerospikeQueryFactory {
                             plainSelect.getSelectItems().forEach(si -> si.accept(new SelectItemVisitorAdapter() {
                                 @Override
                                 public void visit(SelectExpressionItem selectExpressionItem) {
-                                    queries.addBinName(((Column) selectExpressionItem.getExpression()).getColumnName());
+                                    String alias = Optional.ofNullable(selectExpressionItem.getAlias()).map(Alias::getName).orElse(null);
+                                    queries.addBinName(((Column) selectExpressionItem.getExpression()).getColumnName(), alias);
                                 }
                             }));
 

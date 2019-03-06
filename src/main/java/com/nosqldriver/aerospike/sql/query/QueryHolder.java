@@ -8,6 +8,7 @@ import com.aerospike.client.query.Statement;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
 import com.nosqldriver.sql.FilteredResultSet;
 import com.nosqldriver.sql.OffsetLimit;
+import com.nosqldriver.sql.ResultSetWrapper;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ public class QueryHolder {
     private final AerospikePolicyProvider policyProvider;
     private String set;
     private List<String> names = new ArrayList<>();
+    private List<String> aliases = new ArrayList<>();
 
     private final Statement statement;
     private AerospikeBatchQueryBySecondaryIndex secondayIndexQuery = null;
@@ -90,8 +92,9 @@ public class QueryHolder {
         statement.setSetName(set);
     }
 
-    public void addBinName(String name) {
+    public void addBinName(String name, String alias) {
         names.add(name);
+        aliases.add(alias);
         statement.setBinNames(getNames());
     }
 
@@ -141,8 +144,10 @@ public class QueryHolder {
 
 
     private Function<IAerospikeClient, java.sql.ResultSet> wrap(Function<IAerospikeClient, java.sql.ResultSet> nakedQuery) {
+        Function<IAerospikeClient, java.sql.ResultSet> aliasSupport = client -> new ResultSetWrapper(nakedQuery.apply(client), names, aliases);
+
         return offset >= 0 || limit >= 0 ?
-                client -> new FilteredResultSet(nakedQuery.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) :
-                nakedQuery;
+                client -> new FilteredResultSet(aliasSupport.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) :
+                aliasSupport;
     }
 }

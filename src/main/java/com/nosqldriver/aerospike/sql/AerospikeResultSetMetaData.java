@@ -4,12 +4,16 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 public class AerospikeResultSetMetaData implements ResultSetMetaData {
+    private final ResultSetMetaData md;
     private final String schema;
-    private final String [] names;
+    private final String[] names;
+    private final String[] aliases;
 
-    public AerospikeResultSetMetaData(String schema, String[] names) {
+    public AerospikeResultSetMetaData(ResultSetMetaData md, String schema, String[] names, String[] aliases) {
+        this.md = md;
         this.schema = schema;
         this.names = names;
+        this.aliases = aliases;
     }
 
 
@@ -55,7 +59,7 @@ public class AerospikeResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnLabel(int column) throws SQLException {
-        return getColumnName(column);
+        return aliases!= null && aliases.length >= column && aliases[column - 1] != null ? aliases[column - 1] : getColumnName(column);
     }
 
     @Override
@@ -65,7 +69,7 @@ public class AerospikeResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getSchemaName(int column) throws SQLException {
-        return schema;
+        return schema != null ? schema : md != null ? md.getSchemaName(column) : null;
     }
 
     @Override
