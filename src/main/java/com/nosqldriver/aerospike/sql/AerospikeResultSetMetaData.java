@@ -59,7 +59,7 @@ public class AerospikeResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnLabel(int column) throws SQLException {
-        return aliases!= null && aliases.length >= column && aliases[column - 1] != null ? aliases[column - 1] : getColumnName(column);
+        return aliases != null && aliases.length >= column && aliases[column - 1] != null ? aliases[column - 1] : getColumnName(column);
     }
 
     @Override

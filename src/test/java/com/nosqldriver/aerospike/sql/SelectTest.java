@@ -154,6 +154,101 @@ class SelectTest {
         assertEquals(1940, selectedPeople.get("Ringo").intValue());
     }
 
+    @Test
+    @DisplayName("select 1 as one from people where PK=1")
+    void select1fromPeople() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select 1 as one from people where PK=1");
+        assertTrue(rs.next());
+        assertEquals("one", rs.getMetaData().getColumnLabel(1));
+        assertEquals(1, rs.getInt(1));
+        assertEquals(1, rs.getInt("one"));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    @DisplayName("select (1+2)*3 as nine from people where PK=1")
+    void selectIntExpressionFromPeople() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select (1+2)*3 as nine from people where PK=1");
+        assertTrue(rs.next());
+        assertEquals("nine", rs.getMetaData().getColumnLabel(1));
+        assertEquals(9, rs.getInt(1));
+        assertEquals(9, rs.getInt("nine"));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    @DisplayName("select (4+5)/3 as three, first_name as name, year_of_birth - 1900 as year from people where PK=1")
+    void selectExpressionAndFieldFromPeople() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select (4+5)/3 as three, first_name as name, year_of_birth - 1900 as year from people where PK=1");
+        assertTrue(rs.next());
+        assertEquals("three", rs.getMetaData().getColumnLabel(1));
+        assertEquals(3, rs.getInt(1));
+        assertEquals(3, rs.getInt("three"));
+
+        assertEquals("name", rs.getMetaData().getColumnLabel(2));
+        assertEquals("John", rs.getString(2));
+        assertEquals("John", rs.getString("name"));
+
+        assertEquals("year", rs.getMetaData().getColumnLabel(3));
+        assertEquals(40, rs.getInt(3));
+        assertEquals(40, rs.getInt("year"));
+
+        assertFalse(rs.next());
+    }
+
+    @Test
+    void selectSpecificFieldsWithLowerCaseLenFunction() throws SQLException {
+        selectSpecificFieldsWithLenFunction("select first_name as name, len(first_name) as name_len from people");
+    }
+
+    @Test
+    void selectSpecificFieldsWithUpperCaseLenFunction() throws SQLException {
+        selectSpecificFieldsWithLenFunction("select first_name as name, LEN(first_name) as name_len from people");
+    }
+
+    private void selectSpecificFieldsWithLenFunction(String query) throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery(query);
+
+        Map<String, Integer> selectedPeople = new HashMap<>();
+
+        assertEquals("first_name", rs.getMetaData().getColumnName(1));
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        while (rs.next()) {
+            selectedPeople.put(rs.getString("name"), rs.getInt("name_len"));
+        }
+
+        selectedPeople.forEach((key, value) -> assertEquals(value.intValue(), key.length()));
+    }
+
+
+    //@Test
+    void selectSpecificFieldsWithFunctions2() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select 1 one, 2 + 3 as two_plus_three, (1+2)*3 as someexpr, year() - year_of_birth as years_ago, first_name as name, year_of_birth - 1900 as y, length(last_name) as surname_length from people");
+
+        Map<String, Integer> selectedPeople = new HashMap<>();
+
+        assertEquals("first_name", rs.getMetaData().getColumnName(1));
+        assertEquals("name", rs.getMetaData().getColumnLabel(1));
+        assertEquals("surname_length", rs.getMetaData().getColumnLabel(2));
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        while (rs.next()) {
+            selectedPeople.put(rs.getString("name"), rs.getInt("surname_length"));
+            assertNull(rs.getString("last_name"));
+            assertNull(rs.getString("id"));
+        }
+
+        assertEquals("Lennon".length(), selectedPeople.get("John").intValue());
+        assertEquals("McCartney".length(), selectedPeople.get("Paul").intValue());
+        assertEquals("Harrison".length(), selectedPeople.get("George").intValue());
+        assertEquals("Starr".length(), selectedPeople.get("Ringo").intValue());
+    }
+
+
 
     @Test
     void selectByPk() throws SQLException {

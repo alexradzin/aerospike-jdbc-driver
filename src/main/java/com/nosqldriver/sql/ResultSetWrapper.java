@@ -43,7 +43,7 @@ public class ResultSetWrapper implements ResultSet {
         this.rs = rs;
         this.names = names;
         this.aliases = aliases;
-        aliasToName = range(0, names.size()).boxed().filter(i -> aliases.get(i) != null).collect(toMap(aliases::get, names::get));
+        aliasToName = range(0, names.size()).boxed().filter(i -> names.get(i) != null && aliases.get(i) != null).collect(toMap(aliases::get, names::get));
     }
     
     private String getName(String alias) {
@@ -149,7 +149,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public String getString(String columnLabel) throws SQLException {
-        return rs.getString(getName(getName(columnLabel)));
+        return rs.getString(getName(columnLabel));
     }
 
     @Override

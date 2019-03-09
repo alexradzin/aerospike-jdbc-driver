@@ -6,6 +6,7 @@ import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
+import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.FilteredResultSet;
 import com.nosqldriver.sql.OffsetLimit;
 import com.nosqldriver.sql.ResultSetWrapper;
@@ -14,6 +15,7 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -27,6 +29,8 @@ public class QueryHolder {
     private String set;
     private List<String> names = new ArrayList<>();
     private List<String> aliases = new ArrayList<>();
+    private List<String> expressions = new ArrayList<>();
+    private Collection<String> hiddenNames = new HashSet<>();
 
     private final Statement statement;
     private AerospikeBatchQueryBySecondaryIndex secondayIndexQuery = null;
@@ -36,6 +40,8 @@ public class QueryHolder {
     private List<PredExp> predExps = new ArrayList<>();
     private long offset = -1;
     private long limit = -1;
+
+    private final ExpressionAwareResultSetFactory expressionResultSetWrappingFactory = new ExpressionAwareResultSetFactory();
 
 
     public QueryHolder(String schema, Collection<String> indexes, AerospikePolicyProvider policyProvider) {
@@ -74,8 +80,12 @@ public class QueryHolder {
         }
     }
 
-    private String[] getNames() {
-        return names.toArray(new String[0]);
+    private String[] getNames(boolean hidden) {
+        List<String> all = new ArrayList<>(names);
+        if (hidden) {
+            all.addAll(hiddenNames);
+        }
+        return all.toArray(new String[0]);
     }
 
     public void setSchema(String schema) {
@@ -92,14 +102,23 @@ public class QueryHolder {
         statement.setSetName(set);
     }
 
-    public void addBinName(String name, String alias) {
-        names.add(name);
-        aliases.add(alias);
-        statement.setBinNames(getNames());
+    public void addColumn(String column, String alias, boolean expr) {
+        if (expr) {
+            names.add(null);
+            expressions.add(column);
+            aliases.add(alias);
+            hiddenNames.addAll(expressionResultSetWrappingFactory.getVariableNames(column));
+        } else {
+            names.add(column);
+            expressions.add(null);
+            aliases.add(alias);
+        }
+        statement.setBinNames(getNames(true));
     }
 
 
-    public Function<IAerospikeClient, java.sql.ResultSet>  createSecondaryIndexQuery() {
+
+    private Function<IAerospikeClient, java.sql.ResultSet>  createSecondaryIndexQuery() {
         return createSecondaryIndexQuery(filter, predExps);
     }
 
@@ -109,15 +128,15 @@ public class QueryHolder {
         if (predExps.size() >= 3) {
             statement.setPredExp(predExps.toArray(new PredExp[0]));
         }
-        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, getNames(), statement, policyProvider.getQueryPolicy());
+        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, getNames(false), statement, policyProvider.getQueryPolicy());
     }
 
-    public void createPkQuery(Key key) {
-        pkQuery = new AerospikeQueryByPk(schema, getNames(), key, policyProvider.getPolicy());
+    void createPkQuery(Key key) {
+        pkQuery = new AerospikeQueryByPk(schema, getNames(false), key, policyProvider.getPolicy());
     }
 
-    public void createPkBatchQuery(Key ... keys) {
-        pkBatchQuery = new AerospikeBatchQueryByPk(schema, getNames(), keys, policyProvider.getBatchPolicy());
+    void createPkBatchQuery(Key ... keys) {
+        pkBatchQuery = new AerospikeBatchQueryByPk(schema, getNames(false), keys, policyProvider.getBatchPolicy());
     }
 
     public String getSetName() {
@@ -144,10 +163,9 @@ public class QueryHolder {
 
 
     private Function<IAerospikeClient, java.sql.ResultSet> wrap(Function<IAerospikeClient, java.sql.ResultSet> nakedQuery) {
-        Function<IAerospikeClient, java.sql.ResultSet> aliasSupport = client -> new ResultSetWrapper(nakedQuery.apply(client), names, aliases);
-
+        Function<IAerospikeClient, java.sql.ResultSet> wrapped = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), names, aliases), hiddenNames, expressions, aliases);
         return offset >= 0 || limit >= 0 ?
-                client -> new FilteredResultSet(aliasSupport.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) :
-                aliasSupport;
+                client -> new FilteredResultSet(wrapped.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) :
+                wrapped;
     }
 }

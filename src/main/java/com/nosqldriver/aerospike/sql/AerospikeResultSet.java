@@ -1007,7 +1007,7 @@ abstract class AerospikeResultSet implements ResultSet {
         if (names == null) {
             throw new IllegalStateException("Cannot retrive field by index when querying all fields");
         }
-        return names[index];
+        return names[index - 1];
     }
 
     private <T> T getValue(String columnLabel, Function<Object, T> mapper) {
