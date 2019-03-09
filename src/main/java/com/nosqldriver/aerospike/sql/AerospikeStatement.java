@@ -2,6 +2,8 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
+import com.aerospike.client.policy.ScanPolicy;
+import com.aerospike.client.policy.WritePolicy;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -35,7 +37,7 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
-        return 0;
+        return new AerospikeQueryFactory(schema, policyProvider, indexes).createUpdate(sql).apply(client);
     }
 
     @Override

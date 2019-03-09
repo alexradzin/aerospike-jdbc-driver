@@ -17,10 +17,12 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.junit.Assert.assertFalse;
@@ -458,6 +460,54 @@ class SelectTest {
     }
 
 
+    @Test
+    void deleteAll() throws SQLException {
+        writeBeatles();
+        Collection<String> names1 = retrieveColumn("select * from people", "first_name");
+        assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
+        conn.createStatement().executeUpdate("delete from people");
+        assertTrue(retrieveColumn("select * from people", "first_name").isEmpty());
+    }
+
+
+    @Test
+    void deleteByPk() throws SQLException {
+        writeBeatles();
+        Collection<String> names1 = retrieveColumn("select * from people", "first_name");
+        assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
+
+        conn.createStatement().executeUpdate("delete from people where PK=1");
+        //conn.createStatement().executeUpdate("delete from people where PK in (1, 2, 3)");
+        //conn.createStatement().executeUpdate("delete from people where PK between 1 and 3");
+
+        Collection<String> names2 = retrieveColumn("select * from people", "first_name");
+        assertEquals(Arrays.stream(beatles).map(p -> p.firstName).filter(name -> !name.equals("John")).collect(Collectors.toSet()), names2);
+    }
+
+
+    @Test
+    void deleteByCriteria() throws SQLException {
+        writeBeatles();
+        Collection<String> names1 = retrieveColumn("select * from people", "first_name");
+        assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
+
+        conn.createStatement().executeUpdate("delete from people where year_of_birth=1940");
+
+        Collection<String> names2 = retrieveColumn("select * from people", "first_name");
+        assertEquals(Arrays.stream(beatles).filter(p -> p.yearOfBirth != 1940).map(p -> p.firstName).collect(Collectors.toSet()), names2);
+    }
+
+
+
+    private Collection<String> retrieveColumn(String sql, String column) throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+        Collection<String> data = new HashSet<>();
+        while (rs.next()) {
+            data.add(rs.getString(column));
+        }
+        return data;
+    }
+
     private void selectByOneNumericIndexedField(Connection conn, String operation, int year, int ... expectedIds) throws SQLException {
         select(conn, format("select * from people where year_of_birth%s%s", operation, year), expectedIds);
     }
@@ -519,12 +569,4 @@ class SelectTest {
         write(writePolicy, 3, person(3, "George", "Harrison", 1943));
         write(writePolicy, 4, person(4, "Ringo", "Starr", 1940));
     }
-
-
-    @Test
-    void mytest() throws SQLException {
-        writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select first_name as fn, year_of_birth  from people");
-    }
-
 }

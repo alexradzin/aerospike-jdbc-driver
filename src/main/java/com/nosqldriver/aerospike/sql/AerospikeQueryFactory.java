@@ -1,9 +1,14 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
+import com.aerospike.client.Key;
+import com.aerospike.client.Record;
+import com.aerospike.client.policy.ScanPolicy;
+import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.PredExp;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation;
 import com.nosqldriver.aerospike.sql.query.QueryHolder;
+import com.nosqldriver.sql.RecordPredicate;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -22,6 +27,7 @@ import net.sf.jsqlparser.parser.CCJSqlParserManager;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
+import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.select.FromItemVisitorAdapter;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
@@ -32,7 +38,9 @@ import net.sf.jsqlparser.statement.select.SelectVisitorAdapter;
 import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
@@ -40,7 +48,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 class AerospikeQueryFactory {
     private CCJSqlParserManager parserManager = new CCJSqlParserManager();
@@ -151,6 +162,7 @@ class AerospikeQueryFactory {
                                         operation.clear();
                                     }
 
+                                    @Override
                                     public void visit(Column column) {
                                         System.out.println("visit(Column column): " + column);
                                         if (operation.getColumn() == null) {
@@ -224,14 +236,141 @@ class AerospikeQueryFactory {
                 }
             });
 
-
-
-
             return queries.getQuery();
         } catch (JSQLParserException e) {
             throw new SQLException(e);
         }
     }
+
+
+    Function<IAerospikeClient, Integer> createUpdate(String sql) throws SQLException {
+        try {
+
+            AtomicInteger limit = new AtomicInteger(0);
+            AtomicReference<String> tableName = new AtomicReference<>(null);
+            AtomicReference<String> schema = new AtomicReference<>(AerospikeQueryFactory.this.schema);
+            AtomicReference<String> whereExpr = new AtomicReference<>(null);
+
+            AtomicReference<Predicate<Key>> keyPredicate = new AtomicReference<>(key -> false);
+            AtomicReference<Predicate<Record>> recordPredicate = new AtomicReference<>(key -> true);
+            AtomicBoolean useWhereRecord = new AtomicBoolean(false);
+            AtomicBoolean filterByPk = new AtomicBoolean(false);
+
+            parserManager.parse(new StringReader(sql)).accept(new StatementVisitorAdapter() {
+                @Override
+                public void visit(Delete delete) {
+                    Table table = delete.getTable();
+                    if (table != null) {
+                        tableName.set(table.getName());
+                        if (table.getSchemaName() != null) {
+                            schema.set(table.getSchemaName());
+                        }
+                    }
+
+                    if (delete.getLimit() != null && delete.getLimit().getRowCount() != null) {
+                        delete.getLimit().getRowCount().accept(new ExpressionVisitorAdapter() {
+                            @Override
+                            public void visit(LongValue value) {
+                                limit.set((int)value.getValue());
+                            }
+                        });
+                    }
+                    Expression where = delete.getWhere();
+                    AtomicReference<String> column = new AtomicReference<>(null);
+                    List<Long> longParameters = new ArrayList<>();
+                    Collection<String> stringParameters = new ArrayList<>();
+
+                    if (where != null) {
+                        where.accept(new ExpressionVisitorAdapter() {
+                            public void visit(Between expr) {
+                                System.out.println("visit(Between): " + expr);
+                                super.visit(expr);
+                                if (!stringParameters.isEmpty()) {
+                                    throw new IllegalArgumentException("BETWEEN cannot be applied to string");
+                                }
+
+                                if (!longParameters.isEmpty()) {
+                                    if (longParameters.size() != 2) {
+                                        throw new IllegalArgumentException("BETWEEN must have exactly 2 edges");
+                                    }
+                                    if ("PK".equals(column.get())) {
+                                        Collection<Key> keys = LongStream.range(longParameters.get(0), longParameters.get(1)).boxed().map(i -> new Key(schema.get(), tableName.get(), i)).collect(Collectors.toSet());
+                                        keyPredicate.set(keys::contains);
+                                        filterByPk.set(true);
+                                    } else {
+                                        useWhereRecord.set(true);
+                                    }
+                                }
+                            }
+                            public void visit(InExpression expr) {
+                                super.visit(expr);
+                                System.out.println("visit(In): " + expr);
+                                if ("PK".equals(column.get())) {
+                                    Collection<Key> keys = longParameters.stream().map(i -> new Key(schema.get(), tableName.get(), i)).collect(Collectors.toSet());
+                                    keyPredicate.set(keys::contains);
+                                    filterByPk.set(true);
+                                } else {
+                                    useWhereRecord.set(true);
+                                }
+                            }
+                            protected void visitBinaryExpression(BinaryExpression expr) {
+                                System.out.println("visitBinaryExpression(BinaryExpression expr): " + expr);
+                                super.visitBinaryExpression(expr);
+
+                                if ("PK".equals(column.get())) {
+                                    Key condition = new Key(schema.get(), tableName.get(), longParameters.get(0));
+                                    keyPredicate.set(new Predicate<Key>() {
+                                        @Override
+                                        public boolean test(Key key) {
+                                            return condition.equals(key);
+                                        }
+                                    });
+                                    filterByPk.set(true);
+                                } else {
+                                    useWhereRecord.set(true);
+                                }
+
+                            }
+                            public void visit(Column col) {
+                                column.set(col.getColumnName());
+                                System.out.println("visit(Column column): " + column);
+                            }
+                            public void visit(LongValue value) {
+                                System.out.println("visit(LongValue): " + value);
+                                longParameters.add(value.getValue());
+                            }
+                            public void visit(StringValue value) {
+                                System.out.println("visit(StringValue): " + value);
+                                stringParameters.add(value.getValue());
+                            }
+                        });
+                        whereExpr.set(delete.getWhere().toString());
+                    }
+                }
+            });
+
+            if (useWhereRecord.get() && whereExpr.get() != null) {
+                recordPredicate.set(new RecordPredicate(whereExpr.get()));
+            } else if (filterByPk.get()) {
+                recordPredicate.set(r -> false);
+            }
+
+            return client -> {
+                AtomicInteger count = new AtomicInteger(0);
+                client.scanAll(new ScanPolicy(), schema.get(), tableName.get(),
+                        (key, record) -> {
+                            if (keyPredicate.get().test(key) || recordPredicate.get().test(record)) {
+                                client.delete(new WritePolicy(), key);
+                                count.incrementAndGet();
+                            }
+                        });
+                return count.get();
+            };
+        } catch (JSQLParserException e) {
+            throw new SQLException(e);
+        }
+    }
+
 
     private static String operatorKey(Class<?> type, String operand) {
         return type.getName() + operand;
