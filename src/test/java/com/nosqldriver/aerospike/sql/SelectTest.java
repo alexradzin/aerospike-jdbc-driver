@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -462,42 +463,42 @@ class SelectTest {
 
     @Test
     void deleteAll() throws SQLException {
-        writeBeatles();
-        Collection<String> names1 = retrieveColumn("select * from people", "first_name");
-        assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
-        conn.createStatement().executeUpdate("delete from people");
-        assertTrue(retrieveColumn("select * from people", "first_name").isEmpty());
+        delete("delete from people", p -> false);
     }
 
 
     @Test
-    void deleteByPk() throws SQLException {
-        writeBeatles();
-        Collection<String> names1 = retrieveColumn("select * from people", "first_name");
-        assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
-
-        conn.createStatement().executeUpdate("delete from people where PK=1");
-        //conn.createStatement().executeUpdate("delete from people where PK in (1, 2, 3)");
-        //conn.createStatement().executeUpdate("delete from people where PK between 1 and 3");
-
-        Collection<String> names2 = retrieveColumn("select * from people", "first_name");
-        assertEquals(Arrays.stream(beatles).map(p -> p.firstName).filter(name -> !name.equals("John")).collect(Collectors.toSet()), names2);
+    void deleteByPkEq() throws SQLException {
+        delete("delete from people where PK=1", p -> !"John".equals(p.firstName));
     }
 
+
+    @Test
+    void deleteByPkIn() throws SQLException {
+        delete("delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName));
+    }
+
+    @Test
+    void deleteByPkBetween() throws SQLException {
+        delete("delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName));
+    }
 
     @Test
     void deleteByCriteria() throws SQLException {
+        delete("delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940);
+    }
+
+
+    private void delete(String deleteSql, Predicate<Person> expectedResultFilter) throws SQLException {
         writeBeatles();
         Collection<String> names1 = retrieveColumn("select * from people", "first_name");
         assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
 
-        conn.createStatement().executeUpdate("delete from people where year_of_birth=1940");
+        conn.createStatement().executeUpdate(deleteSql);
 
         Collection<String> names2 = retrieveColumn("select * from people", "first_name");
-        assertEquals(Arrays.stream(beatles).filter(p -> p.yearOfBirth != 1940).map(p -> p.firstName).collect(Collectors.toSet()), names2);
+        assertEquals(Arrays.stream(beatles).filter(expectedResultFilter).map(p -> p.firstName).collect(Collectors.toSet()), names2);
     }
-
-
 
     private Collection<String> retrieveColumn(String sql, String column) throws SQLException {
         ResultSet rs = conn.createStatement().executeQuery(sql);

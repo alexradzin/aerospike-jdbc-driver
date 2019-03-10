@@ -3,7 +3,6 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
-import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.PredExp;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation;
@@ -294,8 +293,9 @@ class AerospikeQueryFactory {
                                         throw new IllegalArgumentException("BETWEEN must have exactly 2 edges");
                                     }
                                     if ("PK".equals(column.get())) {
-                                        Collection<Key> keys = LongStream.range(longParameters.get(0), longParameters.get(1)).boxed().map(i -> new Key(schema.get(), tableName.get(), i)).collect(Collectors.toSet());
+                                        Collection<Key> keys = LongStream.rangeClosed(longParameters.get(0), longParameters.get(1)).boxed().map(i -> new Key(schema.get(), tableName.get(), i)).collect(Collectors.toSet());
                                         keyPredicate.set(keys::contains);
+
                                         filterByPk.set(true);
                                     } else {
                                         useWhereRecord.set(true);
@@ -319,12 +319,7 @@ class AerospikeQueryFactory {
 
                                 if ("PK".equals(column.get())) {
                                     Key condition = new Key(schema.get(), tableName.get(), longParameters.get(0));
-                                    keyPredicate.set(new Predicate<Key>() {
-                                        @Override
-                                        public boolean test(Key key) {
-                                            return condition.equals(key);
-                                        }
-                                    });
+                                    keyPredicate.set(condition::equals);
                                     filterByPk.set(true);
                                 } else {
                                     useWhereRecord.set(true);
@@ -357,7 +352,7 @@ class AerospikeQueryFactory {
 
             return client -> {
                 AtomicInteger count = new AtomicInteger(0);
-                client.scanAll(new ScanPolicy(), schema.get(), tableName.get(),
+                client.scanAll(policyProvider.getScanPolicy(), schema.get(), tableName.get(),
                         (key, record) -> {
                             if (keyPredicate.get().test(key) || recordPredicate.get().test(record)) {
                                 client.delete(new WritePolicy(), key);
