@@ -2,9 +2,10 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
-import com.aerospike.client.policy.ScanPolicy;
-import com.aerospike.client.policy.WritePolicy;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -22,6 +23,51 @@ public class AerospikeStatement implements java.sql.Statement {
     private final Collection<String> indexes;
     private final ConnectionParametersParser parametersParser = new ConnectionParametersParser();
 
+    private enum StatementType {
+        SELECT {
+            @Override
+            ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
+                return new AerospikeQueryFactory(statement.schema, statement.policyProvider, statement.indexes).createQuery(sql).apply(statement.client);
+            }
+        },
+        INSERT,
+        UPDATE,
+        DELETE {
+            @Override
+            ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
+                executeUpdate(statement, sql);
+                return (ResultSet) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), new Class[]{ResultSet.class}, new InvocationHandler() {
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) {
+                        return "next".equals(method.getName()) ? false : null;
+                    }
+                });
+            }
+            @Override
+            int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
+                return new AerospikeQueryFactory(statement.schema, statement.policyProvider, statement.indexes).createUpdate(sql).apply(statement.client);
+            }
+
+            @Override
+            boolean execute(AerospikeStatement statement, String sql) throws SQLException {
+                return executeUpdate(statement, sql) > 0;
+            }
+        },
+        SHOW,
+        ;
+
+
+        ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
+            throw new UnsupportedOperationException(String.format("%s does not support %s", name(), "executeQuery"));
+        }
+        int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
+            throw new UnsupportedOperationException(String.format("%s does not support %s", name(), "executeUpdate"));
+        }
+        boolean execute(AerospikeStatement statement, String sql) throws SQLException {
+            throw new UnsupportedOperationException(String.format("%s does not support %s", name(), "execute"));
+        }
+    }
+
     public AerospikeStatement(IAerospikeClient client, Connection connection, String schema, AerospikePolicyProvider policyProvider) {
         this.client = client;
         this.connection = connection;
@@ -32,12 +78,14 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
-        return new AerospikeQueryFactory(schema, policyProvider, indexes).createQuery(sql).apply(client);
+        return getStatementType(sql).executeQuery(this, sql);
+        //return new AerospikeQueryFactory(schema, policyProvider, indexes).createQuery(sql).apply(client);
     }
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
-        return new AerospikeQueryFactory(schema, policyProvider, indexes).createUpdate(sql).apply(client);
+        return getStatementType(sql).executeUpdate(this, sql);
+        //return new AerospikeQueryFactory(schema, policyProvider, indexes).createUpdate(sql).apply(client);
     }
 
     @Override
@@ -102,7 +150,7 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public boolean execute(String sql) throws SQLException {
-        return false;
+        return getStatementType(sql).execute(this, sql);
     }
 
     @Override
@@ -248,5 +296,9 @@ public class AerospikeStatement implements java.sql.Statement {
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return false;
+    }
+
+    private static StatementType getStatementType(String sql) {
+        return StatementType.valueOf(sql.trim().split("\\s+")[0].toUpperCase());
     }
 }

@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -61,6 +62,40 @@ class SelectTest {
             this.yearOfBirth = yearOfBirth;
         }
     }
+
+    private Function<String, Integer> executeUpdate = new Function<String, Integer>() {
+        @Override
+        public Integer apply(String sql) {
+            try {
+                return conn.createStatement().executeUpdate(sql);
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+    };
+
+    private Function<String, Boolean> execute = new Function<String, Boolean>() {
+        @Override
+        public Boolean apply(String sql) {
+            try {
+                return conn.createStatement().execute(sql);
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+    };
+
+    private Function<String, ResultSet> executeQuery = new Function<String, ResultSet>() {
+        @Override
+        public ResultSet apply(String sql) {
+            try {
+                return conn.createStatement().executeQuery(sql);
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+    };
+
 
     @BeforeEach
     void init() throws SQLException {
@@ -463,42 +498,60 @@ class SelectTest {
 
     @Test
     void deleteAll() throws SQLException {
-        delete("delete from people", p -> false);
+        delete(executeUpdate, "delete from people", p -> false, res -> res == 4);
+        delete(execute, "delete from people", p -> false, res -> res);
+        delete(executeQuery, "delete from people", p -> false, rs -> !resultSetNext(rs));
     }
 
 
     @Test
     void deleteByPkEq() throws SQLException {
-        delete("delete from people where PK=1", p -> !"John".equals(p.firstName));
+        delete(executeUpdate, "delete from people where PK=1", p -> !"John".equals(p.firstName), res -> res == 1);
+        delete(execute, "delete from people where PK=1", p -> !"John".equals(p.firstName), res -> res);
+        delete(executeQuery, "delete from people where PK=1", p -> !"John".equals(p.firstName), rs -> !resultSetNext(rs));
     }
 
 
     @Test
     void deleteByPkIn() throws SQLException {
-        delete("delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName));
+        delete(executeUpdate, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), res -> res == 3);
+        delete(execute, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), res -> res);
+        delete(executeQuery, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), rs -> !resultSetNext(rs));
     }
 
     @Test
     void deleteByPkBetween() throws SQLException {
-        delete("delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName));
+        delete(executeUpdate, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), res -> res == 3);
+        delete(execute, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), res -> res);
+        delete(executeQuery, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), rs -> !resultSetNext(rs));
     }
 
     @Test
     void deleteByCriteria() throws SQLException {
-        delete("delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940);
+        delete(executeUpdate, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, res -> res == 2);
+        delete(execute, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, res -> res);
+        delete(executeQuery, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, rs -> !resultSetNext(rs));
     }
 
-
-    private void delete(String deleteSql, Predicate<Person> expectedResultFilter) throws SQLException {
+    private <T> void delete(Function<String, T> executor, String deleteSql, Predicate<Person> expectedResultFilter, Predicate<T> returnValueValidator) throws SQLException {
         writeBeatles();
         Collection<String> names1 = retrieveColumn("select * from people", "first_name");
         assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
 
-        conn.createStatement().executeUpdate(deleteSql);
+        assertTrue(returnValueValidator.test(executor.apply(deleteSql)));
 
         Collection<String> names2 = retrieveColumn("select * from people", "first_name");
         assertEquals(Arrays.stream(beatles).filter(expectedResultFilter).map(p -> p.firstName).collect(Collectors.toSet()), names2);
     }
+
+    boolean resultSetNext(ResultSet rs) {
+        try {
+            return rs.next();
+        } catch (SQLException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
 
     private Collection<String> retrieveColumn(String sql, String column) throws SQLException {
         ResultSet rs = conn.createStatement().executeQuery(sql);
