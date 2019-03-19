@@ -6,7 +6,7 @@ import com.aerospike.client.policy.Policy;
 import java.sql.ResultSet;
 import java.util.function.Function;
 
-abstract class AerospikeQuery<C, P extends Policy> implements Function<IAerospikeClient, java.sql.ResultSet> {
+abstract class AerospikeQuery<C, P extends Policy> implements Function<IAerospikeClient, ResultSet> {
     protected final String schema;
     protected final String[] names;
     protected final C criteria;

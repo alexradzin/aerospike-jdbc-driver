@@ -2,6 +2,7 @@ package com.nosqldriver.aerospike.sql.query;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
+import com.aerospike.client.Value;
 import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
@@ -9,17 +10,28 @@ import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.FilteredResultSet;
 import com.nosqldriver.sql.OffsetLimit;
+import com.nosqldriver.sql.ResultSetOverIterableFactory;
 import com.nosqldriver.sql.ResultSetWrapper;
+import net.sf.jsqlparser.expression.BinaryExpression;
+import net.sf.jsqlparser.expression.DoubleValue;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.schema.Column;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static java.lang.String.join;
 
 public class QueryHolder {
@@ -31,6 +43,7 @@ public class QueryHolder {
     private List<String> aliases = new ArrayList<>();
     private List<String> expressions = new ArrayList<>();
     private Collection<String> hiddenNames = new HashSet<>();
+    private Collection<String> aggregatedFields = null;
 
     private final Statement statement;
     private AerospikeBatchQueryBySecondaryIndex secondayIndexQuery = null;
@@ -102,22 +115,6 @@ public class QueryHolder {
         statement.setSetName(set);
     }
 
-    public void addColumn(String column, String alias, boolean expr) {
-        if (expr) {
-            names.add(null);
-            expressions.add(column);
-            aliases.add(alias);
-            hiddenNames.addAll(expressionResultSetWrappingFactory.getVariableNames(column));
-        } else {
-            names.add(column);
-            expressions.add(null);
-            aliases.add(alias);
-        }
-        statement.setBinNames(getNames(true));
-    }
-
-
-
     private Function<IAerospikeClient, java.sql.ResultSet>  createSecondaryIndexQuery() {
         return createSecondaryIndexQuery(filter, predExps);
     }
@@ -128,6 +125,16 @@ public class QueryHolder {
         if (predExps.size() >= 3) {
             statement.setPredExp(predExps.toArray(new PredExp[0]));
         }
+
+        if (aggregatedFields != null) {
+            Value[] fieldsForAggregation = aggregatedFields.stream().map(Value.StringValue::new).toArray(Value[]::new);
+            if(statement.getBinNames() != null && statement.getBinNames().length > 0) {
+                throw new IllegalArgumentException("Cannot perform aggregation operation with query that contains regular fields");
+            }
+            statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", fieldsForAggregation);
+            return new AerospikeAggregationQuery(schema, getNames(false), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
+        }
+
         return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, getNames(false), statement, policyProvider.getQueryPolicy());
     }
 
@@ -167,5 +174,75 @@ public class QueryHolder {
         return offset >= 0 || limit >= 0 ?
                 client -> new FilteredResultSet(wrapped.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) :
                 wrapped;
+    }
+
+
+    public abstract class ColumnType {
+        private final Predicate<Expression> locator;
+
+        protected ColumnType(Predicate<Expression> locator) {
+            this.locator = locator;
+        }
+        protected abstract String getText(Expression expr);
+        public abstract void addColumn(Expression expr, String alias);
+    }
+
+
+
+    private ColumnType[] types = new ColumnType[] {
+            new ColumnType((e) -> e instanceof Column) {
+
+                @Override
+                protected String getText(Expression expr) {
+                    return ((Column) expr).getColumnName();
+                }
+
+                @Override
+                public void addColumn(Expression expr, String alias) {
+                    names.add(getText(expr));
+                    expressions.add(null);
+                    aliases.add(alias);
+                    statement.setBinNames(getNames(true));
+                }
+            },
+
+            new ColumnType(e -> e instanceof BinaryExpression || e instanceof LongValue ||  e instanceof DoubleValue || (e instanceof net.sf.jsqlparser.expression.Function && expressionResultSetWrappingFactory.getClientSideFuctionNames().contains(((net.sf.jsqlparser.expression.Function)e).getName()))) {
+                @Override
+                protected String getText(Expression expr) {
+                    return expr.toString();
+                }
+
+                @Override
+                public void addColumn(Expression expr, String alias) {
+                    String column = getText(expr);
+                    names.add(null);
+                    expressions.add(column);
+                    aliases.add(alias);
+                    hiddenNames.addAll(expressionResultSetWrappingFactory.getVariableNames(column));
+                    statement.setBinNames(getNames(true));
+                }
+            },
+
+
+            new ColumnType(e -> e instanceof net.sf.jsqlparser.expression.Function) {
+                @Override
+                protected String getText(Expression expr) {
+                    return expr.toString();
+                }
+
+                @Override
+                public void addColumn(Expression expr, String alias) {
+                    if (aggregatedFields == null) {
+                        aggregatedFields = new HashSet<>();
+                    }
+                    aggregatedFields.addAll(Optional.ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(Collectors.toList())).orElse(Collections.emptyList()));
+                    names.add(expr.toString());
+                    aliases.add(alias);
+                }
+            },
+    };
+
+    public ColumnType getColumnType(Expression expr) {
+        return Arrays.stream(types).filter(t -> t.locator.test(expr)).findFirst().orElseThrow(() -> new IllegalArgumentException(format("Column type %s is not supported", expr)));
     }
 }

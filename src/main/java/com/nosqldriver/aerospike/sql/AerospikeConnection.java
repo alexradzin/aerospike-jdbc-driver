@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.Host;
 import com.aerospike.client.IAerospikeClient;
+import com.aerospike.client.Language;
 
 import java.sql.Array;
 import java.sql.Blob;
@@ -49,6 +50,7 @@ public class AerospikeConnection implements Connection {
         client = new AerospikeClient(parser.policy(url, props), hosts);
         schema = parser.schema(url);
         policyProvider = new AerospikePolicyProvider(parser.clientInfo(url, props));
+        client.register(policyProvider.getPolicy(), getClass().getClassLoader(), "stats.lua", "stats.lua", Language.LUA);
 
         getMetaData();
     }

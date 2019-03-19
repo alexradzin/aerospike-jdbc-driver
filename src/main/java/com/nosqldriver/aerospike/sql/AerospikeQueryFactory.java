@@ -112,12 +112,7 @@ class AerospikeQueryFactory {
                                 public void visit(SelectExpressionItem selectExpressionItem) {
                                     String alias = Optional.ofNullable(selectExpressionItem.getAlias()).map(Alias::getName).orElse(null);
                                     Expression expr = selectExpressionItem.getExpression();
-
-                                    if (expr instanceof Column) {
-                                        queries.addColumn(((Column) expr).getColumnName(), alias, false);
-                                    } else {
-                                        queries.addColumn(expr.toString(), alias, true);
-                                    }
+                                    queries.getColumnType(expr).addColumn(expr, alias);
                                 }
                             }));
 

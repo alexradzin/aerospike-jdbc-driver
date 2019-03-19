@@ -4,9 +4,13 @@ import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.AerospikeException;
 import com.aerospike.client.Bin;
 import com.aerospike.client.Key;
+import com.aerospike.client.Language;
+import com.aerospike.client.Value;
+import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.IndexType;
+import com.aerospike.client.query.Statement;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,6 +32,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -533,6 +539,93 @@ class SelectTest {
         delete(executeQuery, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, rs -> !resultSetNext(rs));
     }
 
+
+    @Test
+    @DisplayName("select count(*) from people")
+    void countAll() throws SQLException {
+        aggregateOneField("select count(*) from people", "count(*)", "count(*)", 4);
+    }
+
+    @Test
+    @DisplayName("select count(*) from people")
+    void countAllWithAlias() throws SQLException {
+        aggregateOneField("select count(*) as number_of_people from people", "count(*)", "number_of_people", 4);
+    }
+
+    @Test
+    @DisplayName("select count(year_of_birth) from people")
+    void countYearOfBirth() throws SQLException {
+        aggregateOneField("select count(year_of_birth) from people", "count(year_of_birth)", "count(year_of_birth)", 4);
+    }
+
+    @Test
+    @DisplayName("select count(year_of_birth) as n from people")
+    void countYearOfBirthWithAlias() throws SQLException {
+        aggregateOneField("select count(year_of_birth) as n from people", "count(year_of_birth)", "n", 4);
+    }
+
+    @Test
+    @DisplayName("select max(year_of_birth) from people")
+    void maxYearOfBirh() throws SQLException {
+        aggregateOneField("select max(year_of_birth) as youngest from people", "max(year_of_birth)", "youngest", 1943);
+    }
+
+    @Test
+    @DisplayName("select min(year_of_birth) from people")
+    void minYearOfBirh() throws SQLException {
+        aggregateOneField("select min(year_of_birth) as oldest from people", "min(year_of_birth)", "oldest", 1940);
+    }
+
+    @Test
+    @DisplayName("select count(*) as n, min(year_of_birth) as min, max(year_of_birth) as max, avg(year_of_birth) as avg, sum(year_of_birth) as total from people")
+    void callAllAggregations() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select count(*) as n, min(year_of_birth) as min, max(year_of_birth) as max, avg(year_of_birth) as avg, sum(year_of_birth) as total from people");
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(NAMESPACE, md.getSchemaName(1));
+        assertEquals(5, rs.getMetaData().getColumnCount());
+
+        assertEquals("count(*)", md.getColumnName(1));
+        assertEquals("n", md.getColumnLabel(1));
+        assertEquals("min(year_of_birth)", md.getColumnName(2));
+        assertEquals("min", md.getColumnLabel(2));
+        assertEquals("max(year_of_birth)", md.getColumnName(3));
+        assertEquals("max", md.getColumnLabel(3));
+        assertEquals("avg(year_of_birth)", md.getColumnName(4));
+        assertEquals("avg", md.getColumnLabel(4));
+        assertEquals("sum(year_of_birth)", md.getColumnName(5));
+        assertEquals("total", md.getColumnLabel(5));
+
+        assertTrue(rs.next());
+
+        assertEquals(4, rs.getInt(1));
+        assertEquals(4, rs.getInt("n"));
+        assertEquals(1940, rs.getInt(2));
+        assertEquals(1940, rs.getInt("min"));
+        assertEquals(1943, rs.getInt(3));
+        assertEquals(1943, rs.getInt("max"));
+        double average = Arrays.stream(beatles).mapToInt(p -> p.yearOfBirth).average().orElseThrow(() -> new IllegalStateException("No average found"));
+        assertEquals(average, rs.getDouble(4), 0.001);
+        assertEquals(average, rs.getDouble("avg"), 0.001);
+        int sum = Arrays.stream(beatles).mapToInt(p -> p.yearOfBirth).sum();
+        assertEquals(sum, rs.getInt(5));
+        assertEquals(sum, rs.getInt("total"));
+        assertFalse(rs.next());
+    }
+
+    void aggregateOneField(String sql, String name, String label, int expected) throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertEquals(1, rs.getMetaData().getColumnCount());
+        assertEquals(name, rs.getMetaData().getColumnName(1));
+        assertEquals(label, rs.getMetaData().getColumnLabel(1));
+        assertTrue(rs.next());
+        assertEquals(expected, rs.getInt(1));
+        assertEquals(expected, rs.getInt(label));
+        assertFalse(rs.next());
+    }
+
     private <T> void delete(Function<String, T> executor, String deleteSql, Predicate<Person> expectedResultFilter, Predicate<T> returnValueValidator) throws SQLException {
         writeBeatles();
         Collection<String> names1 = retrieveColumn("select * from people", "first_name");
@@ -622,5 +715,35 @@ class SelectTest {
         write(writePolicy, 2, person(2, "Paul", "McCartney", 1942));
         write(writePolicy, 3, person(3, "George", "Harrison", 1943));
         write(writePolicy, 4, person(4, "Ringo", "Starr", 1940));
+    }
+
+    @Test
+    void testFunction() {
+        writeBeatles();
+        Statement statement = new Statement();
+        statement.setSetName("people");
+        statement.setNamespace("test");
+        //statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "add_stat_ops");
+        //statement.setAggregateFunction(getClass().getClassLoader(), "sum1.lua", "sum1", "sum_single_bin", new Value.StringValue("year_of_birth"));
+        //statement.setAggregateFunction(getClass().getClassLoader(), "sum2.lua", "sum2", "sum_single_bin", new Value.StringValue("year_of_birth"));
+
+        //System.setProperty("lua.dir", "/tmp");
+        //statement.setAggregateFunction("sum2", "sum_single_bin", new Value.StringValue("year_of_birth"));
+
+        //statement.setAggregateFunction(getClass().getClassLoader(), "sum3.lua", "sum3", "sum_single_bin", new Value.StringValue("year_of_birth"));
+        statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", new Value.StringValue("year_of_birth"));
+        //statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats");
+
+
+
+
+        //client.register(new Policy(), getClass().getClassLoader(), "stats.lua", "stats.lua", Language.LUA);
+        //client.register(new Policy(), getClass().getClassLoader(), "sum1.lua", "sum1.lua", Language.LUA).waitTillComplete();
+        //client.register(new Policy(), getClass().getClassLoader(), "sum2.lua", "sum2.lua", Language.LUA).waitTillComplete();
+        client.register(new Policy(), getClass().getClassLoader(), "stats.lua", "stats.lua", Language.LUA);
+        com.aerospike.client.query.ResultSet rs = client.queryAggregate(null, statement);
+        while(rs.next()) {
+            System.out.println("rec: " + rs.getObject());
+        }
     }
 }

@@ -42,7 +42,7 @@ public class ExpressionAwareResultSetFactory {
 
 
     private static final Pattern FUNCTION_HEADER = Pattern.compile("function\\s+(\\w+)\\s*\\(");
-    private static final Map<Class<? extends Number>, Function<Number, Number>> typeTransforemers = new HashMap<>();
+    static final Map<Class<?>, Function<Number, Number>> typeTransforemers = new HashMap<>();
     static {
         typeTransforemers.put(Byte.class, Number::byteValue);
         typeTransforemers.put(Short.class, Number::shortValue);
@@ -87,7 +87,7 @@ public class ExpressionAwareResultSetFactory {
 
     public ResultSet wrap(ResultSet rs, Collection<String> names, List<String> evals, List<String> aliases) {
         return (ResultSet)Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), new Class[]{ResultSet.class}, new InvocationHandler() {
-            Map<String, String> aliasToEval = range(0, aliases.size()).boxed().filter(i -> evals.get(i) != null).collect(toMap(aliases::get, evals::get));
+            Map<String, String> aliasToEval = range(0, aliases.size()).boxed().filter(i -> evals.size() > i && evals.get(i) != null).collect(toMap(aliases::get, evals::get));
 
             @Override
             public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
@@ -98,7 +98,8 @@ public class ExpressionAwareResultSetFactory {
                         String key = (String) args[0];
                         eval = aliasToEval.get(key);
                     } else if (int.class.equals(paramType)) {
-                        eval = evals.get((Integer) args[0] - 1);
+                        int index = (Integer)args[0] - 1;
+                        eval = evals.size() > index ? evals.get(index) : null;
                     }
                     if (eval != null) {
                         Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
@@ -150,4 +151,7 @@ public class ExpressionAwareResultSetFactory {
                 .collect(toCollection(LinkedHashSet::new));
     }
 
+    public Collection<String> getClientSideFuctionNames() {
+        return functionNames;
+    }
 }
