@@ -29,6 +29,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -131,6 +133,22 @@ public class QueryHolder {
             if(statement.getBinNames() != null && statement.getBinNames().length > 0) {
                 throw new IllegalArgumentException("Cannot perform aggregation operation with query that contains regular fields");
             }
+            Pattern p = Pattern.compile("distinct\\((\\w+)\\)");
+            Optional<String> distinctExpression = aggregatedFields.stream().filter(s -> p.matcher(s).find()).findAny();
+            if (distinctExpression.isPresent()) {
+                if (aggregatedFields.size() > 1) {
+                    throw new IllegalArgumentException("Wrong query syntax: distinct is used together with other fileds");
+                }
+
+                Matcher m = p.matcher(distinctExpression.get());
+                if (!m.find()) {
+                    throw new IllegalStateException(); // actually cannot happen
+                }
+                String groupField = m.group(1);
+                statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new Value.StringValue(groupField));
+                names = new ArrayList<>(aggregatedFields);
+                return new AerospikeDistinctQuery(schema, aggregatedFields.toArray(new String[0]), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
+            }
             statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", fieldsForAggregation);
             return new AerospikeAggregationQuery(schema, getNames(false), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
         }
@@ -178,9 +196,9 @@ public class QueryHolder {
 
 
     public abstract class ColumnType {
-        private final Predicate<Expression> locator;
+        private final Predicate<Object> locator;
 
-        protected ColumnType(Predicate<Expression> locator) {
+        protected ColumnType(Predicate<Object> locator) {
             this.locator = locator;
         }
         protected abstract String getText(Expression expr);
@@ -240,9 +258,26 @@ public class QueryHolder {
                     aliases.add(alias);
                 }
             },
+
+            new ColumnType(e -> e instanceof String && ((String)e).startsWith("distinct")) {
+                @Override
+                protected String getText(Expression expr) {
+                    return expr.toString();
+                }
+
+                @Override
+                public void addColumn(Expression expr, String alias) {
+                    if (aggregatedFields == null) {
+                        aggregatedFields = new HashSet<>();
+                    }
+                    aggregatedFields.add("distinct" + expr.toString());
+                    names.add(expr.toString());
+                    aliases.add(alias);
+                }
+            },
     };
 
-    public ColumnType getColumnType(Expression expr) {
+    public ColumnType getColumnType(Object expr) {
         return Arrays.stream(types).filter(t -> t.locator.test(expr)).findFirst().orElseThrow(() -> new IllegalArgumentException(format("Column type %s is not supported", expr)));
     }
 }

@@ -107,12 +107,15 @@ class AerospikeQueryFactory {
                                 }
                             });
 
+
+
                             plainSelect.getSelectItems().forEach(si -> si.accept(new SelectItemVisitorAdapter() {
                                 @Override
                                 public void visit(SelectExpressionItem selectExpressionItem) {
                                     String alias = Optional.ofNullable(selectExpressionItem.getAlias()).map(Alias::getName).orElse(null);
                                     Expression expr = selectExpressionItem.getExpression();
-                                    queries.getColumnType(expr).addColumn(expr, alias);
+                                    Object selector = plainSelect.getDistinct() != null ? "distinct" + expr : expr; //TODO: ugly patch.
+                                    queries.getColumnType(selector).addColumn(expr, alias);
                                 }
                             }));
 

@@ -1,6 +1,6 @@
 function single_bin_stats(stream, ...)
 	local out = map()
-    parm={...}
+    parm={... }
 
     out['count(*)'] = 0
     for i=1,#parm do

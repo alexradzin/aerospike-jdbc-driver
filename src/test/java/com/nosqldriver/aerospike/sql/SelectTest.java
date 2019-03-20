@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -613,6 +614,42 @@ class SelectTest {
         assertFalse(rs.next());
     }
 
+    @Test
+    void selectDistinctYearOfBirth() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select distinct(year_of_birth) as year from people");
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(NAMESPACE, md.getSchemaName(1));
+        assertEquals(1, rs.getMetaData().getColumnCount());
+        assertEquals("distinct(year_of_birth)", rs.getMetaData().getColumnName(1));
+        assertEquals("year", rs.getMetaData().getColumnLabel(1));
+
+        Collection<Integer> years = new LinkedHashSet<>();
+        while(rs.next()) {
+            years.add(rs.getInt(1));
+        }
+        assertEquals(new HashSet<>(Arrays.asList(1940, 1942, 1943)), years);
+    }
+
+    @Test
+    void selectDistinctFirstName() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select distinct(first_name) as given_name from people");
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(NAMESPACE, md.getSchemaName(1));
+        assertEquals(1, rs.getMetaData().getColumnCount());
+        assertEquals("distinct(first_name)", rs.getMetaData().getColumnName(1));
+        assertEquals("given_name", rs.getMetaData().getColumnLabel(1));
+
+        Collection<String> names = new HashSet<>();
+        while(rs.next()) {
+            names.add(rs.getString(1));
+        }
+        assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names);
+    }
+
+
+
     void aggregateOneField(String sql, String name, String label, int expected) throws SQLException {
         writeBeatles();
         ResultSet rs = conn.createStatement().executeQuery(sql);
@@ -717,7 +754,7 @@ class SelectTest {
         write(writePolicy, 4, person(4, "Ringo", "Starr", 1940));
     }
 
-    @Test
+    //@Test
     void testFunction() {
         writeBeatles();
         Statement statement = new Statement();
@@ -731,16 +768,16 @@ class SelectTest {
         //statement.setAggregateFunction("sum2", "sum_single_bin", new Value.StringValue("year_of_birth"));
 
         //statement.setAggregateFunction(getClass().getClassLoader(), "sum3.lua", "sum3", "sum_single_bin", new Value.StringValue("year_of_birth"));
-        statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", new Value.StringValue("year_of_birth"));
+        //statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", new Value.StringValue("year_of_birth"));
         //statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats");
-
-
-
 
         //client.register(new Policy(), getClass().getClassLoader(), "stats.lua", "stats.lua", Language.LUA);
         //client.register(new Policy(), getClass().getClassLoader(), "sum1.lua", "sum1.lua", Language.LUA).waitTillComplete();
         //client.register(new Policy(), getClass().getClassLoader(), "sum2.lua", "sum2.lua", Language.LUA).waitTillComplete();
-        client.register(new Policy(), getClass().getClassLoader(), "stats.lua", "stats.lua", Language.LUA);
+
+        statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new Value.StringValue("year_of_birth"));
+        client.register(new Policy(), getClass().getClassLoader(), "distinct.lua", "distinct.lua", Language.LUA);
+
         com.aerospike.client.query.ResultSet rs = client.queryAggregate(null, statement);
         while(rs.next()) {
             System.out.println("rec: " + rs.getObject());
