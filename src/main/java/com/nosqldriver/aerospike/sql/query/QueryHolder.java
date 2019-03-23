@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql.query;
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.Value;
+import com.aerospike.client.Value.StringValue;
 import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
@@ -46,6 +47,7 @@ public class QueryHolder {
     private List<String> expressions = new ArrayList<>();
     private Collection<String> hiddenNames = new HashSet<>();
     private Collection<String> aggregatedFields = null;
+    private Collection<String> groupByFields = null;
 
     private final Statement statement;
     private AerospikeBatchQueryBySecondaryIndex secondayIndexQuery = null;
@@ -128,8 +130,14 @@ public class QueryHolder {
             statement.setPredExp(predExps.toArray(new PredExp[0]));
         }
 
+        if (groupByFields != null) {
+            Value[] args = names.stream().map(expr -> expr.replace('(', ':').replace(")", "")).map(StringValue::new).toArray(Value[]::new);
+            statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
+            return new AerospikeDistinctQuery(schema, getNames(false), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
+        }
+
         if (aggregatedFields != null) {
-            Value[] fieldsForAggregation = aggregatedFields.stream().map(Value.StringValue::new).toArray(Value[]::new);
+            Value[] fieldsForAggregation = aggregatedFields.stream().map(StringValue::new).toArray(Value[]::new);
             if(statement.getBinNames() != null && statement.getBinNames().length > 0) {
                 throw new IllegalArgumentException("Cannot perform aggregation operation with query that contains regular fields");
             }
@@ -145,13 +153,16 @@ public class QueryHolder {
                     throw new IllegalStateException(); // actually cannot happen
                 }
                 String groupField = m.group(1);
-                statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new Value.StringValue(groupField));
+                statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new StringValue(groupField));
                 names = new ArrayList<>(aggregatedFields);
                 return new AerospikeDistinctQuery(schema, aggregatedFields.toArray(new String[0]), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
             }
+
+
             statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", fieldsForAggregation);
             return new AerospikeAggregationQuery(schema, getNames(false), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
         }
+
 
         return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, getNames(false), statement, policyProvider.getQueryPolicy());
     }
@@ -250,10 +261,11 @@ public class QueryHolder {
 
                 @Override
                 public void addColumn(Expression expr, String alias) {
-                    if (aggregatedFields == null) {
+                    if (aggregatedFields == null) { // && !addition.isEmpty()) {
                         aggregatedFields = new HashSet<>();
                     }
-                    aggregatedFields.addAll(Optional.ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(Collectors.toList())).orElse(Collections.emptyList()));
+                    List<String> addition = Optional.ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(Collectors.toList())).orElse(Collections.emptyList());
+                    aggregatedFields.addAll(addition);
                     names.add(expr.toString());
                     aliases.add(alias);
                 }
@@ -276,6 +288,13 @@ public class QueryHolder {
                 }
             },
     };
+
+    public void addGroupField(String field) {
+        if (groupByFields == null) {
+            groupByFields = new HashSet<>();
+        }
+        groupByFields.add(field);
+    }
 
     public ColumnType getColumnType(Object expr) {
         return Arrays.stream(types).filter(t -> t.locator.test(expr)).findFirst().orElseThrow(() -> new IllegalArgumentException(format("Column type %s is not supported", expr)));

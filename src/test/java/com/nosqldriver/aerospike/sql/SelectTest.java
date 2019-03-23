@@ -33,7 +33,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -49,10 +48,10 @@ class SelectTest {
     private Connection conn;
 
     private static final Person[] beatles = new Person[] {
-            new Person(1, "John", "Lennon", 1940),
-            new Person(2, "Paul", "McCartney", 1942),
-            new Person(3, "George", "Harrison", 1943),
-            new Person(4, "Ringo", "Starr", 1940),
+            new Person(1, "John", "Lennon", 1940, 2),
+            new Person(2, "Paul", "McCartney", 1942, 5),
+            new Person(3, "George", "Harrison", 1943, 1),
+            new Person(4, "Ringo", "Starr", 1940, 3),
     };
 
 
@@ -61,12 +60,14 @@ class SelectTest {
         private final String firstName;
         private final String lastName;
         private final int yearOfBirth;
+        private final int kidsCount;
 
-        private Person(int id, String firstName, String lastName, int yearOfBirth) {
+        private Person(int id, String firstName, String lastName, int yearOfBirth, int numberOfChildren) {
             this.id = id;
             this.firstName = firstName;
             this.lastName = lastName;
             this.yearOfBirth = yearOfBirth;
+            this.kidsCount = numberOfChildren;
         }
     }
 
@@ -243,6 +244,7 @@ class SelectTest {
 
         assertFalse(rs.next());
     }
+
 
     @Test
     void selectSpecificFieldsWithLowerCaseLenFunction() throws SQLException {
@@ -648,7 +650,53 @@ class SelectTest {
         assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names);
     }
 
+    @Test
+    @DisplayName("select year_of_birth as year, count(*) as n from people group by year_of_birth")
+    void groupByYearOfBirth() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select year_of_birth, count(*) from people group by year_of_birth");
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(2, md.getColumnCount());
+        assertEquals("year_of_birth", md.getColumnName(1));
+        assertEquals("count(*)", md.getColumnName(2));
 
+        assertTrue(rs.next());
+        assertEquals(1940, rs.getInt(1));
+        assertEquals(2, rs.getInt(2));
+        assertTrue(rs.next());
+        assertEquals(1942, rs.getInt(1));
+        assertEquals(1, rs.getInt(2));
+        assertTrue(rs.next());
+        assertEquals(1943, rs.getInt(1));
+        assertEquals(1, rs.getInt(2));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    @DisplayName("select year_of_birth as year, count(*) as n from people group by year_of_birth")
+    void groupByYearOfBirthWithAliases() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery("select year_of_birth as year, count(*) as n from people group by year_of_birth");
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(2, md.getColumnCount());
+        assertEquals("year_of_birth", md.getColumnName(1));
+        assertEquals("year", md.getColumnLabel(1));
+        assertEquals("count(*)", md.getColumnName(2));
+        assertEquals("n", md.getColumnLabel(2));
+
+        assertTrue(rs.next());
+        assertEquals(1940, rs.getInt(1));
+        assertEquals(2, rs.getInt(2));
+        assertTrue(rs.next());
+        assertEquals(1942, rs.getInt(1));
+        assertEquals(1, rs.getInt(2));
+        assertTrue(rs.next());
+        assertEquals(1943, rs.getInt(1));
+        assertEquals(1, rs.getInt(2));
+        assertFalse(rs.next());
+    }
 
     void aggregateOneField(String sql, String name, String label, int expected) throws SQLException {
         writeBeatles();
@@ -722,8 +770,8 @@ class SelectTest {
     }
 
 
-    private Bin[] person(int id, String firstName, String lastName, int yearOfBirth) {
-        return new Bin[] {new Bin("id", id), new Bin("first_name", firstName), new Bin("last_name", lastName), new Bin("year_of_birth", yearOfBirth)};
+    private Bin[] person(int id, String firstName, String lastName, int yearOfBirth, int kidsCount) {
+        return new Bin[] {new Bin("id", id), new Bin("first_name", firstName), new Bin("last_name", lastName), new Bin("year_of_birth", yearOfBirth), new Bin("kids_count", kidsCount)};
     }
 
     private void write(WritePolicy writePolicy, Key key, Bin ... bins) {
@@ -748,10 +796,10 @@ class SelectTest {
 
     private void writeBeatles() {
         WritePolicy writePolicy = new WritePolicy();
-        write(writePolicy, 1, person(1, "John", "Lennon", 1940));
-        write(writePolicy, 2, person(2, "Paul", "McCartney", 1942));
-        write(writePolicy, 3, person(3, "George", "Harrison", 1943));
-        write(writePolicy, 4, person(4, "Ringo", "Starr", 1940));
+        write(writePolicy, 1, person(1, "John", "Lennon", 1940, 2));
+        write(writePolicy, 2, person(2, "Paul", "McCartney", 1942, 5));
+        write(writePolicy, 3, person(3, "George", "Harrison", 1943, 1));
+        write(writePolicy, 4, person(4, "Ringo", "Starr", 1940, 3));
     }
 
     //@Test
@@ -775,8 +823,13 @@ class SelectTest {
         //client.register(new Policy(), getClass().getClassLoader(), "sum1.lua", "sum1.lua", Language.LUA).waitTillComplete();
         //client.register(new Policy(), getClass().getClassLoader(), "sum2.lua", "sum2.lua", Language.LUA).waitTillComplete();
 
-        statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new Value.StringValue("year_of_birth"));
-        client.register(new Policy(), getClass().getClassLoader(), "distinct.lua", "distinct.lua", Language.LUA);
+//        statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new Value.StringValue("year_of_birth"));
+//        client.register(new Policy(), getClass().getClassLoader(), "distinct.lua", "distinct.lua", Language.LUA);
+
+
+        statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("year_of_birth"), new Value.StringValue("avg:kids_count"));
+        client.register(new Policy(), getClass().getClassLoader(), "groupby.lua", "groupby.lua", Language.LUA);
+
 
         com.aerospike.client.query.ResultSet rs = client.queryAggregate(null, statement);
         while(rs.next()) {

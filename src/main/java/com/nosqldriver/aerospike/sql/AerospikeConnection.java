@@ -22,6 +22,7 @@ import java.sql.SQLXML;
 import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -51,9 +52,17 @@ public class AerospikeConnection implements Connection {
         client = new AerospikeClient(parser.policy(url, props), hosts);
         schema = parser.schema(url);
         policyProvider = new AerospikePolicyProvider(parser.clientInfo(url, props));
-        client.register(policyProvider.getPolicy(), getClass().getClassLoader(), "stats.lua", "stats.lua", Language.LUA).waitTillComplete();
-        client.register(new Policy(), getClass().getClassLoader(), "distinct.lua", "distinct.lua", Language.LUA).waitTillComplete();
+
+        registerScript("stats", "distinct", "groupby");
         getMetaData();
+    }
+
+    private void registerScript(String ... names) {
+        Policy regPolicy = policyProvider.getPolicy();
+        ClassLoader cl = getClass().getClassLoader();
+        Arrays.stream(names).map(name -> name + ".lua")
+                .forEach(script -> client.register(regPolicy, cl, script, script, Language.LUA)
+                        .waitTillComplete());
     }
 
     @Override

@@ -215,6 +215,11 @@ class AerospikeQueryFactory {
                                 });
                             }
 
+
+                            if (plainSelect.getGroupByColumnReferences() != null) {
+                                plainSelect.getGroupByColumnReferences().forEach(e -> queries.addGroupField(((Column) e).getColumnName()));
+                            }
+
                             if (plainSelect.getOffset() != null) {
                                 queries.setOffset(plainSelect.getOffset().getOffset());
                             }

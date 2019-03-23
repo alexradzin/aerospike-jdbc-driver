@@ -6,11 +6,11 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 public class ResultSetOverDistinctMapFactory {
     public ResultSet create(String schema, String[] names, String[] aliases, Iterable<Object> iterable) {
@@ -27,8 +27,8 @@ public class ResultSetOverDistinctMapFactory {
                     }
                     currentIndex++;
                     if (currentIndex == 0) {
-                        row = (Map<String, Object>)it.next();
-                        entries = row.entrySet().stream().collect(Collectors.toList());
+                        row = toMap(it.next());
+                        entries = new ArrayList<>(row.entrySet());
                         currentIndex = 0;
                         return true;
                     }
@@ -43,9 +43,8 @@ public class ResultSetOverDistinctMapFactory {
                     if (int.class == method.getParameterTypes()[0]) {
                         int index = (int)args[0] - 1;
                         Entry<String, Object> e = entries.get(currentIndex);
-                        return cast(index == 0 ? e.getKey() : ((List<Object>)e.getValue()).get(index - 1), method.getReturnType());
-
-                        //return cast(entries.get(index).getValue(), method.getReturnType());
+                        return cast(index == 0 ? e.getKey() : new ArrayList<>(toMap(e.getValue()).values()).get(index - 1), method.getReturnType());
+                        //return cast(index == 0 ? e.getKey() : new ArrayList<>(((Map<Object, Object>)e.getValue()).values()).get(index - 1), method.getReturnType());
                     } else if (String.class == method.getParameterTypes()[0]) {
                         name = (String)args[0];
                         return cast(row.get(name), method.getReturnType());
@@ -57,6 +56,11 @@ public class ResultSetOverDistinctMapFactory {
                 throw new UnsupportedOperationException(method.getName());
             }
         });
+    }
+
+    @SuppressWarnings("unchecked")
+    private <K, V> Map<K, V> toMap(Object obj) {
+        return (Map<K, V>)obj;
     }
 
     @SuppressWarnings("unchecked")

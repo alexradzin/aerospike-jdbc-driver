@@ -10,9 +10,7 @@ function distinct(stream, name)
 
 	local function mapper(rec)
         local val = ((rec and rec[name]) or nil)
-        info("ddd1: mapper %s", tostring(existing))
         existing[val] = name
-        info("ddd2: mapper %s", tostring(existing))
 		return existing
 	end
     return stream : map(mapper) : reduce(reducer)
