@@ -2,15 +2,17 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
+import com.nosqldriver.sql.ResultSetInvocationHandler;
+import com.nosqldriver.sql.ResultSetWrapperFactory;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.util.Collection;
+
+import static com.nosqldriver.sql.ResultSetInvocationHandler.METADATA;
+import static com.nosqldriver.sql.ResultSetInvocationHandler.NEXT;
 
 public class AerospikeStatement implements java.sql.Statement {
     private final IAerospikeClient client;
@@ -36,10 +38,11 @@ public class AerospikeStatement implements java.sql.Statement {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-                return (ResultSet) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), new Class[]{ResultSet.class}, new InvocationHandler() {
+
+                return new ResultSetWrapperFactory().create(new ResultSetInvocationHandler<Object>(NEXT | METADATA, null, statement.schema, new String[0], new String[0]) {
                     @Override
-                    public Object invoke(Object proxy, Method method, Object[] args) {
-                        return "next".equals(method.getName()) ? false : null;
+                    protected boolean next() {
+                        return false;
                     }
                 });
             }
@@ -79,13 +82,11 @@ public class AerospikeStatement implements java.sql.Statement {
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         return getStatementType(sql).executeQuery(this, sql);
-        //return new AerospikeQueryFactory(schema, policyProvider, indexes).createQuery(sql).apply(client);
     }
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
         return getStatementType(sql).executeUpdate(this, sql);
-        //return new AerospikeQueryFactory(schema, policyProvider, indexes).createUpdate(sql).apply(client);
     }
 
     @Override

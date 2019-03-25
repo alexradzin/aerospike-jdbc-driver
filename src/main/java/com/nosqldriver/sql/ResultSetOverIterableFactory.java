@@ -1,69 +1,50 @@
 package com.nosqldriver.sql;
 
-import com.nosqldriver.aerospike.sql.AerospikeResultSetMetaData;
-
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Map;
 
-import static java.lang.String.format;
+import static com.nosqldriver.sql.ResultSetInvocationHandler.GET_INDEX;
+import static com.nosqldriver.sql.ResultSetInvocationHandler.GET_NAME;
+import static com.nosqldriver.sql.ResultSetInvocationHandler.METADATA;
+import static com.nosqldriver.sql.ResultSetInvocationHandler.NEXT;
 
 public class ResultSetOverIterableFactory {
+    private final ResultSetWrapperFactory wrapperFactory = new ResultSetWrapperFactory();
+
     public ResultSet create(String schema, String[] names, String[] aliases, Iterable<Object> iterable) {
-        return (ResultSet) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), new Class[]{ResultSet.class}, new InvocationHandler() {
+        return wrapperFactory.create(new ResultSetInvocationHandler<Iterable<Object>>(NEXT | METADATA | GET_NAME | GET_INDEX, iterable, schema, names, aliases) {
             private final Iterator<Object> it = iterable.iterator();
             private Object current = null;
             private boolean currentInitialized = false;
             @Override
-            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                if ("next".equals(method.getName())) {
-                    if (it.hasNext()) {
-                        current = it.next();
-                        currentInitialized = true;
-                        return true;
-                    }
-                    current = null;
-                    currentInitialized = false;
-                    return false;
+            protected boolean next() {
+                if (it.hasNext()) {
+                    current = it.next();
+                    currentInitialized = true;
+                    return true;
                 }
-                if ("getMetaData".equals(method.getName())) {
-                    return new AerospikeResultSetMetaData(null, schema, names, aliases);
-                }
+                current = null;
+                currentInitialized = false;
+                return false;
+            }
 
+            @Override
+            protected <T> T get(int i, Class<T> type) {
+                int index = i - 1;
+                String name = index < names.length ? names[index] : null;
+                return get(name, type);
+            }
+
+            @Override
+            protected <T> T get(String name, Class<T> type) {
                 if(!currentInitialized) {
-                    throw new SQLException(format("Attempt to call %s without next()", method.getName()));
+                    throw new IllegalStateException("Attempt to get value without next()");
                 }
                 @SuppressWarnings("unchecked")
                 Map<String, Object> row = (Map<String, Object>)current;
-                if (method.getName().startsWith("get") && method.getParameterTypes().length == 1) {
-                    final String name;
-                    if (int.class == method.getParameterTypes()[0]) {
-                        int index = (int)args[0] - 1;
-                        name = index < names.length ? names[index] : null;
-                    } else if (String.class == method.getParameterTypes()[0]) {
-                        name = (String)args[0];
-                    } else {
-                        throw new IllegalArgumentException(method.toString());
-                    }
-                    return cast(row.get(name), method.getReturnType());
-                }
-
-                throw new UnsupportedOperationException(method.getName());
+                return cast(row.get(name), type);
             }
         });
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> T cast(Object obj, Class<T> type) {
-        //TODO: create better implementation: probably base InvocationHandler for ResultSets
-        if (ExpressionAwareResultSetFactory.typeTransforemers.containsKey(type) && obj instanceof Number) {
-            return (T) ExpressionAwareResultSetFactory.typeTransforemers.get(type).apply((Number)obj);
-        }
-
-        return (T)obj;
     }
 }

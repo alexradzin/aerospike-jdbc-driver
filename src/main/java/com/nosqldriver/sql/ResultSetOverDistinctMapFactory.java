@@ -1,10 +1,5 @@
 package com.nosqldriver.sql;
 
-import com.nosqldriver.aerospike.sql.AerospikeResultSetMetaData;
-
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -12,67 +7,53 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static com.nosqldriver.sql.ResultSetInvocationHandler.GET_INDEX;
+import static com.nosqldriver.sql.ResultSetInvocationHandler.GET_NAME;
+import static com.nosqldriver.sql.ResultSetInvocationHandler.METADATA;
+import static com.nosqldriver.sql.ResultSetInvocationHandler.NEXT;
+
 public class ResultSetOverDistinctMapFactory {
+    private final ResultSetWrapperFactory wrapperFactory = new ResultSetWrapperFactory();
+
     public ResultSet create(String schema, String[] names, String[] aliases, Iterable<Object> iterable) {
-        return (ResultSet) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), new Class[]{ResultSet.class}, new InvocationHandler() {
+        return wrapperFactory.create(new ResultSetInvocationHandler<Iterable<Object>>(NEXT | METADATA | GET_NAME | GET_INDEX, iterable, schema, names, aliases) {
             private final Iterator<Object> it = iterable.iterator();
             private Map<String, Object> row = null;
             private List<Entry<String, Object>> entries = null;
             private int currentIndex = -1;
+
             @Override
-            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                if ("next".equals(method.getName())) {
-                    if (currentIndex < 0 && !it.hasNext()) {
-                        return false;
-                    }
-                    currentIndex++;
-                    if (currentIndex == 0) {
-                        row = toMap(it.next());
-                        entries = new ArrayList<>(row.entrySet());
-                        currentIndex = 0;
-                        return true;
-                    }
-                    return currentIndex < row.size();
+            protected boolean next() {
+                if (currentIndex < 0 && !it.hasNext()) {
+                    return false;
                 }
-                if ("getMetaData".equals(method.getName())) {
-                    return new AerospikeResultSetMetaData(null, schema, names, aliases);
+                currentIndex++;
+                if (currentIndex == 0) {
+                    row = toMap(it.next());
+                    entries = new ArrayList<>(row.entrySet());
+                    currentIndex = 0;
+                    return true;
                 }
+                return currentIndex < row.size();
+            }
 
-                if (method.getName().startsWith("get") && method.getParameterTypes().length == 1) {
-                    final String name;
-                    if (int.class == method.getParameterTypes()[0]) {
-                        int index = (int)args[0] - 1;
-                        Entry<String, Object> e = entries.get(currentIndex);
-                        return cast(index == 0 ? e.getKey() : new ArrayList<>(toMap(e.getValue()).values()).get(index - 1), method.getReturnType());
-                        //return cast(index == 0 ? e.getKey() : new ArrayList<>(((Map<Object, Object>)e.getValue()).values()).get(index - 1), method.getReturnType());
-                    } else if (String.class == method.getParameterTypes()[0]) {
-                        name = (String)args[0];
-                        return cast(row.get(name), method.getReturnType());
-                    } else {
-                        throw new IllegalArgumentException(method.toString());
-                    }
-                }
+            @Override
+            protected <T> T get(int i, Class<T> type) {
+                int index = i - 1;
+                Entry<String, Object> e = entries.get(currentIndex);
+                return cast(index == 0 ? e.getKey() : new ArrayList<>(toMap(e.getValue()).values()).get(index - 1), type);
+            }
 
-                throw new UnsupportedOperationException(method.getName());
+            @Override
+            protected <T> T get(String name, Class<T> type) {
+                return cast(row.get(name), type);
             }
         });
     }
 
+
     @SuppressWarnings("unchecked")
     private <K, V> Map<K, V> toMap(Object obj) {
         return (Map<K, V>)obj;
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> T cast(Object obj, Class<T> type) {
-        //TODO: create better implementation: probably base InvocationHandler for ResultSets
-        if (ExpressionAwareResultSetFactory.typeTransforemers.containsKey(type) && obj instanceof Number) {
-            return (T) ExpressionAwareResultSetFactory.typeTransforemers.get(type).apply((Number)obj);
-        }
-
-        if (ExpressionAwareResultSetFactory.typeTransforemers.containsKey(type) && obj instanceof String) {
-            return (T)Integer.valueOf((String)obj); //TODO: patch!!!
-        }
-        return (T)obj;
     }
 }
