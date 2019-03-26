@@ -668,38 +668,26 @@ class SelectTest {
     @Test
     @DisplayName("select year_of_birth, count(*) from people group by year_of_birth")
     void groupByYearOfBirth() throws SQLException {
-        writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
-        ResultSetMetaData md = rs.getMetaData();
-        assertNotNull(md);
-        assertEquals(2, md.getColumnCount());
-        assertEquals("year_of_birth", md.getColumnName(1));
-        assertEquals("count(*)", md.getColumnName(2));
-
-        assertTrue(rs.next());
-        assertEquals(1940, rs.getInt(1));
-        assertEquals(2, rs.getInt(2));
-        assertTrue(rs.next());
-        assertEquals(1942, rs.getInt(1));
-        assertEquals(1, rs.getInt(2));
-        assertTrue(rs.next());
-        assertEquals(1943, rs.getInt(1));
-        assertEquals(1, rs.getInt(2));
-        assertFalse(rs.next());
+        groupByYearOfBirth(getDisplayName());
     }
 
     @Test
     @DisplayName("select year_of_birth as year, count(*) as n from people group by year_of_birth")
     void groupByYearOfBirthWithAliases() throws SQLException {
+        ResultSetMetaData md = groupByYearOfBirth(getDisplayName());
+        assertEquals("year", md.getColumnLabel(1));
+        assertEquals("n", md.getColumnLabel(2));
+    }
+
+
+    private ResultSetMetaData groupByYearOfBirth(String sql) throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSet rs = conn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());
         assertEquals("year_of_birth", md.getColumnName(1));
-        assertEquals("year", md.getColumnLabel(1));
         assertEquals("count(*)", md.getColumnName(2));
-        assertEquals("n", md.getColumnLabel(2));
 
         assertTrue(rs.next());
         assertEquals(1940, rs.getInt(1));
@@ -711,7 +699,9 @@ class SelectTest {
         assertEquals(1943, rs.getInt(1));
         assertEquals(1, rs.getInt(2));
         assertFalse(rs.next());
+        return md;
     }
+
 
     void aggregateOneField(String sql, String name, String label, int expected) throws SQLException {
         writeBeatles();

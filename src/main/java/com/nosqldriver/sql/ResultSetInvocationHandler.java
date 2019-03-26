@@ -93,16 +93,16 @@ public class ResultSetInvocationHandler<R> implements InvocationHandler {
         return (T)method.invoke(resultSet, args);
     }
 
-    private boolean isNext(Method method) {
+    protected boolean isNext(Method method) {
         return "next".equals(method.getName()) && boolean.class.equals(method.getReturnType()) && method.getParameterTypes().length == 0;
     }
-    private boolean isMetadata(Method method) {
+    protected boolean isMetadata(Method method) {
         return "getMetaData".equals(method.getName()) && ResultSetMetaData.class.equals(method.getReturnType()) && method.getParameterTypes().length == 0;
     }
-    private boolean isGetByIndex(Method method) {
+    protected boolean isGetByIndex(Method method) {
         return isGet(method, int.class);
     }
-    private boolean isGetByName(Method method) {
+    protected boolean isGetByName(Method method) {
         return isGet(method, String.class);
     }
 
