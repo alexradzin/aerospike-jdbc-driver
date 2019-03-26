@@ -11,8 +11,9 @@ import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.FilteredResultSet;
 import com.nosqldriver.sql.OffsetLimit;
-import com.nosqldriver.sql.ResultSetOverIterableFactory;
+import com.nosqldriver.sql.ResultSetInvocationHandler;
 import com.nosqldriver.sql.ResultSetWrapper;
+import com.nosqldriver.sql.ResultSetWrapperFactory;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
@@ -20,12 +21,14 @@ import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.schema.Column;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -34,8 +37,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.nosqldriver.sql.ResultSetInvocationHandler.GET_NAME;
+import static com.nosqldriver.sql.ResultSetInvocationHandler.OTHER;
 import static java.lang.String.format;
 import static java.lang.String.join;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.IntStream.range;
 
 public class QueryHolder {
     private String schema;
@@ -199,12 +206,35 @@ public class QueryHolder {
 
 
     private Function<IAerospikeClient, java.sql.ResultSet> wrap(Function<IAerospikeClient, java.sql.ResultSet> nakedQuery) {
-        Function<IAerospikeClient, java.sql.ResultSet> wrapped = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), names, aliases), hiddenNames, expressions, aliases);
-        return offset >= 0 || limit >= 0 ?
-                client -> new FilteredResultSet(wrapped.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) :
-                wrapped;
+        Function<IAerospikeClient, java.sql.ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), names, aliases), hiddenNames, expressions, aliases);
+        Function<IAerospikeClient, java.sql.ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(expressioned.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) : expressioned;
+        return client -> new ResultSetWrapperFactory().create(new ResultSetInvocationHandler<java.sql.ResultSet>(GET_NAME | OTHER, limited.apply(client), schema, names.toArray(new String[0]), aliases.toArray(new String[0])){
+            private final Map<String, String> aliasToName = range(0, names.size()).boxed().filter(i -> names.get(i) != null && aliases.get(i) != null).collect(toMap(aliases::get, names::get));
+            @Override
+            protected <T> T get(String alias, Class<T> type) {
+                String name = aliasToName.get(alias);
+
+                if (!aliases.contains(alias) && !names.contains(alias) && !names.isEmpty()) {
+                    throwAny(new SQLException(String.format("Column '%s' not found", alias)));
+                }
+
+                try {
+                    @SuppressWarnings("unchecked")
+                    T result = cast(resultSet.getObject(alias), type);
+                    return result;
+                } catch (SQLException e) {
+                    throwAny(e);
+                    return null; // just to satisfy compiler: the exception is thrown in previous line.
+                }
+            }
+
+        });
     }
 
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void throwAny(Throwable e) throws E {
+        throw (E)e;
+    }
 
     public abstract class ColumnType {
         private final Predicate<Object> locator;

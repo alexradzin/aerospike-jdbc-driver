@@ -17,7 +17,7 @@ public class ResultSetInvocationHandler<R> implements InvocationHandler {
     public static final int GET_NAME = 8;
     public static final int OTHER = 8;
 
-    static final Map<Class<?>, Function<Number, Number>> typeTransforemers = new HashMap<>();
+    private static final Map<Class<?>, Function<Number, Number>> typeTransforemers = new HashMap<>();
     static {
         typeTransforemers.put(Byte.class, Number::byteValue);
         typeTransforemers.put(Short.class, Number::shortValue);
@@ -35,7 +35,7 @@ public class ResultSetInvocationHandler<R> implements InvocationHandler {
     }
 
 
-    private final R resultSet;
+    protected final R resultSet;
     private final String schema;
     private final String[] names;
     private final String[] aliases;
@@ -93,16 +93,16 @@ public class ResultSetInvocationHandler<R> implements InvocationHandler {
         return (T)method.invoke(resultSet, args);
     }
 
-    protected boolean isNext(Method method) {
+    private boolean isNext(Method method) {
         return "next".equals(method.getName()) && boolean.class.equals(method.getReturnType()) && method.getParameterTypes().length == 0;
     }
-    protected boolean isMetadata(Method method) {
+    private boolean isMetadata(Method method) {
         return "getMetaData".equals(method.getName()) && ResultSetMetaData.class.equals(method.getReturnType()) && method.getParameterTypes().length == 0;
     }
-    protected boolean isGetByIndex(Method method) {
+    private boolean isGetByIndex(Method method) {
         return isGet(method, int.class);
     }
-    protected boolean isGetByName(Method method) {
+    private boolean isGetByName(Method method) {
         return isGet(method, String.class);
     }
 

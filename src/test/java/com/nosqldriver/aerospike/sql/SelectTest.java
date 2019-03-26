@@ -15,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -39,7 +40,7 @@ import static java.lang.String.format;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SelectTest {
@@ -170,8 +171,8 @@ class SelectTest {
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
         while (rs.next()) {
             selectedPeople.put(rs.getString("first_name"), rs.getInt("year_of_birth"));
-            assertNull(rs.getString("last_name"));
-            assertNull(rs.getString("id"));
+            assertThrowsSqlException(() -> rs.getString("last_name"), "last_name");
+            assertThrowsSqlException(() -> rs.getString("id"), "id");
         }
 
         assertEquals(1940, selectedPeople.get("John").intValue());
@@ -195,8 +196,8 @@ class SelectTest {
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
         while (rs.next()) {
             selectedPeople.put(rs.getString("name"), rs.getInt("year"));
-            assertNull(rs.getString("last_name"));
-            assertNull(rs.getString("id"));
+            assertThrowsSqlException(() -> rs.getString("last_name"), "last_name");
+            assertThrowsSqlException(() -> rs.getString("id"), "id");
         }
 
         assertEquals(1940, selectedPeople.get("John").intValue());
@@ -273,21 +274,29 @@ class SelectTest {
     }
 
 
-    //@Test
+    @Test
     void selectSpecificFieldsWithFunctions2() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select 1 one, 2 + 3 as two_plus_three, (1+2)*3 as someexpr, year() - year_of_birth as years_ago, first_name as name, year_of_birth - 1900 as y, length(last_name) as surname_length from people");
+        ResultSet rs = conn.createStatement().executeQuery("select 1 as one, 2 + 3 as two_plus_three, (1+2)*3 as someexpr, year() - year_of_birth as years_ago, first_name as name, year_of_birth - 1900 as y, len(last_name) as surname_length from people");
 
         Map<String, Integer> selectedPeople = new HashMap<>();
 
-        assertEquals("first_name", rs.getMetaData().getColumnName(1));
-        assertEquals("name", rs.getMetaData().getColumnLabel(1));
-        assertEquals("surname_length", rs.getMetaData().getColumnLabel(2));
+        ResultSetMetaData md = rs.getMetaData();
+        String[] expectedLabels = new String[] {"one", "two_plus_three", "someexpr", "years_ago", "name", "y", "surname_length"};
+        for (int i = 0; i < expectedLabels.length; i++) {
+            assertEquals(expectedLabels[i], md.getColumnLabel(i + 1));
+        }
+        String[] expectedNames = new String[] {null, null, null, null, "first_name", null, null};
+        for (int i = 0; i < expectedNames.length; i++) {
+            assertEquals(expectedNames[i], md.getColumnName(i + 1));
+        }
+
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
         while (rs.next()) {
             selectedPeople.put(rs.getString("name"), rs.getInt("surname_length"));
-            assertNull(rs.getString("last_name"));
-            assertNull(rs.getString("id"));
+
+            assertThrowsSqlException(() -> rs.getString("last_name"), "last_name");
+            assertThrowsSqlException(() -> rs.getString("id"), "id");
         }
 
         assertEquals("Lennon".length(), selectedPeople.get("John").intValue());
@@ -297,6 +306,9 @@ class SelectTest {
     }
 
 
+    private void assertThrowsSqlException(Executable getCall, String columnName) {
+        assertThrows(SQLException.class, getCall, String.format("Column '%s' not found", columnName));
+    }
 
     @Test
     void selectByPk() throws SQLException {
