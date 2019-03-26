@@ -286,12 +286,12 @@ public class AerospikeConnection implements Connection {
 
     @Override
     public void setClientInfo(String name, String value) throws SQLClientInfoException {
-
+        clientInfo.setProperty(name, value);
     }
 
     @Override
     public void setClientInfo(Properties properties) throws SQLClientInfoException {
-
+        clientInfo.putAll(properties);
     }
 
     @Override

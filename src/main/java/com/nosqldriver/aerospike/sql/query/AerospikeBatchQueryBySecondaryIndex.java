@@ -5,6 +5,8 @@ import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeRecordSet;
 
+import java.sql.ResultSet;
+
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy> {
     public AerospikeBatchQueryBySecondaryIndex(String schema, String[] names, Statement statement, QueryPolicy policy) {
         super(schema, names, statement, policy);
@@ -12,7 +14,7 @@ public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statemen
     }
 
     @Override
-    public java.sql.ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeRecordSet(schema, criteria, names, client.query(policy, criteria));
+    public ResultSet apply(IAerospikeClient client) {
+        return new ResultSetOverAerospikeRecordSet(schema, names, client.query(policy, criteria));
     }
 }

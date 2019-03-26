@@ -7,7 +7,7 @@ function ascii(s) {
 }
 
 function char(code) {
-    return String.fromCharCode(code);;
+    return String.fromCharCode(code);
 }
 
 function charIndex(subStr, str, start) {
@@ -15,11 +15,11 @@ function charIndex(subStr, str, start) {
 }
 
 function concat() {
-    return arguments.join('');
+    return arguments.join("");
 }
 
 function left(str, n) {
-    return str.substring(0, n)
+    return str.substring(0, n);
 }
 
 function lower(str, n) {

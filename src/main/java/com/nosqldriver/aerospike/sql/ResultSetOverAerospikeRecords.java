@@ -9,8 +9,6 @@ import java.util.Objects;
 public class ResultSetOverAerospikeRecords extends AerospikeResultSet {
     private final Record[] records;
     private volatile int currentIndex = -1;
-    private volatile boolean closed = false;
-    private volatile int direction = 1;
 
     public ResultSetOverAerospikeRecords(String schema, String[] names, Record[] records) {
         super(schema, names);

@@ -20,7 +20,7 @@ public class AerospikeDriver implements Driver {
             AerospikeDriver driverObj = new AerospikeDriver();
             DriverManager.registerDriver(driverObj);
         } catch (SQLException e) {
-            throw new RuntimeException(e.getMessage());
+            throw new IllegalStateException(e.getMessage(), e);
         }
     }
 

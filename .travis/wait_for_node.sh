@@ -29,7 +29,7 @@ do
   if [ $? == 0 ]; then
     exit 0
   else
-    i=$(($i + 1))
+    i=$((i + 1))
     echo -n "."
   fi
 done

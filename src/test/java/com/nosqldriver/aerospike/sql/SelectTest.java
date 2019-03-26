@@ -307,7 +307,7 @@ class SelectTest {
 
 
     private void assertThrowsSqlException(Executable getCall, String columnName) {
-        assertThrows(SQLException.class, getCall, String.format("Column '%s' not found", columnName));
+        assertThrows(SQLException.class, getCall, format("Column '%s' not found", columnName));
     }
 
     @Test

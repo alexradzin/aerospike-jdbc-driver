@@ -5,6 +5,8 @@ import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.sql.ResultSetOverDistinctMapFactory;
 
+import java.sql.ResultSet;
+
 public class AerospikeDistinctQuery extends AerospikeQuery<Statement, QueryPolicy> {
     private final String[] aliases;
 
@@ -14,7 +16,7 @@ public class AerospikeDistinctQuery extends AerospikeQuery<Statement, QueryPolic
     }
 
     @Override
-    public java.sql.ResultSet apply(IAerospikeClient client) {
+    public ResultSet apply(IAerospikeClient client) {
         return new ResultSetOverDistinctMapFactory().create(schema, names, aliases, client.queryAggregate(policy, criteria));
     }
 }
