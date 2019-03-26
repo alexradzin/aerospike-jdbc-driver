@@ -15,6 +15,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -32,6 +34,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static com.nosqldriver.TestUtils.getDisplayName;
 import static java.lang.String.format;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -155,9 +158,10 @@ class SelectTest {
 
 
     @Test
+    @DisplayName("select first_name, year_of_birth from people")
     void selectSpecificFields() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select first_name, year_of_birth from people");
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
 
         Map<String, Integer> selectedPeople = new HashMap<>();
 
@@ -177,9 +181,10 @@ class SelectTest {
     }
 
     @Test
+    @DisplayName("select first_name as name, year_of_birth as year from people")
     void selectSpecificFieldsWithAliases() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select first_name as name, year_of_birth as year from people");
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
 
         Map<String, Integer> selectedPeople = new HashMap<>();
 
@@ -204,7 +209,7 @@ class SelectTest {
     @DisplayName("select 1 as one from people where PK=1")
     void select1fromPeople() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select 1 as one from people where PK=1");
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
         assertTrue(rs.next());
         assertEquals("one", rs.getMetaData().getColumnLabel(1));
         assertEquals(1, rs.getInt(1));
@@ -216,7 +221,7 @@ class SelectTest {
     @DisplayName("select (1+2)*3 as nine from people where PK=1")
     void selectIntExpressionFromPeople() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select (1+2)*3 as nine from people where PK=1");
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
         assertTrue(rs.next());
         assertEquals("nine", rs.getMetaData().getColumnLabel(1));
         assertEquals(9, rs.getInt(1));
@@ -228,7 +233,7 @@ class SelectTest {
     @DisplayName("select (4+5)/3 as three, first_name as name, year_of_birth - 1900 as year from people where PK=1")
     void selectExpressionAndFieldFromPeople() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select (4+5)/3 as three, first_name as name, year_of_birth - 1900 as year from people where PK=1");
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
         assertTrue(rs.next());
         assertEquals("three", rs.getMetaData().getColumnLabel(1));
         assertEquals(3, rs.getInt(1));
@@ -246,17 +251,13 @@ class SelectTest {
     }
 
 
-    @Test
-    void selectSpecificFieldsWithLowerCaseLenFunction() throws SQLException {
-        selectSpecificFieldsWithLenFunction("select first_name as name, len(first_name) as name_len from people");
-    }
 
-    @Test
-    void selectSpecificFieldsWithUpperCaseLenFunction() throws SQLException {
-        selectSpecificFieldsWithLenFunction("select first_name as name, LEN(first_name) as name_len from people");
-    }
-
-    private void selectSpecificFieldsWithLenFunction(String query) throws SQLException {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "select first_name as name, len(first_name) as name_len from people",
+            "select first_name as name, LEN(first_name) as name_len from people"
+    })
+    void selectSpecificFieldsWithLenFunction(String query) throws SQLException {
         writeBeatles();
         ResultSet rs = conn.createStatement().executeQuery(query);
 
@@ -300,7 +301,7 @@ class SelectTest {
     @Test
     void selectByPk() throws SQLException {
         writeBeatles();
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < beatles.length; i++) {
             int id = i + 1;
             ResultSet rs = conn.createStatement().executeQuery(format("select * from people where PK=%d", id));
             assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
@@ -316,15 +317,15 @@ class SelectTest {
     @Test
     void selectByNotIndexedField() throws SQLException {
         writeBeatles();
-        for (int i = 0; i < 4; i++) {
-            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where last_name=%s", beatles[i].lastName));
+        for (Person person : beatles) {
+            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where last_name=%s", person.lastName));
             assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
             assertTrue(rs.next());
-            assertEquals(beatles[i].id, rs.getInt("id"));
-            assertEquals(beatles[i].firstName, rs.getString("first_name"));
-            assertEquals(beatles[i].lastName, rs.getString("last_name"));
-            assertEquals(beatles[i].yearOfBirth, rs.getInt("year_of_birth"));
+            assertEquals(person.id, rs.getInt("id"));
+            assertEquals(person.firstName, rs.getString("first_name"));
+            assertEquals(person.lastName, rs.getString("last_name"));
+            assertEquals(person.yearOfBirth, rs.getInt("year_of_birth"));
         }
     }
 
@@ -332,15 +333,15 @@ class SelectTest {
     void selectByOneStringIndexedField() throws SQLException {
         writeBeatles();
         createIndex("first_name", IndexType.STRING);
-        for (int i = 0; i < 4; i++) {
-            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where first_name=%s", beatles[i].firstName));
+        for (Person person : beatles) {
+            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where first_name=%s", person.firstName));
             assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
             assertTrue(rs.next());
-            assertEquals(beatles[i].id, rs.getInt("id"));
-            assertEquals(beatles[i].firstName, rs.getString("first_name"));
-            assertEquals(beatles[i].lastName, rs.getString("last_name"));
-            assertEquals(beatles[i].yearOfBirth, rs.getInt("year_of_birth"));
+            assertEquals(person.id, rs.getInt("id"));
+            assertEquals(person.firstName, rs.getString("first_name"));
+            assertEquals(person.lastName, rs.getString("last_name"));
+            assertEquals(person.yearOfBirth, rs.getInt("year_of_birth"));
         }
     }
 
@@ -546,44 +547,44 @@ class SelectTest {
     @Test
     @DisplayName("select count(*) from people")
     void countAll() throws SQLException {
-        aggregateOneField("select count(*) from people", "count(*)", "count(*)", 4);
+        aggregateOneField(getDisplayName(), "count(*)", "count(*)", 4);
     }
 
     @Test
-    @DisplayName("select count(*) from people")
+    @DisplayName("select count(*) as number_of_people from people")
     void countAllWithAlias() throws SQLException {
-        aggregateOneField("select count(*) as number_of_people from people", "count(*)", "number_of_people", 4);
+        aggregateOneField(getDisplayName(), "count(*)", "number_of_people", 4);
     }
 
     @Test
     @DisplayName("select count(year_of_birth) from people")
     void countYearOfBirth() throws SQLException {
-        aggregateOneField("select count(year_of_birth) from people", "count(year_of_birth)", "count(year_of_birth)", 4);
+        aggregateOneField(getDisplayName(), "count(year_of_birth)", "count(year_of_birth)", 4);
     }
 
     @Test
     @DisplayName("select count(year_of_birth) as n from people")
     void countYearOfBirthWithAlias() throws SQLException {
-        aggregateOneField("select count(year_of_birth) as n from people", "count(year_of_birth)", "n", 4);
+        aggregateOneField(getDisplayName(), "count(year_of_birth)", "n", 4);
     }
 
     @Test
-    @DisplayName("select max(year_of_birth) from people")
+    @DisplayName("select max(year_of_birth) as youngest from people")
     void maxYearOfBirh() throws SQLException {
-        aggregateOneField("select max(year_of_birth) as youngest from people", "max(year_of_birth)", "youngest", 1943);
+        aggregateOneField(getDisplayName(), "max(year_of_birth)", "youngest", 1943);
     }
 
     @Test
-    @DisplayName("select min(year_of_birth) from people")
-    void minYearOfBirh() throws SQLException {
-        aggregateOneField("select min(year_of_birth) as oldest from people", "min(year_of_birth)", "oldest", 1940);
+    @DisplayName("select min(year_of_birth) as oldest from people")
+    void minYearOfBirth() throws SQLException {
+        aggregateOneField(getDisplayName(), "min(year_of_birth)", "oldest", 1940);
     }
 
     @Test
     @DisplayName("select count(*) as n, min(year_of_birth) as min, max(year_of_birth) as max, avg(year_of_birth) as avg, sum(year_of_birth) as total from people")
     void callAllAggregations() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select count(*) as n, min(year_of_birth) as min, max(year_of_birth) as max, avg(year_of_birth) as avg, sum(year_of_birth) as total from people");
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(NAMESPACE, md.getSchemaName(1));
         assertEquals(5, rs.getMetaData().getColumnCount());
@@ -617,9 +618,10 @@ class SelectTest {
     }
 
     @Test
+    @DisplayName("select distinct(year_of_birth) as year from people")
     void selectDistinctYearOfBirth() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select distinct(year_of_birth) as year from people");
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(NAMESPACE, md.getSchemaName(1));
         assertEquals(1, rs.getMetaData().getColumnCount());
@@ -634,9 +636,10 @@ class SelectTest {
     }
 
     @Test
+    @DisplayName("select distinct(first_name) as given_name from people")
     void selectDistinctFirstName() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select distinct(first_name) as given_name from people");
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(NAMESPACE, md.getSchemaName(1));
         assertEquals(1, rs.getMetaData().getColumnCount());
@@ -651,10 +654,10 @@ class SelectTest {
     }
 
     @Test
-    @DisplayName("select year_of_birth as year, count(*) as n from people group by year_of_birth")
+    @DisplayName("select year_of_birth, count(*) from people group by year_of_birth")
     void groupByYearOfBirth() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select year_of_birth, count(*) from people group by year_of_birth");
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());
@@ -677,7 +680,7 @@ class SelectTest {
     @DisplayName("select year_of_birth as year, count(*) as n from people group by year_of_birth")
     void groupByYearOfBirthWithAliases() throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery("select year_of_birth as year, count(*) as n from people group by year_of_birth");
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());
@@ -713,12 +716,12 @@ class SelectTest {
 
     private <T> void delete(Function<String, T> executor, String deleteSql, Predicate<Person> expectedResultFilter, Predicate<T> returnValueValidator) throws SQLException {
         writeBeatles();
-        Collection<String> names1 = retrieveColumn("select * from people", "first_name");
+        Collection<String> names1 = retrieveColumn(SELECT_ALL, "first_name");
         assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
 
         assertTrue(returnValueValidator.test(executor.apply(deleteSql)));
 
-        Collection<String> names2 = retrieveColumn("select * from people", "first_name");
+        Collection<String> names2 = retrieveColumn(SELECT_ALL, "first_name");
         assertEquals(Arrays.stream(beatles).filter(expectedResultFilter).map(p -> p.firstName).collect(Collectors.toSet()), names2);
     }
 
