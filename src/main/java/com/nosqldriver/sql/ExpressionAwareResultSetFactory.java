@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.IntStream.range;
@@ -50,7 +51,7 @@ public class ExpressionAwareResultSetFactory {
             while (matcher.find()) {
                 String functionName = matcher.group(1);
                 String capitalizedFunctionName = functionName.toUpperCase();
-                matcher.appendReplacement(buffer, String.format("function %s(", capitalizedFunctionName));
+                matcher.appendReplacement(buffer, format("function %s(", capitalizedFunctionName));
             }
             matcher.appendTail(buffer);
             String capitalizedFunctions = buffer.toString();

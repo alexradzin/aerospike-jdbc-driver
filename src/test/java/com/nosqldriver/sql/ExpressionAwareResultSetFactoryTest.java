@@ -76,7 +76,7 @@ class ExpressionAwareResultSetFactoryTest {
 
     @Test
     void functionCall() {
-        asList("len(x)", "LEN(x)").forEach(v -> assertVariableNames(v, singletonList("x")));
+        assertVariableNames(asList("len(x)", "LEN(x)"), singletonList("x"));
     }
 
 

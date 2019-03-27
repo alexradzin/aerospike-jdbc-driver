@@ -6,6 +6,8 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
 
+import static java.lang.String.format;
+
 public class TestUtils {
     public static String getDisplayName() {
         return Arrays.stream(new Throwable().getStackTrace())
@@ -30,7 +32,7 @@ public class TestUtils {
         try {
             return clazz.getDeclaredMethod(name, params);
         } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException(String.format("%s.%s(%s)", clazz, name, Arrays.toString(params)), e);
+            throw new IllegalArgumentException(format("%s.%s(%s)", clazz, name, Arrays.toString(params)), e);
         }
     }
 }

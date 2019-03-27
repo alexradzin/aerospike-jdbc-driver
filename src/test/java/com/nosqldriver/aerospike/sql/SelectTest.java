@@ -362,8 +362,8 @@ class SelectTest {
     void selectOneRecordByOneNumericIndexedFieldEq() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        selectByOneNumericIndexedField(conn, "=", 1942, 2);
-        selectByOneNumericIndexedField(conn, "=", 1943, 3);
+        assertSelectByOneNumericIndexedField(conn, "=", 1942, 2);
+        assertSelectByOneNumericIndexedField(conn, "=", 1943, 3);
     }
 
     @Test
@@ -371,7 +371,7 @@ class SelectTest {
     void selectSeveralRecordsByOneNumericIndexedFieldEq() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        selectByOneNumericIndexedField(conn, "=", 1940, 1, 4);
+        assertSelectByOneNumericIndexedField(conn, "=", 1940, 1, 4);
     }
 
     @Test
@@ -379,14 +379,14 @@ class SelectTest {
     void selectOneRecordByOneNumericIndexedFieldEqAndOneNotIndexedField() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        select(conn, "select * from people where year_of_birth=1940 and first_name='John'", 1);
+        assertSelect(conn, "select * from people where year_of_birth=1940 and first_name='John'", 1);
     }
 
     @Test
     @DisplayName("year_of_birth=1940 and last_name='Lennon'-> [John]")
     void selectOneRecordByOneNumericEqAndOneStringFieldAllNotIndexed() throws SQLException {
         writeBeatles();
-        select(conn, "select * from people where year_of_birth=1940 and last_name='Lennon'", 1);
+        assertSelect(conn, "select * from people where year_of_birth=1940 and last_name='Lennon'", 1);
     }
 
 
@@ -394,7 +394,7 @@ class SelectTest {
     @DisplayName("last_name='Lennon' or last_name='Harrison' -> [John, George]")
     void selectSeveralPersonsByLastNameOr() throws SQLException {
         writeBeatles();
-        select(conn, "select * from people where last_name='Lennon' or last_name='Harrison'", 1, 3);
+        assertSelect(conn, "select * from people where last_name='Lennon' or last_name='Harrison'", 1, 3);
     }
 
 
@@ -403,7 +403,7 @@ class SelectTest {
     void selectNothingByOneNumericIndexedFieldEq() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        selectByOneNumericIndexedField(conn, "=", 1939);
+        assertSelectByOneNumericIndexedField(conn, "=", 1939);
     }
 
     @Test
@@ -411,7 +411,7 @@ class SelectTest {
     void selectAllRecordsByOneNumericIndexedFieldGt() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        selectByOneNumericIndexedField(conn, ">", 1939, 1, 2, 3, 4);
+        assertSelectByOneNumericIndexedField(conn, ">", 1939, 1, 2, 3, 4);
     }
 
     @Test
@@ -419,7 +419,7 @@ class SelectTest {
     void selectAllRecordsByOneNumericIndexedFieldGe() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        selectByOneNumericIndexedField(conn, ">=", 1940, 1, 2, 3, 4);
+        assertSelectByOneNumericIndexedField(conn, ">=", 1940, 1, 2, 3, 4);
     }
 
     @Test
@@ -427,7 +427,7 @@ class SelectTest {
     void selectSeveralRecordsByOneNumericIndexedFieldGe() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        selectByOneNumericIndexedField(conn, ">", 1940, 2, 3);
+        assertSelectByOneNumericIndexedField(conn, ">", 1940, 2, 3);
     }
 
     @Test
@@ -435,7 +435,7 @@ class SelectTest {
     void selectSeveralRecordsByOneNumericIndexedFieldBetween() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        select(conn, "select * from people where year_of_birth between 1942 and 1943", 2, 3);
+        assertSelect(conn, "select * from people where year_of_birth between 1942 and 1943", 2, 3);
     }
 
     @Test
@@ -443,7 +443,7 @@ class SelectTest {
     void selectSeveralRecordsByOneNumericIndexedFieldBetween2() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        select(conn, "select * from people where year_of_birth between 1941 and 1944", 2, 3);
+        assertSelect(conn, "select * from people where year_of_birth between 1941 and 1944", 2, 3);
     }
 
 
@@ -451,14 +451,14 @@ class SelectTest {
     @DisplayName("PK IN (2, 3) -> [Paul, George]")
     void selectSeveralRecordsByPkIn() throws SQLException {
         writeBeatles();
-        select(conn, "select * from people where PK in (2, 3)", 2, 3);
+        assertSelect(conn, "select * from people where PK in (2, 3)", 2, 3);
     }
 
     @Test
     @DisplayName("PK IN (20, 30) -> []")
     void selectNoRecordsByPkIn() throws SQLException {
         writeBeatles();
-        select(conn, "select * from people where PK in (20, 30)");
+        assertSelect(conn, "select * from people where PK in (20, 30)");
     }
 
 
@@ -467,7 +467,7 @@ class SelectTest {
     void selectNothingRecordsByOneNumericIndexedFieldLt() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        selectByOneNumericIndexedField(conn, "<", 1939);
+        assertSelectByOneNumericIndexedField(conn, "<", 1939);
     }
 
     @Test
@@ -475,7 +475,7 @@ class SelectTest {
     void selectNothingRecordsByOneNumericIndexedFieldLt2() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        selectByOneNumericIndexedField(conn, "<", 1940);
+        assertSelectByOneNumericIndexedField(conn, "<", 1940);
     }
 
     @Test
@@ -483,14 +483,14 @@ class SelectTest {
     void selectNothingRecordsByOneNumericIndexedFieldLe() throws SQLException {
         writeBeatles();
         createIndex("year_of_birth", IndexType.NUMERIC);
-        selectByOneNumericIndexedField(conn, "<=", 1940, 1, 4);
+        assertSelectByOneNumericIndexedField(conn, "<=", 1940, 1, 4);
     }
 
     @Test
     @DisplayName("limit 2 -> [John, Paul]")
     void selectAllWithLimit2() throws SQLException {
         writeBeatles();
-        select(conn, "select * from people limit 2", 1, 2);
+        assertSelect(conn, "select * from people limit 2", 1, 2);
 
         ResultSet rs = conn.createStatement().executeQuery("select * from people limit 2");
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
@@ -520,76 +520,76 @@ class SelectTest {
 
     @Test
     void deleteAll() throws SQLException {
-        delete(executeUpdate, "delete from people", p -> false, res -> res == 4);
-        delete(execute, "delete from people", p -> false, res -> res);
-        delete(executeQuery, "delete from people", p -> false, rs -> !resultSetNext(rs));
+        assertDelete(executeUpdate, "delete from people", p -> false, res -> res == 4);
+        assertDelete(execute, "delete from people", p -> false, res -> res);
+        assertDelete(executeQuery, "delete from people", p -> false, rs -> !resultSetNext(rs));
     }
 
 
     @Test
     void deleteByPkEq() throws SQLException {
-        delete(executeUpdate, "delete from people where PK=1", p -> !"John".equals(p.firstName), res -> res == 1);
-        delete(execute, "delete from people where PK=1", p -> !"John".equals(p.firstName), res -> res);
-        delete(executeQuery, "delete from people where PK=1", p -> !"John".equals(p.firstName), rs -> !resultSetNext(rs));
+        assertDelete(executeUpdate, "delete from people where PK=1", p -> !"John".equals(p.firstName), res -> res == 1);
+        assertDelete(execute, "delete from people where PK=1", p -> !"John".equals(p.firstName), res -> res);
+        assertDelete(executeQuery, "delete from people where PK=1", p -> !"John".equals(p.firstName), rs -> !resultSetNext(rs));
     }
 
 
     @Test
     void deleteByPkIn() throws SQLException {
-        delete(executeUpdate, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), res -> res == 3);
-        delete(execute, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), res -> res);
-        delete(executeQuery, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), rs -> !resultSetNext(rs));
+        assertDelete(executeUpdate, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), res -> res == 3);
+        assertDelete(execute, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), res -> res);
+        assertDelete(executeQuery, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), rs -> !resultSetNext(rs));
     }
 
     @Test
     void deleteByPkBetween() throws SQLException {
-        delete(executeUpdate, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), res -> res == 3);
-        delete(execute, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), res -> res);
-        delete(executeQuery, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), rs -> !resultSetNext(rs));
+        assertDelete(executeUpdate, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), res -> res == 3);
+        assertDelete(execute, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), res -> res);
+        assertDelete(executeQuery, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), rs -> !resultSetNext(rs));
     }
 
     @Test
     void deleteByCriteria() throws SQLException {
-        delete(executeUpdate, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, res -> res == 2);
-        delete(execute, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, res -> res);
-        delete(executeQuery, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, rs -> !resultSetNext(rs));
+        assertDelete(executeUpdate, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, res -> res == 2);
+        assertDelete(execute, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, res -> res);
+        assertDelete(executeQuery, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, rs -> !resultSetNext(rs));
     }
 
 
     @Test
     @DisplayName("select count(*) from people")
     void countAll() throws SQLException {
-        aggregateOneField(getDisplayName(), "count(*)", "count(*)", 4);
+        assertAggregateOneField(getDisplayName(), "count(*)", "count(*)", 4);
     }
 
     @Test
     @DisplayName("select count(*) as number_of_people from people")
     void countAllWithAlias() throws SQLException {
-        aggregateOneField(getDisplayName(), "count(*)", "number_of_people", 4);
+        assertAggregateOneField(getDisplayName(), "count(*)", "number_of_people", 4);
     }
 
     @Test
     @DisplayName("select count(year_of_birth) from people")
     void countYearOfBirth() throws SQLException {
-        aggregateOneField(getDisplayName(), "count(year_of_birth)", "count(year_of_birth)", 4);
+        assertAggregateOneField(getDisplayName(), "count(year_of_birth)", "count(year_of_birth)", 4);
     }
 
     @Test
     @DisplayName("select count(year_of_birth) as n from people")
     void countYearOfBirthWithAlias() throws SQLException {
-        aggregateOneField(getDisplayName(), "count(year_of_birth)", "n", 4);
+        assertAggregateOneField(getDisplayName(), "count(year_of_birth)", "n", 4);
     }
 
     @Test
     @DisplayName("select max(year_of_birth) as youngest from people")
     void maxYearOfBirh() throws SQLException {
-        aggregateOneField(getDisplayName(), "max(year_of_birth)", "youngest", 1943);
+        assertAggregateOneField(getDisplayName(), "max(year_of_birth)", "youngest", 1943);
     }
 
     @Test
     @DisplayName("select min(year_of_birth) as oldest from people")
     void minYearOfBirth() throws SQLException {
-        aggregateOneField(getDisplayName(), "min(year_of_birth)", "oldest", 1940);
+        assertAggregateOneField(getDisplayName(), "min(year_of_birth)", "oldest", 1940);
     }
 
     @Test
@@ -668,19 +668,19 @@ class SelectTest {
     @Test
     @DisplayName("select year_of_birth, count(*) from people group by year_of_birth")
     void groupByYearOfBirth() throws SQLException {
-        groupByYearOfBirth(getDisplayName());
+        assertGroupByYearOfBirth(getDisplayName());
     }
 
     @Test
     @DisplayName("select year_of_birth as year, count(*) as n from people group by year_of_birth")
     void groupByYearOfBirthWithAliases() throws SQLException {
-        ResultSetMetaData md = groupByYearOfBirth(getDisplayName());
+        ResultSetMetaData md = assertGroupByYearOfBirth(getDisplayName());
         assertEquals("year", md.getColumnLabel(1));
         assertEquals("n", md.getColumnLabel(2));
     }
 
 
-    private ResultSetMetaData groupByYearOfBirth(String sql) throws SQLException {
+    private ResultSetMetaData assertGroupByYearOfBirth(String sql) throws SQLException {
         writeBeatles();
         ResultSet rs = conn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
@@ -703,7 +703,7 @@ class SelectTest {
     }
 
 
-    void aggregateOneField(String sql, String name, String label, int expected) throws SQLException {
+    void assertAggregateOneField(String sql, String name, String label, int expected) throws SQLException {
         writeBeatles();
         ResultSet rs = conn.createStatement().executeQuery(sql);
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
@@ -716,7 +716,7 @@ class SelectTest {
         assertFalse(rs.next());
     }
 
-    private <T> void delete(Function<String, T> executor, String deleteSql, Predicate<Person> expectedResultFilter, Predicate<T> returnValueValidator) throws SQLException {
+    private <T> void assertDelete(Function<String, T> executor, String deleteSql, Predicate<Person> expectedResultFilter, Predicate<T> returnValueValidator) throws SQLException {
         writeBeatles();
         Collection<String> names1 = retrieveColumn(SELECT_ALL, "first_name");
         assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
@@ -745,11 +745,11 @@ class SelectTest {
         return data;
     }
 
-    private void selectByOneNumericIndexedField(Connection conn, String operation, int year, int ... expectedIds) throws SQLException {
-        select(conn, format("select * from people where year_of_birth%s%s", operation, year), expectedIds);
+    private void assertSelectByOneNumericIndexedField(Connection conn, String operation, int year, int ... expectedIds) throws SQLException {
+        assertSelect(conn, format("select * from people where year_of_birth%s%s", operation, year), expectedIds);
     }
 
-    private void select(Connection conn, String sql, int ... expectedIds) throws SQLException {
+    private void assertSelect(Connection conn, String sql, int ... expectedIds) throws SQLException {
         ResultSet rs = conn.createStatement().executeQuery(sql);
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
         assertPeople(rs, beatles, expectedIds);

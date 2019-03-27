@@ -66,13 +66,13 @@ public class AerospikeStatement implements java.sql.Statement {
 
 
         ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
-            throw new UnsupportedOperationException(String.format("%s does not support %s", name(), "executeQuery"));
+            throw new UnsupportedOperationException(name() + " does not support " + "executeQuery");
         }
         int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
-            throw new UnsupportedOperationException(String.format("%s does not support %s", name(), "executeUpdate"));
+            throw new UnsupportedOperationException(format("%s does not support %s", name(), "executeUpdate"));
         }
         boolean execute(AerospikeStatement statement, String sql) throws SQLException {
-            throw new UnsupportedOperationException(String.format("%s does not support %s", name(), "execute"));
+            throw new UnsupportedOperationException(format("%s does not support %s", name(), "execute"));
         }
     }
 
