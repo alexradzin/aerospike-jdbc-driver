@@ -343,7 +343,7 @@ abstract class AerospikeResultSet implements ResultSet {
     @Override
     public void setFetchDirection(int direction) throws SQLException {
         if (direction != FETCH_FORWARD) {
-            sqlWarning.setNextWarning(new SQLWarning(format("Attempt to set unsuported fetch direction %d. Only FETCH_FORWARD=%d is supported. The value is ignored.", direction, FETCH_FORWARD)));
+            sqlWarning.setNextWarning(new SQLWarning(format("Attempt to set unsupported fetch direction %d. Only FETCH_FORWARD=%d is supported. The value is ignored.", direction, FETCH_FORWARD)));
         }
     }
 

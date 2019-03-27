@@ -13,6 +13,11 @@ import java.util.Collection;
 
 import static com.nosqldriver.sql.ResultSetInvocationHandler.METADATA;
 import static com.nosqldriver.sql.ResultSetInvocationHandler.NEXT;
+import static java.lang.String.format;
+import static java.sql.ResultSet.CLOSE_CURSORS_AT_COMMIT;
+import static java.sql.ResultSet.CONCUR_READ_ONLY;
+import static java.sql.ResultSet.FETCH_FORWARD;
+import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 
 public class AerospikeStatement implements java.sql.Statement {
     private final IAerospikeClient client;
@@ -91,7 +96,7 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public void close() throws SQLException {
-
+        // nothing to do here
     }
 
     @Override
@@ -116,7 +121,7 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public void setEscapeProcessing(boolean enable) throws SQLException {
-
+        // nothing to do here so far
     }
 
     @Override
@@ -171,47 +176,51 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public void setFetchDirection(int direction) throws SQLException {
-
+        if (direction != FETCH_FORWARD) {
+            throw new SQLException(format("Attempt to set unsupported fetch direction %d. Only FETCH_FORWARD=%d is supported. The value is ignored.", direction, FETCH_FORWARD));
+        }
     }
 
     @Override
     public int getFetchDirection() throws SQLException {
-        return 0;
+        return FETCH_FORWARD;
     }
 
     @Override
     public void setFetchSize(int rows) throws SQLException {
-
+        if (rows != 1) {
+            throw new SQLException("Fetch size other than 1 is not supported right now");
+        }
     }
 
     @Override
     public int getFetchSize() throws SQLException {
-        return 0;
+        return 1;
     }
 
     @Override
     public int getResultSetConcurrency() throws SQLException {
-        return 0;
+        return CONCUR_READ_ONLY;
     }
 
     @Override
     public int getResultSetType() throws SQLException {
-        return 0;
+        return TYPE_FORWARD_ONLY;
     }
 
     @Override
     public void addBatch(String sql) throws SQLException {
-
+        throw new SQLException("Batch update is not supported");
     }
 
     @Override
     public void clearBatch() throws SQLException {
-
+        throw new SQLException("Batch update is not supported");
     }
 
     @Override
     public int[] executeBatch() throws SQLException {
-        return new int[0];
+        throw new SQLException("Batch update is not supported");
     }
 
     @Override
@@ -261,7 +270,7 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public int getResultSetHoldability() throws SQLException {
-        return 0;
+        return CLOSE_CURSORS_AT_COMMIT;
     }
 
     @Override
@@ -271,7 +280,9 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public void setPoolable(boolean poolable) throws SQLException {
-
+        if (poolable) {
+            throw new SQLException("Statement does not support pools");
+        }
     }
 
     @Override
@@ -281,7 +292,7 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public void closeOnCompletion() throws SQLException {
-
+        // just ignore
     }
 
     @Override
@@ -291,7 +302,7 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        return null;
+        throw new SQLException("Unsupported feature");
     }
 
     @Override
