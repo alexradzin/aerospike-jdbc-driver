@@ -97,15 +97,17 @@ class AerospikeQueryFactory {
                     select.getSelectBody().accept(new SelectVisitorAdapter() {
                         @Override
                         public void visit(PlainSelect plainSelect) {
-                            plainSelect.getFromItem().accept(new FromItemVisitorAdapter() {
-                                @Override
-                                public void visit(Table tableName) {
-                                    if (tableName.getSchemaName() != null) {
-                                        queries.setSchema(tableName.getSchemaName());
+                            if (plainSelect.getFromItem() != null) {
+                                plainSelect.getFromItem().accept(new FromItemVisitorAdapter() {
+                                    @Override
+                                    public void visit(Table tableName) {
+                                        if (tableName.getSchemaName() != null) {
+                                            queries.setSchema(tableName.getSchemaName());
+                                        }
+                                        queries.setSetName(tableName.getName());
                                     }
-                                    queries.setSetName(tableName.getName());
-                                }
-                            });
+                                });
+                            }
 
 
 

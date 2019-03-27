@@ -230,6 +230,19 @@ class SelectTest {
         assertFalse(rs.next());
     }
 
+
+    @Test
+    @DisplayName("select (1+2)*3 as nine")
+    void selectIntExpressionNoFrom() throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        assertTrue(rs.next());
+        assertEquals("nine", rs.getMetaData().getColumnLabel(1));
+        assertEquals(9, rs.getInt(1));
+        assertEquals(9, rs.getInt("nine"));
+        assertFalse(rs.next());
+    }
+
+
     @Test
     @DisplayName("select (4+5)/3 as three, first_name as name, year_of_birth - 1900 as year from people where PK=1")
     void selectExpressionAndFieldFromPeople() throws SQLException {
