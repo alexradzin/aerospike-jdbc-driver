@@ -8,6 +8,7 @@ import static com.nosqldriver.sql.ResultSetInvocationHandler.GET_INDEX;
 import static com.nosqldriver.sql.ResultSetInvocationHandler.GET_NAME;
 import static com.nosqldriver.sql.ResultSetInvocationHandler.METADATA;
 import static com.nosqldriver.sql.ResultSetInvocationHandler.NEXT;
+import static com.nosqldriver.sql.TypeTransformer.cast;
 
 public class ResultSetOverIterableFactory {
     private final ResultSetWrapperFactory wrapperFactory = new ResultSetWrapperFactory();

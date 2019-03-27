@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.ResultSetInvocationHandler.GET_NAME;
 import static com.nosqldriver.sql.ResultSetInvocationHandler.OTHER;
+import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
 import static java.lang.String.join;
 

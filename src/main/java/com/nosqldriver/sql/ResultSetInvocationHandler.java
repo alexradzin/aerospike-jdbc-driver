@@ -6,9 +6,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
 
 public class ResultSetInvocationHandler<R> implements InvocationHandler {
     public static final int NEXT = 1;
@@ -16,24 +13,6 @@ public class ResultSetInvocationHandler<R> implements InvocationHandler {
     public static final int GET_INDEX = 4;
     public static final int GET_NAME = 8;
     public static final int OTHER = 8;
-
-    private static final Map<Class<?>, Function<Number, Number>> typeTransforemers = new HashMap<>();
-    static {
-        typeTransforemers.put(Byte.class, Number::byteValue);
-        typeTransforemers.put(Short.class, Number::shortValue);
-        typeTransforemers.put(Integer.class, Number::intValue);
-        typeTransforemers.put(Long.class, Number::longValue);
-        typeTransforemers.put(Float.class, Number::floatValue);
-        typeTransforemers.put(Double.class, Number::doubleValue);
-
-        typeTransforemers.put(byte.class, Number::byteValue);
-        typeTransforemers.put(short.class, Number::shortValue);
-        typeTransforemers.put(int.class, Number::intValue);
-        typeTransforemers.put(long.class, Number::longValue);
-        typeTransforemers.put(float.class, Number::floatValue);
-        typeTransforemers.put(double.class, Number::doubleValue);
-    }
-
 
     protected final R resultSet;
     private final String schema;
@@ -109,18 +88,4 @@ public class ResultSetInvocationHandler<R> implements InvocationHandler {
     private boolean isGet(Method method, Class<?> paramType) {
         return method.getName().startsWith("get") && method.getParameterTypes().length == 1 && paramType.equals(method.getParameterTypes()[0]);
     }
-
-
-    @SuppressWarnings("unchecked")
-    protected <T> T cast(Object obj, Class<T> type) {
-        if (typeTransforemers.containsKey(type) && obj instanceof Number) {
-            return (T)typeTransforemers.get(type).apply((Number)obj);
-        }
-
-        if (typeTransforemers.containsKey(type) && obj instanceof String) {
-            return (T)Integer.valueOf((String)obj); //TODO: patch!!!
-        }
-        return (T)obj;
-    }
-
 }
