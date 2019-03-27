@@ -3,6 +3,7 @@ package com.nosqldriver.sql;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import static java.util.Arrays.asList;
@@ -41,39 +42,46 @@ class ExpressionAwareResultSetFactoryTest {
 
     @Test
     void numberWithExponent() {
-        asList("+6e23", "+6e-23", "+678e+42", "6.022e+23").forEach(n -> assertVariableNames(n, emptyList()));
+        assertVariableNames(asList("+6e23", "+6e-23", "+678e+42", "6.022e+23"), emptyList());
     }
 
     @Test
     void variableOnly() {
-        asList("x", "xyz", "a1").forEach(v -> assertVariableNames(v, singletonList(v)));
+        assertVariableNames("x", singletonList("x"));
+        assertVariableNames("xyz", singletonList("xyz"));
+        assertVariableNames("a1", singletonList("a1"));
     }
 
     @Test
     void numericExpression() {
-        asList("1+2", "3 + 4", "(1+2) / 3").forEach(v -> assertVariableNames(v, emptyList()));
+        assertVariableNames(asList("1+2", "3 + 4", "(1+2) / 3"), emptyList());
     }
 
     @Test
     void numericExpressionWithVariable() {
-        asList("x+1", "x * 2").forEach(v -> assertVariableNames(v, singletonList("x")));
-        asList("factor *= 5", "4 * ( factor + 2)").forEach(v -> assertVariableNames(v, singletonList("factor")));
+        assertVariableNames(asList("x+1", "x * 2"), singletonList("x"));
+        assertVariableNames(asList("factor *= 5", "4 * ( factor + 2)"), singletonList("factor"));
     }
 
 
     @Test
     void numericExpressionWithSevaralVariables() {
-        asList("x+y", "x * y").forEach(v -> assertVariableNames(v, asList("x", "y")));
+        assertVariableNames(asList("x+y", "x * y"), asList("x", "y"));
     }
 
     @Test
     void numericExpressionWithRepatedVariables() {
-        asList("x+x", "x * x").forEach(v -> assertVariableNames(v, singletonList("x")));
+        assertVariableNames(asList("x+x", "x * x"), singletonList("x"));
     }
 
     @Test
     void functionCall() {
         asList("len(x)", "LEN(x)").forEach(v -> assertVariableNames(v, singletonList("x")));
+    }
+
+
+    private void assertVariableNames(Collection<String> exprs, List<String> expectedVariables) {
+        exprs.forEach(expr -> assertVariableNames(expr, expectedVariables));
     }
 
 
