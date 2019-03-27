@@ -31,7 +31,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
-import static com.sun.jmx.mbeanserver.Util.cast;
+import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
 
 abstract class AerospikeResultSet implements ResultSet {
@@ -1018,7 +1018,7 @@ abstract class AerospikeResultSet implements ResultSet {
             return (T)value;
         }
 
-        return cast(value);
+        return cast(value, type);
     }
 
     @Override
