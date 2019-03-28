@@ -33,15 +33,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.nosqldriver.TestUtils.getDisplayName;
 import static java.lang.String.format;
+import static java.util.Arrays.stream;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 class SelectTest {
     private static final String NAMESPACE = "test";
@@ -140,10 +144,14 @@ class SelectTest {
     }
 
 
-    @Test
-    void selectAll() throws SQLException {
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            SELECT_ALL,
+            "select * from people as p"
+    })
+    void selectAll(String sql) throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery(SELECT_ALL);
+        ResultSet rs = conn.createStatement().executeQuery(sql);
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
         Map<Integer, String> selectedPeople = new HashMap<>();
@@ -158,11 +166,19 @@ class SelectTest {
     }
 
 
-    @Test
-    @DisplayName("select first_name, year_of_birth from people")
-    void selectSpecificFields() throws SQLException {
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select first_name, year_of_birth from people",
+            "select people.first_name, people.year_of_birth from people",
+            "select first_name, year_of_birth from people as p",
+            "select p.first_name, year_of_birth from people as p",
+            "select first_name, p.year_of_birth from people as p",
+            "select p.first_name, p.year_of_birth from people as p",
+            "select p.first_name, p.year_of_birth from people as p",
+    })
+    void selectSpecificFields(String sql) throws SQLException {
         writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSet rs = conn.createStatement().executeQuery(sql);
 
         Map<String, Integer> selectedPeople = new HashMap<>();
 
@@ -266,7 +282,7 @@ class SelectTest {
 
 
 
-    @ParameterizedTest
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select first_name as name, len(first_name) as name_len from people",
             "select first_name as name, LEN(first_name) as name_len from people"
@@ -633,10 +649,10 @@ class SelectTest {
         assertEquals(1940, rs.getInt("min"));
         assertEquals(1943, rs.getInt(3));
         assertEquals(1943, rs.getInt("max"));
-        double average = Arrays.stream(beatles).mapToInt(p -> p.yearOfBirth).average().orElseThrow(() -> new IllegalStateException("No average found"));
+        double average = stream(beatles).mapToInt(p -> p.yearOfBirth).average().orElseThrow(() -> new IllegalStateException("No average found"));
         assertEquals(average, rs.getDouble(4), 0.001);
         assertEquals(average, rs.getDouble("avg"), 0.001);
-        int sum = Arrays.stream(beatles).mapToInt(p -> p.yearOfBirth).sum();
+        int sum = stream(beatles).mapToInt(p -> p.yearOfBirth).sum();
         assertEquals(sum, rs.getInt(5));
         assertEquals(sum, rs.getInt("total"));
         assertFalse(rs.next());
@@ -675,7 +691,7 @@ class SelectTest {
         while(rs.next()) {
             names.add(rs.getString(1));
         }
-        assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names);
+        assertEquals(stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names);
     }
 
     @Test
@@ -716,6 +732,37 @@ class SelectTest {
     }
 
 
+    @Test
+    @DisplayName("select year_of_birth as year, sum(kids_count) as total_kids from people group by year_of_birth")
+    void groupByYearOfBirthWithAggregation() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(2, md.getColumnCount());
+        assertEquals("year_of_birth", md.getColumnName(1));
+        assertEquals("sum(kids_count)", md.getColumnName(2));
+        assertEquals("total_kids", md.getColumnLabel(2));
+
+        assertTrue(rs.next());
+        assertCounts(rs, 1940);
+        assertTrue(rs.next());
+        assertCounts(rs, 1942);
+        assertTrue(rs.next());
+        assertCounts(rs, 1943);
+
+        assertFalse(rs.next());
+    }
+
+    private void assertCounts(ResultSet rs, int yearOfBirth) throws SQLException {
+        assertEquals(yearOfBirth, rs.getInt(1));
+        assertEquals(sum(stream(beatles), p -> p.yearOfBirth == yearOfBirth, p -> p.kidsCount), rs.getDouble(2), 0.01);
+    }
+
+    private <T> int sum(Stream<T> stream, Predicate<T> filter, ToIntFunction<T> pf) {
+        return stream.filter(filter).mapToInt(pf).sum();
+    }
+
     void assertAggregateOneField(String sql, String name, String label, int expected) throws SQLException {
         writeBeatles();
         ResultSet rs = conn.createStatement().executeQuery(sql);
@@ -732,12 +779,12 @@ class SelectTest {
     private <T> void assertDelete(Function<String, T> executor, String deleteSql, Predicate<Person> expectedResultFilter, Predicate<T> returnValueValidator) throws SQLException {
         writeBeatles();
         Collection<String> names1 = retrieveColumn(SELECT_ALL, "first_name");
-        assertEquals(Arrays.stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
+        assertEquals(stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
 
         assertTrue(returnValueValidator.test(executor.apply(deleteSql)));
 
         Collection<String> names2 = retrieveColumn(SELECT_ALL, "first_name");
-        assertEquals(Arrays.stream(beatles).filter(expectedResultFilter).map(p -> p.firstName).collect(Collectors.toSet()), names2);
+        assertEquals(stream(beatles).filter(expectedResultFilter).map(p -> p.firstName).collect(Collectors.toSet()), names2);
     }
 
     boolean resultSetNext(ResultSet rs) {
@@ -770,7 +817,7 @@ class SelectTest {
 
     private void assertPeople(ResultSet rs, Person[] people, int ... expectedIds) throws SQLException {
         Set<Integer> expectedIdsSet = new HashSet<>();
-        Arrays.stream(expectedIds).forEach(expectedIdsSet::add);
+        stream(expectedIds).forEach(expectedIdsSet::add);
 
         int n = 0;
         for (; n < expectedIds.length; n++) {

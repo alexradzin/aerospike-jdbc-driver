@@ -41,7 +41,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,6 +50,8 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
+
+import static java.util.Optional.ofNullable;
 
 class AerospikeQueryFactory {
     private CCJSqlParserManager parserManager = new CCJSqlParserManager();
@@ -104,7 +105,7 @@ class AerospikeQueryFactory {
                                         if (tableName.getSchemaName() != null) {
                                             queries.setSchema(tableName.getSchemaName());
                                         }
-                                        queries.setSetName(tableName.getName());
+                                        queries.setSetName(tableName.getName(), ofNullable(tableName.getAlias()).map(Alias::getName).orElse(null));
                                     }
                                 });
                             }
@@ -114,7 +115,7 @@ class AerospikeQueryFactory {
                             plainSelect.getSelectItems().forEach(si -> si.accept(new SelectItemVisitorAdapter() {
                                 @Override
                                 public void visit(SelectExpressionItem selectExpressionItem) {
-                                    String alias = Optional.ofNullable(selectExpressionItem.getAlias()).map(Alias::getName).orElse(null);
+                                    String alias = ofNullable(selectExpressionItem.getAlias()).map(Alias::getName).orElse(null);
                                     Expression expr = selectExpressionItem.getExpression();
                                     Object selector = plainSelect.getDistinct() != null ? "distinct" + expr : expr; //TODO: ugly patch.
                                     queries.getColumnType(selector).addColumn(expr, alias);

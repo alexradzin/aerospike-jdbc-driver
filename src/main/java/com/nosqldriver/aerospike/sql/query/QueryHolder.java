@@ -19,6 +19,7 @@ import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.schema.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -41,12 +42,15 @@ import static com.nosqldriver.sql.ResultSetInvocationHandler.OTHER;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
 import static java.lang.String.join;
+import static java.util.Optional.ofNullable;
 
 public class QueryHolder {
     private String schema;
     private final Collection<String> indexes;
     private final AerospikePolicyProvider policyProvider;
     private String set;
+    private String setAlias;
+    private List<String> tables = new ArrayList<>();
     private List<String> names = new ArrayList<>();
     private List<String> aliases = new ArrayList<>();
     private List<String> expressions = new ArrayList<>();
@@ -119,8 +123,9 @@ public class QueryHolder {
         return schema;
     }
 
-    public void setSetName(String set) {
+    public void setSetName(String set, String alias) {
         this.set = set;
+        this.setAlias = alias;
         statement.setSetName(set);
     }
 
@@ -237,6 +242,7 @@ public class QueryHolder {
         protected ColumnType(Predicate<Object> locator) {
             this.locator = locator;
         }
+        protected abstract String getTable(Expression expr);
         protected abstract String getText(Expression expr);
         public abstract void addColumn(Expression expr, String alias);
     }
@@ -247,12 +253,18 @@ public class QueryHolder {
             new ColumnType((e) -> e instanceof Column) {
 
                 @Override
+                protected String getTable(Expression expr) {
+                    return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(null);
+                }
+
+                @Override
                 protected String getText(Expression expr) {
                     return ((Column) expr).getColumnName();
                 }
 
                 @Override
                 public void addColumn(Expression expr, String alias) {
+                    tables.add(getTable(expr));
                     names.add(getText(expr));
                     expressions.add(null);
                     aliases.add(alias);
@@ -261,6 +273,11 @@ public class QueryHolder {
             },
 
             new ColumnType(e -> e instanceof BinaryExpression || e instanceof LongValue ||  e instanceof DoubleValue || (e instanceof net.sf.jsqlparser.expression.Function && expressionResultSetWrappingFactory.getClientSideFuctionNames().contains(((net.sf.jsqlparser.expression.Function)e).getName()))) {
+                @Override
+                protected String getTable(Expression expr) {
+                    return null;
+                }
+
                 @Override
                 protected String getText(Expression expr) {
                     return expr.toString();
@@ -280,6 +297,11 @@ public class QueryHolder {
 
             new ColumnType(e -> e instanceof net.sf.jsqlparser.expression.Function) {
                 @Override
+                protected String getTable(Expression expr) {
+                    return null;
+                }
+
+                @Override
                 protected String getText(Expression expr) {
                     return expr.toString();
                 }
@@ -289,7 +311,7 @@ public class QueryHolder {
                     if (aggregatedFields == null) { // && !addition.isEmpty()) {
                         aggregatedFields = new HashSet<>();
                     }
-                    List<String> addition = Optional.ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(Collectors.toList())).orElse(Collections.emptyList());
+                    List<String> addition = ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(Collectors.toList())).orElse(Collections.emptyList());
                     aggregatedFields.addAll(addition);
                     names.add(expr.toString());
                     aliases.add(alias);
@@ -297,6 +319,11 @@ public class QueryHolder {
             },
 
             new ColumnType(e -> e instanceof String && ((String)e).startsWith("distinct")) {
+                @Override
+                protected String getTable(Expression expr) {
+                    return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(null);
+                }
+
                 @Override
                 protected String getText(Expression expr) {
                     return expr.toString();
