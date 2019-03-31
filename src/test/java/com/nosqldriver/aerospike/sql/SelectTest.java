@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -165,6 +166,27 @@ class SelectTest {
         assertEquals("Ringo Starr 1940", selectedPeople.get(4));
     }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            SELECT_ALL,
+            "select * from people as p"
+    })
+    void selectAllWithPreparedStatement(String sql) throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.prepareStatement(sql).executeQuery();
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+
+        Map<Integer, String> selectedPeople = new HashMap<>();
+        while (rs.next()) {
+            selectedPeople.put(rs.getInt("id"), rs.getString("first_name") + " " + rs.getString("last_name") + " " + rs.getInt("year_of_birth"));
+        }
+
+        assertEquals("John Lennon 1940", selectedPeople.get(1));
+        assertEquals("Paul McCartney 1942", selectedPeople.get(2));
+        assertEquals("George Harrison 1943", selectedPeople.get(3));
+        assertEquals("Ringo Starr 1940", selectedPeople.get(4));
+    }
+
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
@@ -227,6 +249,20 @@ class SelectTest {
     void select1fromPeople() throws SQLException {
         writeBeatles();
         ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        assertTrue(rs.next());
+        assertEquals("one", rs.getMetaData().getColumnLabel(1));
+        assertEquals(1, rs.getInt(1));
+        assertEquals(1, rs.getInt("one"));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    @DisplayName("select 1 as one from people where PK=?")
+    void select1fromPeopleUsingPreparedStatement() throws SQLException {
+        writeBeatles();
+        PreparedStatement ps = conn.prepareStatement(getDisplayName());
+        ps.setInt(1, 1);
+        ResultSet rs = ps.executeQuery();
         assertTrue(rs.next());
         assertEquals("one", rs.getMetaData().getColumnLabel(1));
         assertEquals(1, rs.getInt(1));
@@ -410,6 +446,23 @@ class SelectTest {
         createIndex("year_of_birth", IndexType.NUMERIC);
         assertSelect(conn, "select * from people where year_of_birth=1940 and first_name='John'", 1);
     }
+
+
+    @Test
+    @DisplayName("year_of_birth=1940 and first_name='John'-> [John]")
+    void selectOneRecordByOneNumericIndexedFieldEqAndOneNotIndexedFieldUsingPreparedStatement() throws SQLException {
+        writeBeatles();
+        createIndex("year_of_birth", IndexType.NUMERIC);
+        assertSelect(conn, "select * from people where year_of_birth=1940 and first_name='John'", 1);
+
+        PreparedStatement ps = conn.prepareStatement("select * from people where year_of_birth=? and first_name=?");
+        ps.setInt(1, 1940);
+        ps.setString(2, "John");
+        ResultSet rs = ps.executeQuery();
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertPeople(rs, beatles, 1);
+    }
+
 
     @Test
     @DisplayName("year_of_birth=1940 and last_name='Lennon'-> [John]")

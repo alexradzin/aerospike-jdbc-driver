@@ -72,7 +72,7 @@ public class AerospikeConnection implements Connection {
 
     @Override
     public PreparedStatement prepareStatement(String sql) throws SQLException {
-        return null;
+        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql);
     }
 
     @Override

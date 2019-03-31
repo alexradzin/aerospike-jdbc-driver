@@ -22,7 +22,7 @@ import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 public class AerospikeStatement implements java.sql.Statement {
     private final IAerospikeClient client;
     private final Connection connection;
-    private final String schema;
+    protected final String schema;
     private int maxRows = Integer.MAX_VALUE;
     private int queryTimeout = 0;
     private volatile SQLWarning sqlWarning;
