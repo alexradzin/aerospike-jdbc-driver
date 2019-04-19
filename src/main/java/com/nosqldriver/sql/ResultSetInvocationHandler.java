@@ -1,7 +1,5 @@
 package com.nosqldriver.sql;
 
-import com.nosqldriver.aerospike.sql.AerospikeResultSetMetaData;
-
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.sql.ResultSetMetaData;
@@ -55,7 +53,7 @@ public class ResultSetInvocationHandler<R> implements InvocationHandler {
     }
 
     protected ResultSetMetaData getMetadata() throws SQLException {
-        return new AerospikeResultSetMetaData(null, schema, names, aliases);
+        return new SimpleResultSetMetaData(null, schema, names, aliases);
     }
 
     protected <T> T get(int index, Class<T> type) {

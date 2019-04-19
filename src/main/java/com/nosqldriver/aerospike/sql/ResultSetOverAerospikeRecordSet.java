@@ -8,8 +8,9 @@ import java.sql.SQLException;
 
 public class ResultSetOverAerospikeRecordSet extends AerospikeResultSet {
     private final RecordSet rs;
-    private volatile int index = 0;
-    private volatile boolean done = false;
+    private int index = 0;
+    private boolean done = false;
+    private boolean firstNextWasCalled = false;
 
 
     public ResultSetOverAerospikeRecordSet(String schema, String[] names, RecordSet rs) {
@@ -20,6 +21,10 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeResultSet {
 
     @Override
     public boolean next() throws SQLException {
+        if (firstNextWasCalled && index == 1) {
+            firstNextWasCalled = false;
+            return true;
+        }
         boolean result = rs.next();
         if (result) {
             index++;
@@ -46,5 +51,24 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeResultSet {
     @Override
     protected Record getRecord() {
         return rs.getRecord();
+    }
+
+
+    @Override
+    protected Record getSampleRecord() {
+        if (index > 0) {
+            return getRecord();
+        }
+
+        try {
+            if (next()) {
+                firstNextWasCalled = true;
+                return getRecord();
+            }
+        } catch (SQLException e) {
+            return null;
+        }
+
+        return null;
     }
 }

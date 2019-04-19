@@ -6,7 +6,11 @@ import com.aerospike.client.Record;
 import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.PredExp;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation;
+import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
 import com.nosqldriver.aerospike.sql.query.QueryHolder;
+import com.nosqldriver.aerospike.sql.query.ColumnRefPredExp;
+import com.nosqldriver.aerospike.sql.query.ValueRefPredExp;
+import com.nosqldriver.sql.JoinType;
 import com.nosqldriver.sql.RecordPredicate;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
@@ -28,6 +32,7 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.select.FromItemVisitorAdapter;
+import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
@@ -41,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,14 +57,15 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
+import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 
-class AerospikeQueryFactory {
+public class AerospikeQueryFactory {
     private CCJSqlParserManager parserManager = new CCJSqlParserManager();
     private final String schema;
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
-    private static final Map<String, Supplier<PredExp>> predExpOperators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    public static final Map<String, Supplier<PredExp>> predExpOperators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     static {
         predExpOperators.put(operatorKey(String.class, "="), PredExp::stringEqual);
         predExpOperators.put(operatorKey(String.class, "<>"), PredExp::stringUnequal);
@@ -122,7 +129,6 @@ class AerospikeQueryFactory {
                                 }
                             }));
 
-                            BinaryOperation operation = new BinaryOperation();
                             Expression where = plainSelect.getWhere();
                             // Between is not supported by predicates and has to be transformed to expression like filed >= lowerValue and field <= highValue.
                             // In terms of predicates additional "stringBin" and "and" predicates must be added. This is implemented using the following variables.
@@ -130,6 +136,7 @@ class AerospikeQueryFactory {
                             AtomicInteger betweenEdge = new AtomicInteger(0);
                             if (where != null) {
                                 where.accept(new ExpressionVisitorAdapter() {
+                                    BinaryOperation operation = new BinaryOperation();
                                     @Override
                                     public void visit(Between expr) {
                                         System.out.println("visitBinaryExpression " + expr + " START");
@@ -235,6 +242,73 @@ class AerospikeQueryFactory {
                                     }
                                 });
                             }
+
+
+                            if (plainSelect.getJoins() != null) {
+                                for (Join join : plainSelect.getJoins()) {
+                                    QueryHolder currentJoin = queries.addJoin(JoinType.skipIfMissing(JoinType.getTypes(join)));
+
+                                    if (join.getRightItem() != null) {
+                                        join.getRightItem().accept(new FromItemVisitorAdapter() {
+                                            @Override
+                                            public void visit(Table tableName) {
+                                                if (tableName.getSchemaName() != null) {
+                                                    currentJoin.setSchema(tableName.getSchemaName());
+                                                }
+                                                currentJoin.setSetName(tableName.getName(), ofNullable(tableName.getAlias()).map(Alias::getName).orElse(null));
+                                            }
+                                        });
+                                    }
+
+                                    BinaryOperation operation = new BinaryOperation();
+                                    join.getOnExpression().accept(new ExpressionVisitorAdapter() {
+                                        @Override
+                                        protected void visitBinaryExpression(BinaryExpression expr) {
+                                            super.visitBinaryExpression(expr);
+                                            System.out.println("join visitBinaryExpression " + expr);
+                                            BinaryOperation.Operator operator = BinaryOperation.Operator.find(expr.getStringExpression());
+                                            if (!BinaryOperation.Operator.EQ.equals(operator)) {
+                                                throw new IllegalArgumentException(format("Join condition must use = only but was %s", operator.operator()));
+                                            }
+                                            //operator.update(currentJoin, operation);
+                                            //currentJoin.addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), expr.getStringExpression())).get());
+                                            //operation.clear();
+                                            currentJoin.addPredExp(new OperatorRefPredExp(expr.getStringExpression()));
+                                        }
+
+                                        @Override
+                                        public void visit(Column column) {
+                                            System.out.println("join visit(Column column): " + column);
+                                            String table = column.getTable().getName();
+                                            String columnName = column.getColumnName();
+                                            if (Objects.equals(queries.getSetName(), table) || Objects.equals(queries.getSetAlias(), table)) {
+                                                queries.getColumnType(column).addColumn(column, null, false);
+                                                currentJoin.addPredExp(new ValueRefPredExp(table, columnName));
+                                            } else if (Objects.equals(currentJoin.getSetName(), table) || Objects.equals(currentJoin.getSetAlias(), table)) {
+                                                currentJoin.getColumnType(column).addColumn(column, null, false);
+                                                currentJoin.addPredExp(new ColumnRefPredExp(table, columnName));
+                                            }
+
+//                                            if (operation.getColumn() == null) {
+//                                                operation.setColumn(columnName);
+//                                                queries.getColumnType(column).addColumn(column, null, false);
+//                                            } else {
+//                                                operation.addValue(column.getColumnName());
+//                                                //lastValueType.set(String.class);
+//                                                //currentJoin.addPredExp(PredExp.stringBin(operation.getColumn()));
+//                                                //currentJoin.addPredExp(PredExp.stringValue(column.getColumnName()));
+//                                                currentJoin.addPredExp(new ColumnRefPredExp(table, operation.getColumn()));
+//                                                currentJoin.getColumnType(column).addColumn(column, null, false);
+//                                            }
+                                        }
+                                    });
+
+
+                                    join.getUsingColumns();
+                                }
+                            }
+
+
 
                         }
                     });
@@ -373,7 +447,7 @@ class AerospikeQueryFactory {
     }
 
 
-    private static String operatorKey(Class<?> type, String operand) {
+    public static String operatorKey(Class<?> type, String operand) {
         return type.getName() + operand;
     }
 }

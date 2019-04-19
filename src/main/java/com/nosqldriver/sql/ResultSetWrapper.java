@@ -1,7 +1,5 @@
 package com.nosqldriver.sql;
 
-import com.nosqldriver.aerospike.sql.AerospikeResultSetMetaData;
-
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -31,7 +29,7 @@ import static java.util.stream.IntStream.range;
 
 public class ResultSetWrapper implements ResultSet {
     private final ResultSet rs;
-    private final Map<String, String> aliasToName; // alias to to name map
+    private final Map<String, String> aliasToName; // alias to name map
     private List<String> names;
     private List<String> aliases;
 
@@ -245,7 +243,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        return new AerospikeResultSetMetaData(rs.getMetaData(), null, names.toArray(new String[0]), aliases.toArray(new String[0]));
+        return new SimpleResultSetMetaData(rs.getMetaData(), null, names.toArray(new String[0]), aliases.toArray(new String[0]));
     }
 
     @Override

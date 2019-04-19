@@ -1,6 +1,7 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.Record;
+import com.nosqldriver.sql.SimpleResultSetMetaData;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -237,7 +238,16 @@ abstract class AerospikeResultSet implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        return new AerospikeResultSetMetaData(null, schema, names, names);
+        if (names.length != 0) {
+            return new SimpleResultSetMetaData(null, schema, names, names);
+        }
+        Record sampleRecord = getSampleRecord();
+        if (sampleRecord == null) {
+            return new SimpleResultSetMetaData(null, schema, names, names);
+        }
+
+        String[] sampleNames = sampleRecord.bins.keySet().toArray(new String[0]);
+        return new SimpleResultSetMetaData(null, schema, sampleNames, sampleNames);
     }
 
     @Override
@@ -1050,6 +1060,12 @@ abstract class AerospikeResultSet implements ResultSet {
     }
 
     protected abstract Record getRecord();
+
+    /**
+     * Retrieves record used for schema discovery.
+     * @return the sample record or null if result set is empty
+     */
+    protected abstract Record getSampleRecord();
 
 
 }

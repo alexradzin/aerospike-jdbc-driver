@@ -144,6 +144,10 @@ import static java.lang.String.format;
             }
             return key;
         }
+
+        public String operator() {
+            return operator;
+        }
     }
 
     public void setColumn(String column) {

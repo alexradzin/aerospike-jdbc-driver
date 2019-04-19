@@ -31,4 +31,9 @@ public class ResultSetOverAerospikeRecords extends AerospikeResultSet {
     protected Record getRecord() {
         return records[currentIndex];
     }
+
+    @Override
+    protected Record getSampleRecord() {
+        return currentIndex >= 0 ? records[currentIndex] : records.length > 0 ? records[0] : null;
+    }
 }

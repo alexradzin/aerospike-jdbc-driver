@@ -7,10 +7,14 @@ import com.aerospike.client.Key;
 import com.aerospike.client.Language;
 import com.aerospike.client.Value;
 import com.aerospike.client.policy.Policy;
+import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.IndexType;
+import com.aerospike.client.query.PredExp;
+import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
+import com.nosqldriver.Person;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,7 +54,8 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 class SelectTest {
     private static final String NAMESPACE = "test";
-    private static final String SET = "people";
+    private static final String PEOPLE = "people";
+    private static final String INSTRUMENTS = "instruments";
     private static final String SELECT_ALL = "select * from people";
 
     private final AerospikeClient client = new AerospikeClient("localhost", 3000);
@@ -63,22 +68,6 @@ class SelectTest {
             new Person(4, "Ringo", "Starr", 1940, 3),
     };
 
-
-    private static class Person {
-        private final int id;
-        private final String firstName;
-        private final String lastName;
-        private final int yearOfBirth;
-        private final int kidsCount;
-
-        private Person(int id, String firstName, String lastName, int yearOfBirth, int numberOfChildren) {
-            this.id = id;
-            this.firstName = firstName;
-            this.lastName = lastName;
-            this.yearOfBirth = yearOfBirth;
-            this.kidsCount = numberOfChildren;
-        }
-    }
 
     private Function<String, Integer> executeUpdate = new Function<String, Integer>() {
         @Override
@@ -123,7 +112,7 @@ class SelectTest {
     @BeforeEach
     @AfterEach
     void dropAll() {
-        client.scanAll(new ScanPolicy(), NAMESPACE, SET, (key, record) -> client.delete(new WritePolicy(), key));
+        client.scanAll(new ScanPolicy(), NAMESPACE, PEOPLE, (key, record) -> client.delete(new WritePolicy(), key));
         dropIndexSafely("first_name");
         dropIndexSafely("year_of_birth");
     }
@@ -384,10 +373,10 @@ class SelectTest {
             assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
             assertTrue(rs.next());
-            assertEquals(beatles[i].id, rs.getInt("id"));
-            assertEquals(beatles[i].firstName, rs.getString("first_name"));
-            assertEquals(beatles[i].lastName, rs.getString("last_name"));
-            assertEquals(beatles[i].yearOfBirth, rs.getInt("year_of_birth"));
+            assertEquals(beatles[i].getId(), rs.getInt("id"));
+            assertEquals(beatles[i].getFirstName(), rs.getString("first_name"));
+            assertEquals(beatles[i].getLastName(), rs.getString("last_name"));
+            assertEquals(beatles[i].getYearOfBirth(), rs.getInt("year_of_birth"));
         }
     }
 
@@ -395,14 +384,14 @@ class SelectTest {
     void selectByNotIndexedField() throws SQLException {
         writeBeatles();
         for (Person person : beatles) {
-            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where last_name=%s", person.lastName));
+            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where last_name=%s", person.getLastName()));
             assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
             assertTrue(rs.next());
-            assertEquals(person.id, rs.getInt("id"));
-            assertEquals(person.firstName, rs.getString("first_name"));
-            assertEquals(person.lastName, rs.getString("last_name"));
-            assertEquals(person.yearOfBirth, rs.getInt("year_of_birth"));
+            assertEquals(person.getId(), rs.getInt("id"));
+            assertEquals(person.getFirstName(), rs.getString("first_name"));
+            assertEquals(person.getLastName(), rs.getString("last_name"));
+            assertEquals(person.getYearOfBirth(), rs.getInt("year_of_birth"));
         }
     }
 
@@ -411,14 +400,14 @@ class SelectTest {
         writeBeatles();
         createIndex("first_name", IndexType.STRING);
         for (Person person : beatles) {
-            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where first_name=%s", person.firstName));
+            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where first_name=%s", person.getFirstName()));
             assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
             assertTrue(rs.next());
-            assertEquals(person.id, rs.getInt("id"));
-            assertEquals(person.firstName, rs.getString("first_name"));
-            assertEquals(person.lastName, rs.getString("last_name"));
-            assertEquals(person.yearOfBirth, rs.getInt("year_of_birth"));
+            assertEquals(person.getId(), rs.getInt("id"));
+            assertEquals(person.getFirstName(), rs.getString("first_name"));
+            assertEquals(person.getLastName(), rs.getString("last_name"));
+            assertEquals(person.getYearOfBirth(), rs.getInt("year_of_birth"));
         }
     }
 
@@ -610,31 +599,31 @@ class SelectTest {
 
     @Test
     void deleteByPkEq() throws SQLException {
-        assertDelete(executeUpdate, "delete from people where PK=1", p -> !"John".equals(p.firstName), res -> res == 1);
-        assertDelete(execute, "delete from people where PK=1", p -> !"John".equals(p.firstName), res -> res);
-        assertDelete(executeQuery, "delete from people where PK=1", p -> !"John".equals(p.firstName), rs -> !resultSetNext(rs));
+        assertDelete(executeUpdate, "delete from people where PK=1", p -> !"John".equals(p.getFirstName()), res -> res == 1);
+        assertDelete(execute, "delete from people where PK=1", p -> !"John".equals(p.getFirstName()), res -> res);
+        assertDelete(executeQuery, "delete from people where PK=1", p -> !"John".equals(p.getFirstName()), rs -> !resultSetNext(rs));
     }
 
 
     @Test
     void deleteByPkIn() throws SQLException {
-        assertDelete(executeUpdate, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), res -> res == 3);
-        assertDelete(execute, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), res -> res);
-        assertDelete(executeQuery, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.firstName), rs -> !resultSetNext(rs));
+        assertDelete(executeUpdate, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.getFirstName()), res -> res == 3);
+        assertDelete(execute, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.getFirstName()), res -> res);
+        assertDelete(executeQuery, "delete from people where PK in (1, 2, 3)", p -> "Ringo".equals(p.getFirstName()), rs -> !resultSetNext(rs));
     }
 
     @Test
     void deleteByPkBetween() throws SQLException {
-        assertDelete(executeUpdate, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), res -> res == 3);
-        assertDelete(execute, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), res -> res);
-        assertDelete(executeQuery, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.firstName), rs -> !resultSetNext(rs));
+        assertDelete(executeUpdate, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.getFirstName()), res -> res == 3);
+        assertDelete(execute, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.getFirstName()), res -> res);
+        assertDelete(executeQuery, "delete from people where PK between 1 and 3", p -> "Ringo".equals(p.getFirstName()), rs -> !resultSetNext(rs));
     }
 
     @Test
     void deleteByCriteria() throws SQLException {
-        assertDelete(executeUpdate, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, res -> res == 2);
-        assertDelete(execute, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, res -> res);
-        assertDelete(executeQuery, "delete from people where year_of_birth=1940", p -> p.yearOfBirth != 1940, rs -> !resultSetNext(rs));
+        assertDelete(executeUpdate, "delete from people where year_of_birth=1940", p -> p.getYearOfBirth() != 1940, res -> res == 2);
+        assertDelete(execute, "delete from people where year_of_birth=1940", p -> p.getYearOfBirth() != 1940, res -> res);
+        assertDelete(executeQuery, "delete from people where year_of_birth=1940", p -> p.getYearOfBirth() != 1940, rs -> !resultSetNext(rs));
     }
 
 
@@ -702,10 +691,10 @@ class SelectTest {
         assertEquals(1940, rs.getInt("min"));
         assertEquals(1943, rs.getInt(3));
         assertEquals(1943, rs.getInt("max"));
-        double average = stream(beatles).mapToInt(p -> p.yearOfBirth).average().orElseThrow(() -> new IllegalStateException("No average found"));
+        double average = stream(beatles).mapToInt(p -> p.getYearOfBirth()).average().orElseThrow(() -> new IllegalStateException("No average found"));
         assertEquals(average, rs.getDouble(4), 0.001);
         assertEquals(average, rs.getDouble("avg"), 0.001);
-        int sum = stream(beatles).mapToInt(p -> p.yearOfBirth).sum();
+        int sum = stream(beatles).mapToInt(p -> p.getYearOfBirth()).sum();
         assertEquals(sum, rs.getInt(5));
         assertEquals(sum, rs.getInt("total"));
         assertFalse(rs.next());
@@ -744,7 +733,7 @@ class SelectTest {
         while(rs.next()) {
             names.add(rs.getString(1));
         }
-        assertEquals(stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names);
+        assertEquals(stream(beatles).map(p -> p.getFirstName()).collect(Collectors.toSet()), names);
     }
 
     @Test
@@ -807,9 +796,38 @@ class SelectTest {
         assertFalse(rs.next());
     }
 
+
+    @Test
+    @DisplayName("select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id")
+    void simpleJoin() throws SQLException {
+        writeBeatles();
+        writeMainPersonalInstruments();
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(2, md.getColumnCount());
+        assertEquals("first_name", md.getColumnName(1));
+        assertEquals("name", md.getColumnName(2));
+        assertEquals("instrument", md.getColumnLabel(2));
+
+
+        Map<String, String> result = new HashMap<>();
+        while(rs.next()) {
+            assertEquals(rs.getString(1), rs.getString("first_name"));
+            assertEquals(rs.getString(2), rs.getString("instrument"));
+            result.put(rs.getString(1), rs.getString(2));
+        }
+
+        assertEquals(4, result.size());
+        assertEquals("guitar", result.get("John"));
+        assertEquals("bass guitar", result.get("Paul"));
+        assertEquals("guitar", result.get("George"));
+        assertEquals("drums", result.get("Ringo"));
+    }
+
     private void assertCounts(ResultSet rs, int yearOfBirth) throws SQLException {
         assertEquals(yearOfBirth, rs.getInt(1));
-        assertEquals(sum(stream(beatles), p -> p.yearOfBirth == yearOfBirth, p -> p.kidsCount), rs.getDouble(2), 0.01);
+        assertEquals(sum(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(2), 0.01);
     }
 
     private <T> int sum(Stream<T> stream, Predicate<T> filter, ToIntFunction<T> pf) {
@@ -832,12 +850,12 @@ class SelectTest {
     private <T> void assertDelete(Function<String, T> executor, String deleteSql, Predicate<Person> expectedResultFilter, Predicate<T> returnValueValidator) throws SQLException {
         writeBeatles();
         Collection<String> names1 = retrieveColumn(SELECT_ALL, "first_name");
-        assertEquals(stream(beatles).map(p -> p.firstName).collect(Collectors.toSet()), names1);
+        assertEquals(stream(beatles).map(Person::getFirstName).collect(Collectors.toSet()), names1);
 
         assertTrue(returnValueValidator.test(executor.apply(deleteSql)));
 
         Collection<String> names2 = retrieveColumn(SELECT_ALL, "first_name");
-        assertEquals(stream(beatles).filter(expectedResultFilter).map(p -> p.firstName).collect(Collectors.toSet()), names2);
+        assertEquals(stream(beatles).filter(expectedResultFilter).map(Person::getFirstName).collect(Collectors.toSet()), names2);
     }
 
     boolean resultSetNext(ResultSet rs) {
@@ -878,10 +896,10 @@ class SelectTest {
             int id = rs.getInt("id");
             assertTrue(expectedIdsSet.contains(id), "ID " + id + " is unexpected" );
             int i = id - 1;
-            assertEquals(people[i].id, rs.getInt("id"));
-            assertEquals(people[i].firstName, rs.getString("first_name"));
-            assertEquals(people[i].lastName, rs.getString("last_name"));
-            assertEquals(people[i].yearOfBirth, rs.getInt("year_of_birth"));
+            assertEquals(people[i].getId(), rs.getInt("id"));
+            assertEquals(people[i].getFirstName(), rs.getString("first_name"));
+            assertEquals(people[i].getLastName(), rs.getString("last_name"));
+            assertEquals(people[i].getYearOfBirth(), rs.getInt("year_of_birth"));
         }
         assertEquals(expectedIds.length, n);
         assertFalse(rs.next());
@@ -892,33 +910,71 @@ class SelectTest {
         return new Bin[] {new Bin("id", id), new Bin("first_name", firstName), new Bin("last_name", lastName), new Bin("year_of_birth", yearOfBirth), new Bin("kids_count", kidsCount)};
     }
 
+    private Bin[] personalInstrument(int id, int personId, String name) {
+        return new Bin[] {new Bin("id", id), new Bin("person_id", personId), new Bin("name", name)};
+    }
+
+
     private void write(WritePolicy writePolicy, Key key, Bin ... bins) {
         client.put(writePolicy, key, bins);
     }
 
-    private void write(WritePolicy writePolicy, int id, Bin ... bins) {
-        write(writePolicy, new Key(NAMESPACE, SET, id), bins);
+    private void write(String table, WritePolicy writePolicy, int id, Bin ... bins) {
+        write(writePolicy, new Key(NAMESPACE, table, id), bins);
     }
 
     private void createIndex(String fieldName, IndexType indexType) {
-        client.createIndex(null, NAMESPACE, SET, getIndexName(fieldName), fieldName, indexType).waitTillComplete();
+        client.createIndex(null, NAMESPACE, PEOPLE, getIndexName(fieldName), fieldName, indexType).waitTillComplete();
     }
 
     private void dropIndex(String fieldName) {
-        client.dropIndex(null, NAMESPACE, SET, getIndexName(fieldName)).waitTillComplete();
+        client.dropIndex(null, NAMESPACE, PEOPLE, getIndexName(fieldName)).waitTillComplete();
     }
 
     private String getIndexName(String fieldName) {
-        return format("%s_%s_INDEX", SET, fieldName.toUpperCase());
+        return format("%s_%s_INDEX", PEOPLE, fieldName.toUpperCase());
     }
 
     private void writeBeatles() {
         WritePolicy writePolicy = new WritePolicy();
-        write(writePolicy, 1, person(1, "John", "Lennon", 1940, 2));
-        write(writePolicy, 2, person(2, "Paul", "McCartney", 1942, 5));
-        write(writePolicy, 3, person(3, "George", "Harrison", 1943, 1));
-        write(writePolicy, 4, person(4, "Ringo", "Starr", 1940, 3));
+        write(PEOPLE, writePolicy, 1, person(1, "John", "Lennon", 1940, 2));
+        write(PEOPLE, writePolicy, 2, person(2, "Paul", "McCartney", 1942, 5));
+        write(PEOPLE, writePolicy, 3, person(3, "George", "Harrison", 1943, 1));
+        write(PEOPLE, writePolicy, 4, person(4, "Ringo", "Starr", 1940, 3));
     }
+
+    private void writeMainPersonalInstruments() {
+        WritePolicy writePolicy = new WritePolicy();
+        write(INSTRUMENTS, writePolicy, 1, personalInstrument(1, 1, "guitar"));
+        write(INSTRUMENTS, writePolicy, 2, personalInstrument(2, 2, "bass guitar"));
+        write(INSTRUMENTS, writePolicy, 3, personalInstrument(3, 3, "guitar"));
+        write(INSTRUMENTS, writePolicy, 4, personalInstrument(4, 4, "drums"));
+    }
+
+    private void writeAllPersonalInstruments() {
+        WritePolicy writePolicy = new WritePolicy();
+        // John Lennon
+        write(INSTRUMENTS, writePolicy, 1, personalInstrument(1, 1, "vocals"));
+        write(INSTRUMENTS, writePolicy, 2, personalInstrument(2, 1, "guitar"));
+        write(INSTRUMENTS, writePolicy, 3, personalInstrument(3, 1, "keyboards"));
+        write(INSTRUMENTS, writePolicy, 4, personalInstrument(4, 1, "harmonica"));
+
+        // Paul McCartney
+        write(INSTRUMENTS, writePolicy, 5, personalInstrument(5, 2, "vocals"));
+        write(INSTRUMENTS, writePolicy, 6, personalInstrument(6, 2, "bass guitar"));
+        write(INSTRUMENTS, writePolicy, 7, personalInstrument(7, 2, "guitar"));
+        write(INSTRUMENTS, writePolicy, 8, personalInstrument(8, 2, "keyboards"));
+
+        // George Harrison
+        write(INSTRUMENTS, writePolicy, 9, personalInstrument(9, 3, "vocals"));
+        write(INSTRUMENTS, writePolicy, 10, personalInstrument(10, 3, "guitar"));
+        write(INSTRUMENTS, writePolicy, 11, personalInstrument(11, 3, "sitar"));
+
+        // Ringo Starr
+        write(INSTRUMENTS, writePolicy, 12, personalInstrument(12, 4, "drums"));
+        write(INSTRUMENTS, writePolicy, 13, personalInstrument(13, 4, "vocals"));
+    }
+
 
     //@Test
     void testFunction() {
@@ -952,6 +1008,21 @@ class SelectTest {
         com.aerospike.client.query.ResultSet rs = client.queryAggregate(null, statement);
         while(rs.next()) {
             System.out.println("rec: " + rs.getObject());
+        }
+    }
+
+    //@Test
+    void select() {
+        writeMainPersonalInstruments();
+        Statement statement = new Statement();
+        statement.setSetName("instruments");
+        statement.setNamespace("test");
+        //statement.setPredExp(PredExp.integerBin("id"), PredExp.integerValue(2), PredExp.integerEqual());
+        //statement.setPredExp(PredExp.integerValue(2), PredExp.integerBin("id"), PredExp.integerEqual());
+        statement.setPredExp(PredExp.integerBin("person_id"), PredExp.integerBin("id"), PredExp.integerEqual());
+        RecordSet rs = client.query(new QueryPolicy(), statement);
+        while (rs.next()) {
+            System.out.println(rs.getRecord().bins);
         }
     }
 }

@@ -8,8 +8,10 @@ import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
+import com.nosqldriver.aerospike.sql.AerospikeQueryFactory;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.FilteredResultSet;
+import com.nosqldriver.sql.JoinedResultSetInvocationHandler;
 import com.nosqldriver.sql.OffsetLimit;
 import com.nosqldriver.sql.ResultSetInvocationHandler;
 import com.nosqldriver.sql.ResultSetWrapper;
@@ -66,6 +68,9 @@ public class QueryHolder {
     private List<PredExp> predExps = new ArrayList<>();
     private long offset = -1;
     private long limit = -1;
+
+    private List<QueryHolder> joins = new ArrayList<>();
+    private boolean skipIfMissing;
 
     private final ExpressionAwareResultSetFactory expressionResultSetWrappingFactory = new ExpressionAwareResultSetFactory();
 
@@ -189,6 +194,10 @@ public class QueryHolder {
         return set;
     }
 
+    public String getSetAlias() {
+        return setAlias;
+    }
+
     public void addPredExp(PredExp predExp) {
         predExps.add(predExp);
     }
@@ -209,9 +218,20 @@ public class QueryHolder {
 
 
     private Function<IAerospikeClient, ResultSet> wrap(Function<IAerospikeClient, ResultSet> nakedQuery) {
+        ResultSetWrapperFactory rsWrapperFactory = new ResultSetWrapperFactory();
+
         Function<IAerospikeClient, ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), names, aliases), hiddenNames, expressions, aliases);
         Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(expressioned.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) : expressioned;
-        return client -> new ResultSetWrapperFactory().create(new ResultSetInvocationHandler<ResultSet>(GET_NAME | OTHER, limited.apply(client), schema, names.toArray(new String[0]), aliases.toArray(new String[0])){
+
+        Function<IAerospikeClient, ResultSet> joined = client -> rsWrapperFactory.create(
+                new JoinedResultSetInvocationHandler(
+                        limited.apply(client),
+                        joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), skipIfMissing)).collect(Collectors.toList()),
+                        schema,
+                        names.toArray(new String[0]),
+                        aliases.toArray(new String[0])));
+
+        return client -> rsWrapperFactory.create(new ResultSetInvocationHandler<ResultSet>(GET_NAME | OTHER, joined.apply(client), schema, names.toArray(new String[0]), aliases.toArray(new String[0])) {
             @Override
             protected <T> T get(String alias, Class<T> type) {
                 if (!aliases.contains(alias) && !names.contains(alias) && !names.isEmpty()) {
@@ -244,7 +264,10 @@ public class QueryHolder {
         }
         protected abstract String getTable(Expression expr);
         protected abstract String getText(Expression expr);
-        public abstract void addColumn(Expression expr, String alias);
+        public abstract void addColumn(Expression expr, String alias, boolean visible);
+        public void addColumn(Expression expr, String alias) {
+            addColumn(expr, alias, true);
+        }
     }
 
 
@@ -263,9 +286,10 @@ public class QueryHolder {
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias) {
+                public void addColumn(Expression expr, String alias, boolean visible) {
                     tables.add(getTable(expr));
-                    names.add(getText(expr));
+                    (visible ? names : hiddenNames).add(getText(expr));
+                    //names.add(getText(expr));
                     expressions.add(null);
                     aliases.add(alias);
                     statement.setBinNames(getNames(true));
@@ -284,7 +308,7 @@ public class QueryHolder {
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias) {
+                public void addColumn(Expression expr, String alias, boolean visible) {
                     String column = getText(expr);
                     names.add(null);
                     expressions.add(column);
@@ -307,7 +331,7 @@ public class QueryHolder {
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias) {
+                public void addColumn(Expression expr, String alias, boolean visible) {
                     if (aggregatedFields == null) { // && !addition.isEmpty()) {
                         aggregatedFields = new HashSet<>();
                     }
@@ -330,7 +354,7 @@ public class QueryHolder {
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias) {
+                public void addColumn(Expression expr, String alias, boolean visible) {
                     if (aggregatedFields == null) {
                         aggregatedFields = new HashSet<>();
                     }
@@ -351,4 +375,117 @@ public class QueryHolder {
     public ColumnType getColumnType(Object expr) {
         return Arrays.stream(types).filter(t -> t.locator.test(expr)).findFirst().orElseThrow(() -> new IllegalArgumentException(format("Column type %s is not supported", expr)));
     }
+
+    public QueryHolder addJoin(boolean skipIfMissing) {
+        QueryHolder join = new QueryHolder(schema, indexes, policyProvider);
+        join.skipIfMissing = skipIfMissing;
+        joins.add(join);
+        return join;
+    }
+
+//    public QueryHolder getCurrentJoin() {
+//        return joins.get(joins.size() - 1);
+//    }
+
+
+    private static class JoinRetriever implements Function<ResultSet, ResultSet> {
+        private final IAerospikeClient client;
+        private final QueryHolder joinQuery;
+
+        public JoinRetriever(IAerospikeClient client, QueryHolder joinQuery) {
+            this.client = client;
+            this.joinQuery = joinQuery;
+        }
+
+        @Override
+        public ResultSet apply(ResultSet rs) {
+            QueryHolder holder = new QueryHolder(joinQuery.schema, joinQuery.indexes, joinQuery.policyProvider);
+            holder.setSetName(joinQuery.getSetName(), joinQuery.setAlias);
+            //holder.predExps = joinQuery.predExps.stream().map(predExp -> preparePredicate(rs, predExp)).collect(Collectors.toList());
+            holder.predExps = preparePredicates(rs, joinQuery.predExps);
+            return holder.getQuery().apply(client);
+        }
+
+
+        // TODO: try to refactor this code.
+        // TODO: this method uses data from AerospikeQueryFactory. Move this data to shared place.
+        private List<PredExp> preparePredicates(ResultSet rs, List<PredExp> original) {
+            int n = original.size();
+            List<PredExp> result = new ArrayList<>(original);
+            for (int i = 0; i < n; i++) {
+                PredExp exp = result.get(i);
+                if (exp instanceof ValueRefPredExp) {
+                    ValueRefPredExp ref = (ValueRefPredExp)exp;
+                    final Object value;
+                    try {
+                        value = rs.getObject(ref.getName());
+                    } catch (SQLException e) {
+                        throw new IllegalStateException(e);
+                    }
+
+                    if (value instanceof String) {
+                        result.set(i, PredExp.stringValue((String)value));
+                        if (i > 0 && result.get(i - 1) instanceof ColumnRefPredExp) {
+                            result.set(i - 1, PredExp.stringBin(((ColumnRefPredExp)result.get(i - 1)).getName()));
+                            if (i < n - 1 && result.get(i + 1) instanceof OperatorRefPredExp) {
+                                result.set(i + 1, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(String.class, ((OperatorRefPredExp)result.get(i + 1)).getOp())).get());
+                            }
+                        } else if (i < n - 1 && result.get(i + 1) instanceof ColumnRefPredExp) {
+                            result.set(i + 1, PredExp.stringBin(((ColumnRefPredExp)result.get(i + 1)).getName()));
+                            if (i < n - 2 && result.get(i + 2) instanceof OperatorRefPredExp) {
+                                result.set(i + 2, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(String.class, ((OperatorRefPredExp)result.get(i + 2)).getOp())).get());
+                            }
+                        }
+                    } else if (value instanceof Number) {
+                        result.set(i, PredExp.integerValue(((Number)value).longValue()));
+                        if (i > 0 && result.get(i - 1) instanceof ColumnRefPredExp) {
+                            result.set(i - 1, PredExp.integerBin(((ColumnRefPredExp)result.get(i - 1)).getName()));
+                            if (i < n - 1 && result.get(i + 1) instanceof OperatorRefPredExp) {
+                                result.set(i + 1, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(Long.class, ((OperatorRefPredExp)result.get(i + 1)).getOp())).get());
+                            }
+                        } else if (i < n - 1 && result.get(i + 1) instanceof ColumnRefPredExp) {
+                            result.set(i + 1, PredExp.integerBin(((ColumnRefPredExp)result.get(i + 1)).getName()));
+                            if (i < n - 2 && result.get(i + 2) instanceof OperatorRefPredExp) {
+                                result.set(i + 2, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(Long.class, ((OperatorRefPredExp)result.get(i + 2)).getOp())).get());
+                            }
+                        }
+                    } else {
+                        throw new IllegalStateException(value.getClass().getName());
+                    }
+                }
+            }
+            return result;
+        }
+
+        private int index(List<PredExp> predicates, int i, Class placeholderType, int increment) {
+            int j = i + increment;
+            return j >= 0 && j < predicates.size() && placeholderType.equals(predicates.get(j).getClass()) ? j : -1;
+        }
+
+
+        private PredExp preparePredicate(ResultSet rs, PredExp definedPredExp) {
+            if (!(definedPredExp instanceof ColumnRefPredExp)) {
+                return definedPredExp;
+            }
+
+            ColumnRefPredExp ref = (ColumnRefPredExp)definedPredExp;
+            final Object value;
+            try {
+                value = rs.getObject(ref.getName());
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+
+            if (value instanceof String) {
+                return PredExp.stringValue((String)value);
+            }
+            if (value instanceof Number) {
+                return PredExp.integerValue(((Number)value).longValue());
+            }
+            throw new IllegalStateException(value.getClass().getName());
+        }
+
+
+    }
+
 }

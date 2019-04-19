@@ -1,15 +1,16 @@
-package com.nosqldriver.aerospike.sql;
+package com.nosqldriver.sql;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
-public class AerospikeResultSetMetaData implements ResultSetMetaData {
+//TODO: separate SimpleResultSetMetaData and SimpleResultSetMetaDataWrapper
+public class SimpleResultSetMetaData implements ResultSetMetaData {
     private final ResultSetMetaData md;
     private final String schema;
     private final String[] names;
     private final String[] aliases;
 
-    public AerospikeResultSetMetaData(ResultSetMetaData md, String schema, String[] names, String[] aliases) {
+    public SimpleResultSetMetaData(ResultSetMetaData md, String schema, String[] names, String[] aliases) {
         this.md = md;
         this.schema = schema;
         this.names = names;
@@ -18,8 +19,8 @@ public class AerospikeResultSetMetaData implements ResultSetMetaData {
 
 
     @Override
-    public int getColumnCount() {
-        return names.length;
+    public int getColumnCount() throws SQLException {
+        return names.length == 0 && md != null ? md.getColumnCount() : names.length;
     }
 
     @Override
