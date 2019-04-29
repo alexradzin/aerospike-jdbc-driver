@@ -223,7 +223,7 @@ public class QueryHolder {
         Function<IAerospikeClient, ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), names, aliases), hiddenNames, expressions, aliases);
         Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(expressioned.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) : expressioned;
 
-        Function<IAerospikeClient, ResultSet> joined = client -> rsWrapperFactory.create(
+        Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? limited : client -> rsWrapperFactory.create(
                 new JoinedResultSetInvocationHandler(
                         limited.apply(client),
                         joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), skipIfMissing)).collect(Collectors.toList()),
