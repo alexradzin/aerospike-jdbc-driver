@@ -7,6 +7,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
@@ -17,7 +18,7 @@ public class JoinedResultSetInvocationHandler extends ResultSetInvocationHandler
 
 
     public JoinedResultSetInvocationHandler(ResultSet resultSet, List<JoinHolder> joinHolders, String schema, String[] names, String[] aliases) {
-        super(NEXT | METADATA | GET_NAME /*| GET_INDEX*/, resultSet, schema, names, aliases);
+        super(NEXT | METADATA | GET_NAME | GET_INDEX, resultSet, schema, names, aliases);
         this.joinHolders = joinHolders;
     }
 
@@ -50,20 +51,33 @@ public class JoinedResultSetInvocationHandler extends ResultSetInvocationHandler
         return new CompositeResultSetMetaData(metadata);
     }
 
-//    @Override
-//    protected <T> T get(int index, Class<T> type) {
-//        return super.get(index, type);
-//    }
-//
+    @Override
+    protected <T> T get(int index, Class<T> type) {
+        try {
+            return get(getMetadata().getColumnLabel(index), type);
+        } catch (SQLException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+
+
+
     @Override
     protected <T> T get(String alias, Class<T> type) {
         try {
-            @SuppressWarnings("unchecked")
-            T result = cast(resultSet.getObject(alias), type);
-            return result;
+            Collection<ResultSet> allResultSets = new LinkedHashSet<>(resultSets.size() + 1);
+            allResultSets.add(resultSet);
+            allResultSets.addAll(resultSets);
+            for (ResultSet rs : allResultSets) {
+                Object value = rs.getObject(alias);
+                if (value != null) {
+                    return cast(value, type);
+                }
+            }
+            return null;
         } catch (SQLException e) {
             throw new IllegalStateException(e);
-            //return null; // just to satisfy compiler: the exception is thrown in previous line.
         }
 
     }

@@ -1017,9 +1017,13 @@ class SelectTest {
         Statement statement = new Statement();
         statement.setSetName("instruments");
         statement.setNamespace("test");
-        //statement.setPredExp(PredExp.integerBin("id"), PredExp.integerValue(2), PredExp.integerEqual());
+        //statement.setPredExp(PredExp.integerBin("person_id"), PredExp.integerValue(2), PredExp.integerEqual());
+
+        statement.setPredExp(PredExp.integerValue(2), PredExp.integerBin("person_id"), PredExp.integerEqual());
+
+
         //statement.setPredExp(PredExp.integerValue(2), PredExp.integerBin("id"), PredExp.integerEqual());
-        statement.setPredExp(PredExp.integerBin("person_id"), PredExp.integerBin("id"), PredExp.integerEqual());
+        //statement.setPredExp(PredExp.integerBin("person_id"), PredExp.integerBin("id"), PredExp.integerEqual());
         RecordSet rs = client.query(new QueryPolicy(), statement);
         while (rs.next()) {
             System.out.println(rs.getRecord().bins);

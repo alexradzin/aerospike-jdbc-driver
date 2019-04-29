@@ -256,11 +256,14 @@ public class AerospikeQueryFactory {
                                                     currentJoin.setSchema(tableName.getSchemaName());
                                                 }
                                                 currentJoin.setSetName(tableName.getName(), ofNullable(tableName.getAlias()).map(Alias::getName).orElse(null));
+                                                String joinedSetAlias = currentJoin.getSetAlias();
+                                                if (joinedSetAlias != null) {
+                                                    queries.copyColumnsForTable(joinedSetAlias, currentJoin);
+                                                }
                                             }
                                         });
                                     }
 
-                                    BinaryOperation operation = new BinaryOperation();
                                     join.getOnExpression().accept(new ExpressionVisitorAdapter() {
                                         @Override
                                         protected void visitBinaryExpression(BinaryExpression expr) {
@@ -270,9 +273,6 @@ public class AerospikeQueryFactory {
                                             if (!BinaryOperation.Operator.EQ.equals(operator)) {
                                                 throw new IllegalArgumentException(format("Join condition must use = only but was %s", operator.operator()));
                                             }
-                                            //operator.update(currentJoin, operation);
-                                            //currentJoin.addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), expr.getStringExpression())).get());
-                                            //operation.clear();
                                             currentJoin.addPredExp(new OperatorRefPredExp(expr.getStringExpression()));
                                         }
 
@@ -288,18 +288,6 @@ public class AerospikeQueryFactory {
                                                 currentJoin.getColumnType(column).addColumn(column, null, false);
                                                 currentJoin.addPredExp(new ColumnRefPredExp(table, columnName));
                                             }
-
-//                                            if (operation.getColumn() == null) {
-//                                                operation.setColumn(columnName);
-//                                                queries.getColumnType(column).addColumn(column, null, false);
-//                                            } else {
-//                                                operation.addValue(column.getColumnName());
-//                                                //lastValueType.set(String.class);
-//                                                //currentJoin.addPredExp(PredExp.stringBin(operation.getColumn()));
-//                                                //currentJoin.addPredExp(PredExp.stringValue(column.getColumnName()));
-//                                                currentJoin.addPredExp(new ColumnRefPredExp(table, operation.getColumn()));
-//                                                currentJoin.getColumnType(column).addColumn(column, null, false);
-//                                            }
                                         }
                                     });
 

@@ -401,7 +401,7 @@ public class QueryHolder {
         public ResultSet apply(ResultSet rs) {
             QueryHolder holder = new QueryHolder(joinQuery.schema, joinQuery.indexes, joinQuery.policyProvider);
             holder.setSetName(joinQuery.getSetName(), joinQuery.setAlias);
-            //holder.predExps = joinQuery.predExps.stream().map(predExp -> preparePredicate(rs, predExp)).collect(Collectors.toList());
+            joinQuery.copyColumnsForTable(joinQuery.setAlias, holder);
             holder.predExps = preparePredicates(rs, joinQuery.predExps);
             return holder.getQuery().apply(client);
         }
@@ -488,4 +488,15 @@ public class QueryHolder {
 
     }
 
+
+
+    public void copyColumnsForTable(String tableAlias, QueryHolder other) {
+        int n = names.size();
+        for (int i = 0; i < n; i++) {
+            if (tableAlias.equals(tables.get(i))) {
+                other.names.add(names.get(i));
+                other.aliases.add(aliases.get(i));
+            }
+        }
+    }
 }
