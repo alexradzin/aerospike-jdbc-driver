@@ -15,6 +15,8 @@ import static com.nosqldriver.sql.TypeTransformer.cast;
 public class JoinedResultSetInvocationHandler extends ResultSetInvocationHandler<ResultSet> {
     private final List<JoinHolder> joinHolders;
     private final List<ResultSet> resultSets = new ArrayList<>();
+    private boolean moveMainResultSet = true;
+    private boolean hasMore = true;
 
 
     public JoinedResultSetInvocationHandler(ResultSet resultSet, List<JoinHolder> joinHolders, String schema, String[] names, String[] aliases) {
@@ -25,20 +27,44 @@ public class JoinedResultSetInvocationHandler extends ResultSetInvocationHandler
 
     @Override
     protected boolean next() throws SQLException {
-        SUPER:
-        while (resultSet.next()) {
-            resultSets.clear();
-            for (JoinHolder jh : joinHolders) {
-                ResultSet rs = jh.getResultSetRetriver().apply(resultSet);
-                if (!jh.isSkipIfMissing() && (rs == null || !rs.next())) {
-                    continue SUPER;
+        if (moveMainResultSet) {
+            SUPER:
+            while (resultSet.next()) {
+                resultSets.clear();
+                moveMainResultSet = false;
+                for (JoinHolder jh : joinHolders) {
+                    ResultSet rs = jh.getResultSetRetriver().apply(resultSet);
+                    boolean hasNext = rs != null && rs.next();
+                    if (!jh.isSkipIfMissing() && !hasNext) {
+                        continue SUPER;
+                    }
+                    resultSets.add(rs);
                 }
-                resultSets.add(rs);
+                moveMainResultSet = false;
+                hasMore = true;
+                return true;
             }
-            return true;
+            moveMainResultSet = false;
+            hasMore = false;
+            return false;
+        } else if(hasMore) {
+            boolean allDone = true;
+            for (int i = 0; i < joinHolders.size(); i++) {
+                ResultSet rs = resultSets.get(i);
+                boolean hasNext = rs.next();
+                if (hasNext) {
+                    allDone = false;
+                }
+                if (!hasNext && joinHolders.get(i).isSkipIfMissing()) {
+                    moveMainResultSet = true;
+                    return false;
+                }
+            }
+            moveMainResultSet = allDone;
+            return !moveMainResultSet || next();
+        } else {
+            return false;
         }
-
-        return false;
     }
 
     @Override

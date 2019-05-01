@@ -11,7 +11,6 @@ import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.IndexType;
-import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.Person;
@@ -29,7 +28,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,6 +42,7 @@ import java.util.stream.Stream;
 
 import static com.nosqldriver.TestUtils.getDisplayName;
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -112,9 +111,14 @@ class SelectTest {
     @BeforeEach
     @AfterEach
     void dropAll() {
-        client.scanAll(new ScanPolicy(), NAMESPACE, PEOPLE, (key, record) -> client.delete(new WritePolicy(), key));
+        deleteAllRecords(NAMESPACE, PEOPLE);
+        deleteAllRecords(NAMESPACE, INSTRUMENTS);
         dropIndexSafely("first_name");
         dropIndexSafely("year_of_birth");
+    }
+
+    private void deleteAllRecords(String namespace, String table) {
+        client.scanAll(new ScanPolicy(), namespace, table, (key, record) -> client.delete(new WritePolicy(), key));
     }
 
     private void dropIndexSafely(String fieldName) {
@@ -715,7 +719,7 @@ class SelectTest {
         while(rs.next()) {
             years.add(rs.getInt(1));
         }
-        assertEquals(new HashSet<>(Arrays.asList(1940, 1942, 1943)), years);
+        assertEquals(new HashSet<>(asList(1940, 1942, 1943)), years);
     }
 
     @Test
@@ -797,12 +801,16 @@ class SelectTest {
     }
 
 
-    @Test
-    @DisplayName("select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id")
-    void simpleJoin() throws SQLException {
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id",
+            "select first_name, i.name as instrument from people as p inner join instruments as i on p.id=i.person_id",
+            "select first_name, i.name as instrument from people as p left join instruments as i on p.id=i.person_id",
+    })
+    void oneToOneJoin(String sql) throws SQLException {
         writeBeatles();
         writeMainPersonalInstruments();
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSet rs = conn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());
@@ -824,6 +832,45 @@ class SelectTest {
         assertEquals("guitar", result.get("George"));
         assertEquals("drums", result.get("Ringo"));
     }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id",
+            "select first_name, i.name as instrument from people as p inner join instruments as i on p.id=i.person_id",
+            "select first_name, i.name as instrument from people as p left join instruments as i on p.id=i.person_id",
+    })
+    void oneToManyJoin(String sql) throws SQLException {
+        writeBeatles();
+        writeAllPersonalInstruments();
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(2, md.getColumnCount());
+        assertEquals("first_name", md.getColumnName(1));
+        assertEquals("name", md.getColumnName(2));
+        assertEquals("instrument", md.getColumnLabel(2));
+
+
+        Map<String, Collection<String>> result = new HashMap<>();
+        while(rs.next()) {
+            assertEquals(rs.getString(1), rs.getString("first_name"));
+            assertEquals(rs.getString(2), rs.getString("instrument"));
+            String firstName = rs.getString(1);
+
+            Collection<String> instruments = result.getOrDefault(firstName, new HashSet<>());
+            instruments.add(rs.getString(2));
+            result.put(firstName, instruments);
+        }
+
+        assertEquals(4, result.size());
+
+        assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
+        assertEquals(new HashSet<>(asList("vocals", "bass guitar", "guitar", "keyboards")), result.get("Paul"));
+        assertEquals(new HashSet<>(asList("vocals", "guitar", "sitar")), result.get("George"));
+        assertEquals(new HashSet<>(asList("vocals", "drums")), result.get("Ringo"));
+    }
+
 
     private void assertCounts(ResultSet rs, int yearOfBirth) throws SQLException {
         assertEquals(yearOfBirth, rs.getInt(1));
@@ -1013,13 +1060,13 @@ class SelectTest {
 
     //@Test
     void select() {
-        writeMainPersonalInstruments();
+        //writeMainPersonalInstruments();
+        writeAllPersonalInstruments();
         Statement statement = new Statement();
         statement.setSetName("instruments");
         statement.setNamespace("test");
         //statement.setPredExp(PredExp.integerBin("person_id"), PredExp.integerValue(2), PredExp.integerEqual());
-
-        statement.setPredExp(PredExp.integerValue(2), PredExp.integerBin("person_id"), PredExp.integerEqual());
+        //statement.setPredExp(PredExp.integerValue(2), PredExp.integerBin("person_id"), PredExp.integerEqual());
 
 
         //statement.setPredExp(PredExp.integerValue(2), PredExp.integerBin("id"), PredExp.integerEqual());
