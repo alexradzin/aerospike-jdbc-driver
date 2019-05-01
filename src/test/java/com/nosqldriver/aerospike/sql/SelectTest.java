@@ -872,6 +872,40 @@ class SelectTest {
     }
 
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id where first_name='John'",
+    })
+    void oneToManyJoinWhereMainTable(String sql) throws SQLException {
+        writeBeatles();
+        writeAllPersonalInstruments();
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(2, md.getColumnCount());
+        assertEquals("first_name", md.getColumnName(1));
+        assertEquals("name", md.getColumnName(2));
+        assertEquals("instrument", md.getColumnLabel(2));
+
+
+        Map<String, Collection<String>> result = new HashMap<>();
+        while(rs.next()) {
+            assertEquals(rs.getString(1), rs.getString("first_name"));
+            assertEquals(rs.getString(2), rs.getString("instrument"));
+            String firstName = rs.getString(1);
+
+            Collection<String> instruments = result.getOrDefault(firstName, new HashSet<>());
+            instruments.add(rs.getString(2));
+            result.put(firstName, instruments);
+        }
+
+        assertEquals(1, result.size());
+        assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
+    }
+
+
+
+
     private void assertCounts(ResultSet rs, int yearOfBirth) throws SQLException {
         assertEquals(yearOfBirth, rs.getInt(1));
         assertEquals(sum(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(2), 0.01);
