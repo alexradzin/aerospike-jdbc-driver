@@ -44,6 +44,7 @@ import static com.nosqldriver.TestUtils.getDisplayName;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
+import static java.util.Collections.singleton;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -904,6 +905,40 @@ class SelectTest {
     }
 
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id where i.name='guitar'",
+            "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id where instrument='guitar'",
+    })
+    void oneToManyJoinWhereSecondaryTable(String sql) throws SQLException {
+        writeBeatles();
+        writeAllPersonalInstruments();
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(2, md.getColumnCount());
+        assertEquals("first_name", md.getColumnName(1));
+        assertEquals("name", md.getColumnName(2));
+        assertEquals("instrument", md.getColumnLabel(2));
+
+
+        Map<String, Collection<String>> result = new HashMap<>();
+        while(rs.next()) {
+            assertEquals(rs.getString(1), rs.getString("first_name"));
+            assertEquals(rs.getString(2), rs.getString("instrument"));
+            String firstName = rs.getString(1);
+
+            Collection<String> instruments = result.getOrDefault(firstName, new HashSet<>());
+            instruments.add(rs.getString(2));
+            result.put(firstName, instruments);
+        }
+
+        assertEquals(3, result.size());
+
+        assertEquals(new HashSet<>(singleton("guitar")), result.get("John"));
+        assertEquals(new HashSet<>(singleton("guitar")), result.get("Paul"));
+        assertEquals(new HashSet<>(singleton("guitar")), result.get("George"));
+    }
 
 
     private void assertCounts(ResultSet rs, int yearOfBirth) throws SQLException {

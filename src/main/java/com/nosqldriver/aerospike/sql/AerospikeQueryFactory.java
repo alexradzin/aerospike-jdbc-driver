@@ -47,6 +47,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -129,120 +130,6 @@ public class AerospikeQueryFactory {
                                 }
                             }));
 
-                            Expression where = plainSelect.getWhere();
-                            // Between is not supported by predicates and has to be transformed to expression like filed >= lowerValue and field <= highValue.
-                            // In terms of predicates additional "stringBin" and "and" predicates must be added. This is implemented using the following variables.
-                            AtomicBoolean between = new AtomicBoolean(false);
-                            AtomicInteger betweenEdge = new AtomicInteger(0);
-                            if (where != null) {
-                                where.accept(new ExpressionVisitorAdapter() {
-                                    BinaryOperation operation = new BinaryOperation();
-                                    @Override
-                                    public void visit(Between expr) {
-                                        System.out.println("visitBinaryExpression " + expr + " START");
-                                        between.set(true);
-                                        super.visit(expr);
-                                        BinaryOperation.Operator.BETWEEN.update(queries, operation);
-                                        System.out.println("visitBinaryExpression " + expr + " END");
-                                        queries.addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), "AND")).get());
-                                        between.set(false);
-                                        operation.clear();
-                                    }
-
-                                    public void visit(InExpression expr) {
-                                        super.visit(expr);
-                                        expr.getRightItemsList().accept(new ItemsListVisitorAdapter() {
-                                            @Override
-                                            public void visit(ExpressionList expressionList) {
-                                                BinaryOperation.Operator.IN.update(queries, operation);
-                                            }
-                                        });
-                                    }
-
-
-                                    @Override
-                                    protected void visitBinaryExpression(BinaryExpression expr) {
-                                        super.visitBinaryExpression(expr);
-                                        System.out.println("visitBinaryExpression " + expr);
-                                        BinaryOperation.Operator.find(expr.getStringExpression()).update(queries, operation);
-                                        queries.addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), expr.getStringExpression())).get());
-                                        operation.clear();
-                                    }
-
-                                    @Override
-                                    public void visit(Column column) {
-                                        System.out.println("visit(Column column): " + column);
-                                        if (operation.getColumn() == null) {
-                                            operation.setColumn(column.getColumnName());
-                                        } else {
-                                            operation.addValue(column.getColumnName());
-                                            lastValueType.set(String.class);
-                                            queries.addPredExp(PredExp.stringBin(operation.getColumn()));
-                                            queries.addPredExp(PredExp.stringValue(column.getColumnName()));
-                                        }
-                                    }
-
-                                    @Override
-                                    public void visit(LongValue value) {
-                                        System.out.println("visit(LongValue value): " + value);
-                                        operation.addValue(value.getValue());
-                                        queries.addPredExp(PredExp.integerBin(operation.getColumn()));
-                                        queries.addPredExp(PredExp.integerValue(value.getValue()));
-                                        lastValueType.set(Long.class);
-                                        if (between.get()) {
-                                            int edge = betweenEdge.incrementAndGet();
-                                            switch (edge) {
-                                                case 1: queries.addPredExp(PredExp.integerGreaterEq()); break;
-                                                case 2: queries.addPredExp(PredExp.integerLessEq()); break;
-                                                default: throw new IllegalArgumentException("BETWEEN with more than 2 edges");
-                                            }
-                                        }
-                                    }
-
-                                    @Override
-                                    public void visit(StringValue value) {
-                                        System.out.println("visit(StringValue value): " + value);
-                                        operation.addValue(value.getValue());
-                                        queries.addPredExp(PredExp.stringBin(operation.getColumn()));
-                                        queries.addPredExp(PredExp.stringValue(value.getValue()));
-                                        lastValueType.set(String.class);
-                                    }
-
-                                    @Override
-                                    public void visit(DateValue value) {
-                                        visit(new LongValue(value.getValue().getTime()));
-                                    }
-
-                                    @Override
-                                    public void visit(TimeValue value) {
-                                        visit(new LongValue(value.getValue().getTime()));
-                                    }
-
-                                    @Override
-                                    public void visit(TimestampValue value) {
-                                        visit(new LongValue(value.getValue().getTime()));
-                                    }
-                                });
-                            }
-
-
-                            if (plainSelect.getGroupByColumnReferences() != null) {
-                                plainSelect.getGroupByColumnReferences().forEach(e -> queries.addGroupField(((Column) e).getColumnName()));
-                            }
-
-                            if (plainSelect.getOffset() != null) {
-                                queries.setOffset(plainSelect.getOffset().getOffset());
-                            }
-
-                            if (plainSelect.getLimit() != null && plainSelect.getLimit().getRowCount() != null) {
-                                plainSelect.getLimit().getRowCount().accept(new ExpressionVisitorAdapter() {
-                                    @Override
-                                    public void visit(LongValue value) {
-                                        queries.setLimit(value.getValue());
-                                    }
-                                });
-                            }
-
 
                             if (plainSelect.getJoins() != null) {
                                 for (Join join : plainSelect.getJoins()) {
@@ -298,6 +185,139 @@ public class AerospikeQueryFactory {
 
 
 
+                            Expression where = plainSelect.getWhere();
+                            // Between is not supported by predicates and has to be transformed to expression like filed >= lowerValue and field <= highValue.
+                            // In terms of predicates additional "stringBin" and "and" predicates must be added. This is implemented using the following variables.
+                            AtomicBoolean between = new AtomicBoolean(false);
+                            AtomicInteger betweenEdge = new AtomicInteger(0);
+                            if (where != null) {
+                                AtomicBoolean predExpsEmpty = new AtomicBoolean(true);
+                                BinaryOperation operation = new BinaryOperation();
+                                where.accept(new ExpressionVisitorAdapter() {
+                                    @Override
+                                    public void visit(Between expr) {
+                                        System.out.println("visitBinaryExpression " + expr + " START");
+                                        between.set(true);
+                                        super.visit(expr);
+                                        BinaryOperation.Operator.BETWEEN.update(queries, operation);
+                                        System.out.println("visitBinaryExpression " + expr + " END");
+                                        queries.queries(operation.getTable()).addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), "AND")).get());
+                                        between.set(false);
+                                        operation.clear();
+                                    }
+
+                                    public void visit(InExpression expr) {
+                                        super.visit(expr);
+                                        expr.getRightItemsList().accept(new ItemsListVisitorAdapter() {
+                                            @Override
+                                            public void visit(ExpressionList expressionList) {
+                                                BinaryOperation.Operator.IN.update(queries, operation);
+                                            }
+                                        });
+                                    }
+
+
+                                    @Override
+                                    protected void visitBinaryExpression(BinaryExpression expr) {
+                                        super.visitBinaryExpression(expr);
+                                        System.out.println("visitBinaryExpression " + expr);
+                                        BinaryOperation.Operator.find(expr.getStringExpression()).update(queries, operation);
+                                        queries.queries(operation.getTable()).addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), expr.getStringExpression())).get());
+                                        operation.clear();
+                                    }
+
+                                    @Override
+                                    public void visit(Column column) {
+                                        System.out.println("visit(Column column): " + column);
+                                        if (operation.getColumn() == null) {
+                                            String table = Optional.ofNullable(column.getTable()).map(Table::getName).orElse(null);
+                                            String name = column.getColumnName();
+                                            if (table == null) {
+                                                // assumen name is actually alias and try to retrieve real table and column name
+                                                String[] columnData = queries.getByAlias(name);
+                                                if (columnData != null) {
+                                                    table = columnData[0];
+                                                    name = columnData[1];
+                                                }
+                                            }
+                                            operation.setTable(table);
+                                            operation.setColumn(name);
+                                            predExpsEmpty.set(queries.queries(operation.getTable()).getPredExps().isEmpty());
+                                        } else {
+                                            operation.addValue(column.getColumnName());
+                                            lastValueType.set(String.class);
+                                            queries.queries(operation.getTable()).addPredExp(PredExp.stringBin(operation.getColumn()));
+                                            queries.queries(operation.getTable()).addPredExp(PredExp.stringValue(column.getColumnName()));
+                                        }
+                                    }
+
+                                    @Override
+                                    public void visit(LongValue value) {
+                                        System.out.println("visit(LongValue value): " + value);
+                                        operation.addValue(value.getValue());
+                                        queries.queries(operation.getTable()).addPredExp(PredExp.integerBin(operation.getColumn()));
+                                        queries.queries(operation.getTable()).addPredExp(PredExp.integerValue(value.getValue()));
+                                        lastValueType.set(Long.class);
+                                        if (between.get()) {
+                                            int edge = betweenEdge.incrementAndGet();
+                                            switch (edge) {
+                                                case 1: queries.queries(operation.getTable()).addPredExp(PredExp.integerGreaterEq()); break;
+                                                case 2: queries.queries(operation.getTable()).addPredExp(PredExp.integerLessEq()); break;
+                                                default: throw new IllegalArgumentException("BETWEEN with more than 2 edges");
+                                            }
+                                        }
+                                    }
+
+                                    @Override
+                                    public void visit(StringValue value) {
+                                        System.out.println("visit(StringValue value): " + value);
+                                        operation.addValue(value.getValue());
+                                        queries.queries(operation.getTable()).addPredExp(PredExp.stringBin(operation.getColumn()));
+                                        queries.queries(operation.getTable()).addPredExp(PredExp.stringValue(value.getValue()));
+                                        lastValueType.set(String.class);
+                                    }
+
+                                    @Override
+                                    public void visit(DateValue value) {
+                                        visit(new LongValue(value.getValue().getTime()));
+                                    }
+
+                                    @Override
+                                    public void visit(TimeValue value) {
+                                        visit(new LongValue(value.getValue().getTime()));
+                                    }
+
+                                    @Override
+                                    public void visit(TimestampValue value) {
+                                        visit(new LongValue(value.getValue().getTime()));
+                                    }
+                                });
+
+                                if (!predExpsEmpty.get()) {
+                                    List<PredExp> predExps = queries.queries(operation.getTable()).getPredExps();
+                                    if (!predExps.isEmpty() && !"AndOr".equals(predExps.get(predExps.size() - 1).getClass().getSimpleName())) {
+                                        queries.queries(operation.getTable()).addPredExp(PredExp.and(2));
+                                    }
+                                }
+                            }
+
+
+                            if (plainSelect.getGroupByColumnReferences() != null) {
+                                plainSelect.getGroupByColumnReferences().forEach(e -> queries.addGroupField(((Column) e).getColumnName()));
+                            }
+
+                            if (plainSelect.getOffset() != null) {
+                                queries.setOffset(plainSelect.getOffset().getOffset());
+                            }
+
+                            if (plainSelect.getLimit() != null && plainSelect.getLimit().getRowCount() != null) {
+                                plainSelect.getLimit().getRowCount().accept(new ExpressionVisitorAdapter() {
+                                    @Override
+                                    public void visit(LongValue value) {
+                                        queries.setLimit(value.getValue());
+                                    }
+                                });
+                            }
                         }
                     });
                 }

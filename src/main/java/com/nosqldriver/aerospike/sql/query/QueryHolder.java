@@ -69,7 +69,7 @@ public class QueryHolder {
     private long offset = -1;
     private long limit = -1;
 
-    private List<QueryHolder> joins = new ArrayList<>();
+    private Collection<QueryHolder> joins = new ArrayList<>();
     private boolean skipIfMissing;
 
     private final ExpressionAwareResultSetFactory expressionResultSetWrappingFactory = new ExpressionAwareResultSetFactory();
@@ -201,6 +201,12 @@ public class QueryHolder {
     public void addPredExp(PredExp predExp) {
         predExps.add(predExp);
     }
+
+
+    public List<PredExp> getPredExps() {
+        return predExps;
+    }
+
 
     public void setFilter(Filter filter, String binName) {
         if (indexes.contains(join(".", schema, set, binName))) {
@@ -498,5 +504,17 @@ public class QueryHolder {
                 other.aliases.add(aliases.get(i));
             }
         }
+    }
+
+    public QueryHolder queries(String table) {
+        return table == null || table.equals(setAlias) ? this : joins.stream().filter(j -> table.equals(j.setAlias)).findFirst().orElseThrow(() -> new IllegalArgumentException(format("Cannot find query for table  %s", table)));
+    }
+
+    public String[] getByAlias(String alias) {
+        int index = aliases.indexOf(alias);
+        if (index < 0) {
+            return null;
+        }
+        return new String[] {tables.get(index), names.get(index)};
     }
 }

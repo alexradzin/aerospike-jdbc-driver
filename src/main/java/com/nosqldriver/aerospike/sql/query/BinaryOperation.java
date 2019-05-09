@@ -13,14 +13,16 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
- public class BinaryOperation {
+public class BinaryOperation {
+    private String table;
     private String column;
     private List<Object> values = new ArrayList<>(2);
 
     public BinaryOperation() {
     }
 
-    public BinaryOperation(String column, List<Object> values) {
+    private BinaryOperation(String table, String column, List<Object> values) {
+        this.table = table;
         this.column = column;
         this.values = values;
     }
@@ -55,35 +57,35 @@ import static java.lang.String.format;
         GT(">") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                List<Object> values = Arrays.asList(((Number)operation.values.get(0)).longValue() + 1, Long.MAX_VALUE);
-                return BETWEEN.update(queries, new BinaryOperation(operation.column, values));
+                List<Object> values = Arrays.asList(((Number) operation.values.get(0)).longValue() + 1, Long.MAX_VALUE);
+                return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
             }
         },
         GE(">=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 List<Object> values = Arrays.asList(operation.values.get(0), Long.MAX_VALUE);
-                return BETWEEN.update(queries, new BinaryOperation(operation.column, values));
+                return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
             }
         },
         LT("<") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                List<Object> values = Arrays.asList(Long.MIN_VALUE, ((Number)operation.values.get(0)).longValue() - 1);
-                return BETWEEN.update(queries, new BinaryOperation(operation.column, values));
+                List<Object> values = Arrays.asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1);
+                return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
             }
         },
         LE("<=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 List<Object> values = Arrays.asList(Long.MIN_VALUE, operation.values.get(0));
-                return BETWEEN.update(queries, new BinaryOperation(operation.column, values));
+                return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
             }
         },
         BETWEEN("BETWEEN") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                queries.setFilter(Filter.range(operation.column, ((Number)operation.values.get(0)).longValue(), ((Number)operation.values.get(1)).longValue()), operation.column);
+                queries.setFilter(Filter.range(operation.column, ((Number) operation.values.get(0)).longValue(), ((Number) operation.values.get(1)).longValue()), operation.column);
                 return queries;
             }
         },
@@ -132,13 +134,13 @@ import static java.lang.String.format;
             final Key key;
             final String schema = queries.getSchema();
             if (value instanceof Long) {
-                key = new Key(schema, queries.getSetName(), (Long)value);
+                key = new Key(schema, queries.getSetName(), (Long) value);
             } else if (value instanceof Integer) {
-                key = new Key(schema, queries.getSetName(), (Integer)value);
+                key = new Key(schema, queries.getSetName(), (Integer) value);
             } else if (value instanceof Number) {
-                key = new Key(schema, queries.getSetName(), ((Number)value).intValue());
+                key = new Key(schema, queries.getSetName(), ((Number) value).intValue());
             } else if (value instanceof String) {
-                key = new Key(schema, queries.getSetName(), (String)value);
+                key = new Key(schema, queries.getSetName(), (String) value);
             } else {
                 throw new IllegalArgumentException(format("Filter by %s is not supported right now. Use either number or string", value == null ? null : value.getClass()));
             }
@@ -148,6 +150,14 @@ import static java.lang.String.format;
         public String operator() {
             return operator;
         }
+    }
+
+    public void setTable(String table) {
+        this.table = table;
+    }
+
+    public String getTable() {
+        return table;
     }
 
     public void setColumn(String column) {
