@@ -96,15 +96,28 @@ public class JoinedResultSetInvocationHandler extends ResultSetInvocationHandler
             allResultSets.add(resultSet);
             allResultSets.addAll(resultSets);
             for (ResultSet rs : allResultSets) {
-                Object value = rs.getObject(alias);
-                if (value != null) {
-                    return cast(value, type);
+                if (columnTags(rs.getMetaData()).contains(alias)) {
+                    Object value = rs.getObject(alias);
+                    if (value != null) { //TODO: this if is relevant for the main result set only because its metadata holds all fileds. Think about better solution.
+                        return cast(value, type);
+                    }
                 }
             }
             return null;
         } catch (SQLException e) {
             throw new IllegalStateException(e);
         }
-
     }
+
+    private Collection<String> columnTags(ResultSetMetaData md) throws SQLException {
+        int columnCount = md.getColumnCount();
+        Collection<String> labels = new ArrayList<>(columnCount);
+        for (int i = 0; i < columnCount; i++) {
+            String label = md.getColumnLabel(i + 1);
+            String tag = label != null ? label : md.getColumnName(i + 1);
+            labels.add(tag);
+        }
+        return labels;
+    }
+
 }
