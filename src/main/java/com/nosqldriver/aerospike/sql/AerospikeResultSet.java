@@ -257,7 +257,8 @@ abstract class AerospikeResultSet implements ResultSet {
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
-        return getRecord().getValue(columnLabel);
+        Record record = getRecord();
+        return record == null ? null : record.getValue(columnLabel);
     }
 
     @Override

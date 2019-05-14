@@ -232,7 +232,7 @@ public class QueryHolder {
         Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? limited : client -> rsWrapperFactory.create(
                 new JoinedResultSetInvocationHandler(
                         limited.apply(client),
-                        joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), skipIfMissing)).collect(Collectors.toList()),
+                        joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), join.skipIfMissing)).collect(Collectors.toList()),
                         schema,
                         names.toArray(new String[0]),
                         aliases.toArray(new String[0])));
@@ -245,9 +245,7 @@ public class QueryHolder {
                 }
 
                 try {
-                    @SuppressWarnings("unchecked")
-                    T result = cast(resultSet.getObject(alias), type);
-                    return result;
+                    return cast(resultSet.getObject(alias), type);
                 } catch (SQLException e) {
                     throwAny(e);
                     return null; // just to satisfy compiler: the exception is thrown in previous line.

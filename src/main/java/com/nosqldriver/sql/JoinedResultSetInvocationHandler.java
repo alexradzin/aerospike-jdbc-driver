@@ -35,7 +35,7 @@ public class JoinedResultSetInvocationHandler extends ResultSetInvocationHandler
                 for (JoinHolder jh : joinHolders) {
                     ResultSet rs = jh.getResultSetRetriver().apply(resultSet);
                     boolean hasNext = rs != null && rs.next();
-                    if (!jh.isSkipIfMissing() && !hasNext) {
+                    if (jh.isSkipIfMissing() && !hasNext) {
                         continue SUPER;
                     }
                     resultSets.add(rs);
@@ -57,7 +57,7 @@ public class JoinedResultSetInvocationHandler extends ResultSetInvocationHandler
                 }
                 if (!hasNext && joinHolders.get(i).isSkipIfMissing()) {
                     moveMainResultSet = true;
-                    return false;
+                    break;
                 }
             }
             moveMainResultSet = allDone;

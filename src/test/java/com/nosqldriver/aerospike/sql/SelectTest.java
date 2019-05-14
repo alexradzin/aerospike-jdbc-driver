@@ -56,6 +56,7 @@ class SelectTest {
     private static final String NAMESPACE = "test";
     private static final String PEOPLE = "people";
     private static final String INSTRUMENTS = "instruments";
+    private static final String GUITARS = "guitars";
     private static final String SELECT_ALL = "select * from people";
 
     private final AerospikeClient client = new AerospikeClient("localhost", 3000);
@@ -940,7 +941,73 @@ class SelectTest {
         assertEquals(new HashSet<>(singleton("guitar")), result.get("George"));
     }
 
+    @Test
+    @DisplayName("select first_name, i.name as instrument from people as p join guitars as i on p.id=i.person_id")
+    void joinGuitars() throws SQLException {
+        writeBeatles();
+        writeGuitars();
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(2, md.getColumnCount());
+        assertEquals("first_name", md.getColumnName(1));
+        assertEquals("name", md.getColumnName(2));
+        assertEquals("instrument", md.getColumnLabel(2));
 
+
+        Map<String, Collection<String>> result = new HashMap<>();
+        while(rs.next()) {
+            assertEquals(rs.getString(1), rs.getString("first_name"));
+            assertEquals(rs.getString(2), rs.getString("instrument"));
+            String firstName = rs.getString(1);
+
+            Collection<String> instruments = result.getOrDefault(firstName, new HashSet<>());
+            instruments.add(rs.getString(2));
+            result.put(firstName, instruments);
+        }
+
+        assertEquals(3, result.size());
+
+        assertEquals(new HashSet<>(singleton("guitar")), result.get("John"));
+        assertEquals(new HashSet<>(singleton("guitar")), result.get("Paul"));
+        assertEquals(new HashSet<>(singleton("guitar")), result.get("George"));
+    }
+
+    @Test
+    @DisplayName("select first_name, i.name as instrument from people as p left join guitars as i on p.id=i.person_id")
+    void leftJoinGuitars() throws SQLException {
+        writeBeatles();
+        writeGuitars();
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(2, md.getColumnCount());
+        assertEquals("first_name", md.getColumnName(1));
+        assertEquals("name", md.getColumnName(2));
+        assertEquals("instrument", md.getColumnLabel(2));
+
+
+        Map<String, Collection<String>> result = new HashMap<>();
+        while(rs.next()) {
+            assertEquals(rs.getString(1), rs.getString("first_name"));
+            assertEquals(rs.getString(2), rs.getString("instrument"));
+            String firstName = rs.getString(1);
+
+            Collection<String> instruments = result.getOrDefault(firstName, new HashSet<>());
+            String instrument = rs.getString(2);
+            if (instrument != null) {
+                instruments.add(instrument);
+            }
+            result.put(firstName, instruments);
+        }
+
+        assertEquals(4, result.size());
+
+        assertEquals(new HashSet<>(singleton("guitar")), result.get("John"));
+        assertEquals(new HashSet<>(singleton("guitar")), result.get("Paul"));
+        assertEquals(new HashSet<>(singleton("guitar")), result.get("George"));
+        assertEquals(new HashSet<>(), result.get("Ringo"));
+    }
     private void assertCounts(ResultSet rs, int yearOfBirth) throws SQLException {
         assertEquals(yearOfBirth, rs.getInt(1));
         assertEquals(sum(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(2), 0.01);
@@ -1091,6 +1158,12 @@ class SelectTest {
         write(INSTRUMENTS, writePolicy, 13, personalInstrument(13, 4, "vocals"));
     }
 
+    private void writeGuitars() {
+        WritePolicy writePolicy = new WritePolicy();
+        write(GUITARS, writePolicy, 2, personalInstrument(2, 1, "guitar")); // John Lennon
+        write(GUITARS, writePolicy, 7, personalInstrument(7, 2, "guitar")); // Paul McCartney
+        write(GUITARS, writePolicy, 10, personalInstrument(10, 3, "guitar")); // George Harrison
+    }
 
     //@Test
     void testFunction() {
