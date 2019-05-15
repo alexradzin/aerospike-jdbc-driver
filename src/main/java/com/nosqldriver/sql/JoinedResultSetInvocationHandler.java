@@ -92,15 +92,19 @@ public class JoinedResultSetInvocationHandler extends ResultSetInvocationHandler
     @Override
     protected <T> T get(String alias, Class<T> type) {
         try {
-            Collection<ResultSet> allResultSets = new LinkedHashSet<>(resultSets.size() + 1);
-            allResultSets.add(resultSet);
-            allResultSets.addAll(resultSets);
-            for (ResultSet rs : allResultSets) {
+            if (columnTags(resultSet.getMetaData()).contains(alias)) {
+                Object value = resultSet.getObject(alias);
+                // Metadata of the main result set contains all fields including those that in fact are retrieved from
+                // joined tables. So, we have to perform null check and try to retrieve the data from other result sets
+                // if it is null here.
+                if (value != null) {
+                    return cast(value, type);
+                }
+            }
+
+            for (ResultSet rs : resultSets) {
                 if (columnTags(rs.getMetaData()).contains(alias)) {
-                    Object value = rs.getObject(alias);
-                    if (value != null) { //TODO: this if is relevant for the main result set only because its metadata holds all fileds. Think about better solution.
-                        return cast(value, type);
-                    }
+                    return cast(rs.getObject(alias), type);
                 }
             }
             return null;
