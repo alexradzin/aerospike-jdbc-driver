@@ -5,6 +5,7 @@ import com.aerospike.client.AerospikeException;
 import com.aerospike.client.Bin;
 import com.aerospike.client.Key;
 import com.aerospike.client.Language;
+import com.aerospike.client.Log;
 import com.aerospike.client.Value;
 import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.QueryPolicy;
@@ -58,8 +59,13 @@ class SelectTest {
     private static final String INSTRUMENTS = "instruments";
     private static final String GUITARS = "guitars";
     private static final String KEYBOARDS = "keyboards";
+    private static final String SUBJECT_SELECTION = "subject_selection";
     private static final String SELECT_ALL = "select * from people";
 
+    static {
+        com.aerospike.client.Log.setCallback((level, message) -> System.out.println(message));
+        com.aerospike.client.Log.setLevel(Log.Level.DEBUG);
+    }
     private final AerospikeClient client = new AerospikeClient("localhost", 3000);
     private Connection conn;
 
@@ -782,6 +788,40 @@ class SelectTest {
 
 
     @Test
+    @DisplayName("select year_of_birth as year, count(*) as counter, sum(kids_count) as total_kids, max(kids_count) as max_kids, min(kids_count) as min_kids from people group by year_of_birth")
+    void groupByYearOfBirthWithMultipleAggregations() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(5, md.getColumnCount());
+        assertEquals("year_of_birth", md.getColumnName(1));
+
+        assertEquals("count(*)", md.getColumnName(2));
+        assertEquals("counter", md.getColumnLabel(2));
+
+        assertEquals("sum(kids_count)", md.getColumnName(3));
+        assertEquals("total_kids", md.getColumnLabel(3));
+
+        assertEquals("max(kids_count)", md.getColumnName(4));
+        assertEquals("max_kids", md.getColumnLabel(4));
+
+        assertEquals("min(kids_count)", md.getColumnName(5));
+        assertEquals("min_kids", md.getColumnLabel(5));
+
+
+        assertTrue(rs.next());
+        assertStats(rs, 1940);
+        assertTrue(rs.next());
+        assertStats(rs, 1942);
+        assertTrue(rs.next());
+        assertStats(rs, 1943);
+
+        assertFalse(rs.next());
+    }
+
+
+    @Test
     @DisplayName("select year_of_birth as year, sum(kids_count) as total_kids from people group by year_of_birth")
     void groupByYearOfBirthWithAggregation() throws SQLException {
         writeBeatles();
@@ -802,7 +842,6 @@ class SelectTest {
 
         assertFalse(rs.next());
     }
-
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
@@ -1089,8 +1128,28 @@ class SelectTest {
         assertEquals(sum(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(2), 0.01);
     }
 
+    private void assertStats(ResultSet rs, int yearOfBirth) throws SQLException {
+        assertEquals(yearOfBirth, rs.getInt(1));
+        assertEquals(count(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(2), 0.01);
+        assertEquals(sum(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(3), 0.01);
+        assertEquals(max(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(4), 0.01);
+        assertEquals(min(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(5), 0.01);
+    }
+
+    private <T> long count(Stream<T> stream, Predicate<T> filter, ToIntFunction<T> pf) {
+        return stream.filter(filter).mapToInt(pf).count();
+    }
+
     private <T> int sum(Stream<T> stream, Predicate<T> filter, ToIntFunction<T> pf) {
         return stream.filter(filter).mapToInt(pf).sum();
+    }
+
+    private <T> int max(Stream<T> stream, Predicate<T> filter, ToIntFunction<T> pf) {
+        return stream.filter(filter).mapToInt(pf).max().orElseThrow(() -> new IllegalStateException("Cannot calculate maximum"));
+    }
+
+    private <T> int min(Stream<T> stream, Predicate<T> filter, ToIntFunction<T> pf) {
+        return stream.filter(filter).mapToInt(pf).min().orElseThrow(() -> new IllegalStateException("Cannot calculate minumum"));
     }
 
     void assertAggregateOneField(String sql, String name, String label, int expected) throws SQLException {
@@ -1169,6 +1228,10 @@ class SelectTest {
         return new Bin[] {new Bin("id", id), new Bin("first_name", firstName), new Bin("last_name", lastName), new Bin("year_of_birth", yearOfBirth), new Bin("kids_count", kidsCount)};
     }
 
+    private Bin[] subjectSelection(String subject, int semester, String attendee) {
+        return new Bin[] {new Bin("subject", subject), new Bin("semester", semester), new Bin("attendee", attendee)};
+    }
+
     private Bin[] personalInstrument(int id, int personId, String name) {
         return new Bin[] {new Bin("id", id), new Bin("person_id", personId), new Bin("name", name)};
     }
@@ -1201,6 +1264,29 @@ class SelectTest {
         write(PEOPLE, writePolicy, 3, person(3, "George", "Harrison", 1943, 1));
         write(PEOPLE, writePolicy, 4, person(4, "Ringo", "Starr", 1940, 3));
     }
+
+    //Julian Lennon 1963
+    //Sean Lennon 1975
+    // Heather McCartney, 1962
+    // Mary McCartney, 1969
+    // Stella McCartney, 1971
+    // James McCartney, 1977
+    // Dhani Harrison, 1978
+    // Zak Starkey, 1965
+
+    private void writeSubjectSelection() {
+        //reference: https://stackoverflow.com/questions/2421388/using-group-by-on-multiple-columns
+        WritePolicy writePolicy = new WritePolicy();
+        int id = 1;
+        write(SUBJECT_SELECTION, writePolicy, id++, subjectSelection("ITB001", 1, "John"));
+        write(SUBJECT_SELECTION, writePolicy, id++, subjectSelection("ITB001", 1, "Bob"));
+        write(SUBJECT_SELECTION, writePolicy, id++, subjectSelection("ITB001", 1, "Mickey"));
+        write(SUBJECT_SELECTION, writePolicy, id++, subjectSelection("ITB001", 2, "Jenny"));
+        write(SUBJECT_SELECTION, writePolicy, id++, subjectSelection("ITB001", 2, "James"));
+        write(SUBJECT_SELECTION, writePolicy, id++, subjectSelection("MKB114", 1, "John"));
+        write(SUBJECT_SELECTION, writePolicy, id++, subjectSelection("MKB114", 1, "Erica"));
+    }
+
 
     private void writeMainPersonalInstruments() {
         WritePolicy writePolicy = new WritePolicy();
@@ -1253,6 +1339,7 @@ class SelectTest {
     //@Test
     void testFunction() {
         writeBeatles();
+        writeSubjectSelection();
         Statement statement = new Statement();
         statement.setSetName("people");
         statement.setNamespace("test");
@@ -1275,7 +1362,12 @@ class SelectTest {
 //        client.register(new Policy(), getClass().getClassLoader(), "distinct.lua", "distinct.lua", Language.LUA);
 
 
-        statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("year_of_birth"), new Value.StringValue("avg:kids_count"));
+        //statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("year_of_birth"), new Value.StringValue("avg:kids_count"));
+        //statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("groupby:year_of_birth"), new Value.StringValue("count:kids_count"));
+        statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("groupby:year_of_birth"), new Value.StringValue("count:kids_count"), new Value.StringValue("sum:kids_count"));
+
+        //statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("groupby:year_of_birth"), new Value.StringValue("max:kids_count"), new Value.StringValue("count:kids_count"));
+        //statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("groupby:year_of_birth"), new Value.StringValue("max:kids_count"));
         client.register(new Policy(), getClass().getClassLoader(), "groupby.lua", "groupby.lua", Language.LUA);
 
 
@@ -1284,6 +1376,37 @@ class SelectTest {
             System.out.println("rec: " + rs.getObject());
         }
     }
+
+
+    @Test
+    void testFunction2() {
+        writeSubjectSelection();
+
+
+        Statement select = new Statement();
+        select.setSetName(SUBJECT_SELECTION);
+        select.setNamespace("test");
+        RecordSet rs1 = client.query(new QueryPolicy(), select);
+        while (rs1.next()) {
+            System.out.println(rs1.getRecord().bins);
+        }
+
+
+        Statement groupBy = new Statement();
+        groupBy.setSetName(SUBJECT_SELECTION);
+        groupBy.setNamespace("test");
+
+        groupBy.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("groupby:subject"), new Value.StringValue("count"));
+        //groupBy.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("groupby:subject"), new Value.StringValue("groupby:semester"), new Value.StringValue("count"));
+        client.register(new Policy(), getClass().getClassLoader(), "groupby.lua", "groupby.lua", Language.LUA);
+
+
+        com.aerospike.client.query.ResultSet rs = client.queryAggregate(null, groupBy);
+        while(rs.next()) {
+            System.out.println("rec: " + rs.getObject());
+        }
+    }
+
 
     //@Test
     void select() {

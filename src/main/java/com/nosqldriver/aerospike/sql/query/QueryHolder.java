@@ -38,6 +38,7 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.ResultSetInvocationHandler.GET_NAME;
 import static com.nosqldriver.sql.ResultSetInvocationHandler.OTHER;
@@ -146,7 +147,10 @@ public class QueryHolder {
         }
 
         if (groupByFields != null) {
-            Value[] args = names.stream().map(expr -> expr.replace('(', ':').replace(")", "")).map(StringValue::new).toArray(Value[]::new);
+            Value[] args = Stream.concat(
+                    groupByFields.stream().map(f -> "groupby:" + f),
+                    names.stream().filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
+                    .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
             return new AerospikeDistinctQuery(schema, getNames(false), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
         }

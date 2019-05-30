@@ -42,7 +42,7 @@ public class ResultSetOverDistinctMapFactory {
             protected <T> T get(int i, Class<T> type) {
                 int index = i - 1;
                 Entry<String, Object> e = entries.get(currentIndex);
-                return cast(index == 0 ? e.getKey() : new ArrayList<>(toMap(e.getValue()).values()).get(index - 1), type);
+                return cast(index == 0 ? e.getKey() : toMap(e.getValue()).get(names[index]), type);
             }
 
             @Override
