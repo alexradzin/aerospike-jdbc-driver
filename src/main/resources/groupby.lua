@@ -10,6 +10,20 @@ function groupby(stream, ...)
         return func, name
     end
 
+    local function join(delimiter, list)
+        local result = ""
+        for i=1,#list do
+            if i > 1 then
+                result = result .. delimiter
+            end
+            result = result .. list[i]
+        end
+        return result
+    end
+
+
+    -- Important: corresponding constant is defined in com.nosqldriver.sql.ResultSetOverDistinctMapFactory
+    local DELIMITER = '_nsqld_as_d_'
 	local groups = map()
     local parm={...}
     local groupbys = {}
@@ -22,7 +36,6 @@ function groupby(stream, ...)
             table.insert(aggrs, parm[i])
         end
     end
-
 
     local function reducer(a, b)
         local result = map()
@@ -80,9 +93,12 @@ function groupby(stream, ...)
     end
 
 	local function mapper(rec)
+        local groupbyValues = {}
+        for i=1,#groupbys do
+            table.insert(groupbyValues, ((rec and rec[groupbys[i]]) or 'null'))
+        end
 
-        local gname = groupbys[1]
-        local grp = ((rec and rec[gname]) or nil)
+        local grp = join(DELIMITER, groupbyValues)
         local stats = groups[grp] or map()
 
         for i=1,#aggrs do

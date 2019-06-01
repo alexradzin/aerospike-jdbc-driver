@@ -704,10 +704,10 @@ class SelectTest {
         assertEquals(1940, rs.getInt("min"));
         assertEquals(1943, rs.getInt(3));
         assertEquals(1943, rs.getInt("max"));
-        double average = stream(beatles).mapToInt(p -> p.getYearOfBirth()).average().orElseThrow(() -> new IllegalStateException("No average found"));
+        double average = stream(beatles).mapToInt(Person::getYearOfBirth).average().orElseThrow(() -> new IllegalStateException("No average found"));
         assertEquals(average, rs.getDouble(4), 0.001);
         assertEquals(average, rs.getDouble("avg"), 0.001);
-        int sum = stream(beatles).mapToInt(p -> p.getYearOfBirth()).sum();
+        int sum = stream(beatles).mapToInt(Person::getYearOfBirth).sum();
         assertEquals(sum, rs.getInt(5));
         assertEquals(sum, rs.getInt("total"));
         assertFalse(rs.next());
@@ -746,7 +746,7 @@ class SelectTest {
         while(rs.next()) {
             names.add(rs.getString(1));
         }
-        assertEquals(stream(beatles).map(p -> p.getFirstName()).collect(Collectors.toSet()), names);
+        assertEquals(stream(beatles).map(Person::getFirstName).collect(Collectors.toSet()), names);
     }
 
     @Test
@@ -773,19 +773,42 @@ class SelectTest {
         assertEquals("year_of_birth", md.getColumnName(1));
         assertEquals("count(*)", md.getColumnName(2));
 
+        Collection<Integer> years = new HashSet<>();
         assertTrue(rs.next());
-        assertEquals(1940, rs.getInt(1));
-        assertEquals(2, rs.getInt(2));
+        years.add(assertCounts(rs));
         assertTrue(rs.next());
-        assertEquals(1942, rs.getInt(1));
-        assertEquals(1, rs.getInt(2));
+        years.add(assertCounts(rs));
         assertTrue(rs.next());
-        assertEquals(1943, rs.getInt(1));
-        assertEquals(1, rs.getInt(2));
-        assertFalse(rs.next());
+        years.add(assertCounts(rs));
+        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(Collectors.toSet()), years);
+
         return md;
     }
 
+
+    @Test
+    @DisplayName("select year_of_birth as year, sum(kids_count) as total_kids from people group by year_of_birth")
+    void groupByYearOfBirthWithAggregation() throws SQLException {
+        writeBeatles();
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(2, md.getColumnCount());
+        assertEquals("year_of_birth", md.getColumnName(1));
+        assertEquals("sum(kids_count)", md.getColumnName(2));
+        assertEquals("total_kids", md.getColumnLabel(2));
+
+        Collection<Integer> years = new HashSet<>();
+        assertTrue(rs.next());
+        years.add(assertSums(rs));
+        assertTrue(rs.next());
+        years.add(assertSums(rs));
+        assertTrue(rs.next());
+        years.add(assertSums(rs));
+        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(Collectors.toSet()), years);
+
+        assertFalse(rs.next());
+    }
 
     @Test
     @DisplayName("select year_of_birth as year, count(*) as counter, sum(kids_count) as total_kids, max(kids_count) as max_kids, min(kids_count) as min_kids from people group by year_of_birth")
@@ -810,38 +833,61 @@ class SelectTest {
         assertEquals("min_kids", md.getColumnLabel(5));
 
 
+        Collection<Integer> years = new HashSet<>();
         assertTrue(rs.next());
-        assertStats(rs, 1940);
+        years.add(assertStats(rs));
         assertTrue(rs.next());
-        assertStats(rs, 1942);
+        years.add(assertStats(rs));
         assertTrue(rs.next());
-        assertStats(rs, 1943);
+        years.add(assertStats(rs));
+        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(Collectors.toSet()), years);
 
         assertFalse(rs.next());
     }
 
-
     @Test
-    @DisplayName("select year_of_birth as year, sum(kids_count) as total_kids from people group by year_of_birth")
-    void groupByYearOfBirthWithAggregation() throws SQLException {
+    @DisplayName("select subject, semester, count(*) from subject_selection group by subject, semester")
+    void groupByMulti() throws SQLException {
         writeBeatles();
+        writeSubjectSelection();
         ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
-        assertEquals(2, md.getColumnCount());
-        assertEquals("year_of_birth", md.getColumnName(1));
-        assertEquals("sum(kids_count)", md.getColumnName(2));
-        assertEquals("total_kids", md.getColumnLabel(2));
+        assertEquals(3, md.getColumnCount());
+        assertEquals("subject", md.getColumnName(1));
+        assertEquals("semester", md.getColumnName(2));
+        assertEquals("count(*)", md.getColumnName(3));
 
+
+
+        // {ITB001,2={count(*)=2}, MKB114,1={count(*)=2}, ITB001,1={count(*)=3}}
+        Map<String, Integer> expected = new HashMap<>();
+        expected.put("ITB001,2", 2);
+        expected.put("MKB114,1", 2);
+        expected.put("ITB001,1", 3);
+
+        Collection<String> groups = new HashSet<>();
         assertTrue(rs.next());
-        assertCounts(rs, 1940);
+        groups.add(assertSubjectSelection(rs, expected));
         assertTrue(rs.next());
-        assertCounts(rs, 1942);
+        groups.add(assertSubjectSelection(rs, expected));
         assertTrue(rs.next());
-        assertCounts(rs, 1943);
+        groups.add(assertSubjectSelection(rs, expected));
+        assertEquals(expected.keySet(), groups);
 
         assertFalse(rs.next());
     }
+
+    private String assertSubjectSelection(ResultSet rs, Map<String, Integer> expected) throws SQLException {
+        String subject = rs.getString(1);
+        int semester = rs.getInt(2);
+        int count = rs.getInt(3);
+        String group = subject + "," + semester;
+        assertTrue(expected.containsKey(group));
+        assertEquals(expected.get(group).intValue(), count);
+        return group;
+    }
+
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
@@ -1123,17 +1169,25 @@ class SelectTest {
     }
 
 
-    private void assertCounts(ResultSet rs, int yearOfBirth) throws SQLException {
-        assertEquals(yearOfBirth, rs.getInt(1));
-        assertEquals(sum(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(2), 0.01);
+    private int assertCounts(ResultSet rs) throws SQLException {
+        int yearOfBirth = rs.getInt(1);
+        assertEquals(count(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(2), 0.01);
+        return yearOfBirth;
     }
 
-    private void assertStats(ResultSet rs, int yearOfBirth) throws SQLException {
-        assertEquals(yearOfBirth, rs.getInt(1));
+    private int assertSums(ResultSet rs) throws SQLException {
+        int yearOfBirth = rs.getInt(1);
+        assertEquals(sum(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(2), 0.01);
+        return yearOfBirth;
+    }
+
+    private int assertStats(ResultSet rs) throws SQLException {
+        int yearOfBirth = rs.getInt(1);
         assertEquals(count(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(2), 0.01);
         assertEquals(sum(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(3), 0.01);
         assertEquals(max(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(4), 0.01);
         assertEquals(min(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(5), 0.01);
+        return yearOfBirth;
     }
 
     private <T> long count(Stream<T> stream, Predicate<T> filter, ToIntFunction<T> pf) {
@@ -1378,7 +1432,7 @@ class SelectTest {
     }
 
 
-    @Test
+    //@Test
     void testFunction2() {
         writeSubjectSelection();
 
@@ -1396,8 +1450,8 @@ class SelectTest {
         groupBy.setSetName(SUBJECT_SELECTION);
         groupBy.setNamespace("test");
 
-        groupBy.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("groupby:subject"), new Value.StringValue("count"));
-        //groupBy.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("groupby:subject"), new Value.StringValue("groupby:semester"), new Value.StringValue("count"));
+        //groupBy.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("groupby:subject"), new Value.StringValue("count"));
+        groupBy.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", new Value.StringValue("groupby:subject"), new Value.StringValue("groupby:semester"), new Value.StringValue("count"));
         client.register(new Policy(), getClass().getClassLoader(), "groupby.lua", "groupby.lua", Language.LUA);
 
 

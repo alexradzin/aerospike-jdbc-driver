@@ -14,13 +14,15 @@ import static com.nosqldriver.sql.ResultSetInvocationHandler.NEXT;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 
 public class ResultSetOverDistinctMapFactory {
+    // Important: corresponding constant is defined in groupby.lua
+    private static final String KEY_DELIMITER = "_nsqld_as_d_";
     private final ResultSetWrapperFactory wrapperFactory = new ResultSetWrapperFactory();
 
     public ResultSet create(String schema, String[] names, String[] aliases, Iterable<Object> iterable) {
         return wrapperFactory.create(new ResultSetInvocationHandler<Iterable<Object>>(NEXT | METADATA | GET_NAME | GET_INDEX, iterable, schema, names, aliases) {
             private final Iterator<Object> it = iterable.iterator();
-            private Map<String, Object> row = null;
-            private List<Entry<String, Object>> entries = null;
+            private Map<Object, Object> row = null;
+            private List<Entry<Object, Object>> entries = null;
             private int currentIndex = -1;
 
             @Override
@@ -41,8 +43,10 @@ public class ResultSetOverDistinctMapFactory {
             @Override
             protected <T> T get(int i, Class<T> type) {
                 int index = i - 1;
-                Entry<String, Object> e = entries.get(currentIndex);
-                return cast(index == 0 ? e.getKey() : toMap(e.getValue()).get(names[index]), type);
+                Entry<Object, Object> e = entries.get(currentIndex);
+                Object key = e.getKey();
+                Object[] keys = key instanceof String ? ((String)key).split(KEY_DELIMITER) : new Object[] {key};
+                return cast(index < keys.length ? keys[index] : toMap(e.getValue()).get(names[index]), type);
             }
 
             @Override
