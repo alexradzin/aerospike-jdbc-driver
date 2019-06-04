@@ -2,6 +2,9 @@ package com.nosqldriver.sql;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
+import java.util.HashMap;
+import java.util.Map;
 
 //TODO: separate SimpleResultSetMetaData and SimpleResultSetMetaDataWrapper
 public class SimpleResultSetMetaData implements ResultSetMetaData {
@@ -9,12 +12,33 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
     private final String schema;
     private final String[] names;
     private final String[] aliases;
+    private final int[] types;
+
+
+    private static final Map<Integer, String> sqlTypeNames = new HashMap<>();
+    static {
+        sqlTypeNames.put(Types.SMALLINT, "short");
+        sqlTypeNames.put(Types.INTEGER, "integer");
+        sqlTypeNames.put(Types.BIGINT, "long");
+        sqlTypeNames.put(Types.BOOLEAN, "boolean");
+        sqlTypeNames.put(Types.FLOAT, "float");
+        sqlTypeNames.put(Types.DOUBLE, "double");
+        sqlTypeNames.put(Types.VARCHAR, "varchar");
+        sqlTypeNames.put(Types.BLOB, "blob");
+        sqlTypeNames.put(Types.DATE, "date");
+    }
+
 
     public SimpleResultSetMetaData(ResultSetMetaData md, String schema, String[] names, String[] aliases) {
+        this(md, schema, names, aliases, new int[names.length]);
+    }
+
+    public SimpleResultSetMetaData(ResultSetMetaData md, String schema, String[] names, String[] aliases, int[] types) {
         this.md = md;
         this.schema = schema;
         this.names = names;
         this.aliases = aliases;
+        this.types = types;
     }
 
 
@@ -94,13 +118,13 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
     }
 
     @Override
-    public int getColumnType(int column) {
-        return 0;
+    public int getColumnType(int column) throws SQLException {
+        return md != null ? md.getColumnType(column) : types != null && types.length >= column ? types[column - 1] : 0;
     }
 
     @Override
-    public String getColumnTypeName(int column) {
-        return null;
+    public String getColumnTypeName(int column) throws SQLException {
+        return sqlTypeNames.get(getColumnType(column));
     }
 
     @Override

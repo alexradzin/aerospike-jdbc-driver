@@ -29,12 +29,19 @@ public class AerospikeStatement implements java.sql.Statement {
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
     private final ConnectionParametersParser parametersParser = new ConnectionParametersParser();
+    private ResultSet resultSet;
 
     private enum StatementType {
         SELECT {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 return new AerospikeQueryFactory(statement.schema, statement.policyProvider, statement.indexes).createQuery(sql).apply(statement.client);
+            }
+
+            @Override
+            boolean execute(AerospikeStatement statement, String sql) throws SQLException {
+                statement.resultSet = executeQuery(statement, sql);
+                return true;
             }
         },
         INSERT,
@@ -161,7 +168,7 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public ResultSet getResultSet() throws SQLException {
-        return null;
+        return resultSet;
     }
 
     @Override

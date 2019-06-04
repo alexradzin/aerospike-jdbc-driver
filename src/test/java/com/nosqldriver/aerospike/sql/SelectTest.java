@@ -43,6 +43,7 @@ import java.util.stream.Stream;
 
 import static com.nosqldriver.TestUtils.getDisplayName;
 import static java.lang.String.format;
+import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Collections.singleton;
@@ -201,14 +202,59 @@ class SelectTest {
             "select p.first_name, p.year_of_birth from people as p",
     })
     void selectSpecificFields(String sql) throws SQLException {
-        writeBeatles();
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+        selectSpecificFields(sql, sql1 -> {
+            try {
+                return conn.createStatement().executeQuery(sql);
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        });
+    }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select first_name, year_of_birth from people",
+            "select people.first_name, people.year_of_birth from people",
+            "select first_name, year_of_birth from people as p",
+            "select p.first_name, year_of_birth from people as p",
+            "select first_name, p.year_of_birth from people as p",
+            "select p.first_name, p.year_of_birth from people as p",
+            "select p.first_name, p.year_of_birth from people as p",
+    })
+    void selectSpecificFieldsUsingExecute(String sql) throws SQLException {
+        selectSpecificFields(sql, sql1 -> {
+            try {
+                java.sql.Statement statement = conn.createStatement();
+                statement.execute(sql1);
+                return statement.getResultSet();
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        });
+    }
+
+    private void selectSpecificFields(String sql, Function<String, ResultSet> resultSetFactory) throws SQLException {
+        writeBeatles();
+
+        ResultSet rs = resultSetFactory.apply(sql);
         Map<String, Integer> selectedPeople = new HashMap<>();
 
-        assertEquals("first_name", rs.getMetaData().getColumnName(1));
-        assertEquals("year_of_birth", rs.getMetaData().getColumnName(2));
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+
+        ResultSetMetaData metaData = rs.getMetaData();
+        assertEquals(2, metaData.getColumnCount());
+        assertEquals(NAMESPACE, metaData.getSchemaName(1));
+
+        assertEquals("first_name", metaData.getColumnName(1));
+        //assertEquals("people", metaData.getTableName(1));
+        assertEquals(VARCHAR, metaData.getColumnType(1));
+        assertEquals("varchar", metaData.getColumnTypeName(1));
+
+        assertEquals("year_of_birth", metaData.getColumnName(2));
+        //assertEquals("people", metaData.getTableName(2));
+        assertEquals(VARCHAR, metaData.getColumnType(1));
+        assertEquals("varchar", metaData.getColumnTypeName(1));
+
+
         while (rs.next()) {
             selectedPeople.put(rs.getString("first_name"), rs.getInt("year_of_birth"));
             assertThrowsSqlException(() -> rs.getString("last_name"), "last_name");
