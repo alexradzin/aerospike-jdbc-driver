@@ -40,6 +40,18 @@ dependencies {
     )
 }
 
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'JDBC driver for Aerospike',
+                'Implementation-Version': version
+                //'Main-Class': 'com.nosqldriver.aerospike.sql.AerospikeDriverMain'
+    }
+    baseName = project.name + '-all'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
+
 test {
     testLogging {
         events 'PASSED', 'FAILED', 'SKIPPED'

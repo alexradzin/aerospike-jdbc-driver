@@ -23,6 +23,9 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.IntStream.range;
@@ -243,7 +246,43 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
+        if (names.isEmpty()) {
+            List<String> actualNames = list(rs.getMetaData(), (md, i) -> {
+                try {
+                    return md.getColumnName(i);
+                } catch (SQLException e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+            List<String> actualAliases = list(rs.getMetaData(), (md, i) -> {
+                try {
+                    return md.getColumnLabel(i);
+                } catch (SQLException e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+            List<Integer> actualTypes = list(rs.getMetaData(), (md, i) -> {
+                try {
+                    return md.getColumnType(i);
+                } catch (SQLException e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+
+            int[] actualTypesArray = new int[actualTypes.size()];
+            IntStream.range(0, actualTypesArray.length).forEach(i -> actualTypesArray[i] = actualTypes.get(i));
+
+            return new SimpleResultSetMetaData(rs.getMetaData(), null, actualNames.toArray(new String[0]), actualAliases.toArray(new String[0]), actualTypesArray);
+        }
+
+
+
         return new SimpleResultSetMetaData(rs.getMetaData(), null, names.toArray(new String[0]), aliases.toArray(new String[0]));
+    }
+
+
+    private <T> List<T> list(ResultSetMetaData md, BiFunction<ResultSetMetaData, Integer, T> getter) throws SQLException {
+        return IntStream.range(0, md.getColumnCount()).mapToObj(i -> getter.apply(md, i + 1)).collect(Collectors.toList());
     }
 
     @Override

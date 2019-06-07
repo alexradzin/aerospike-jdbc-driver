@@ -29,6 +29,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -156,7 +157,23 @@ class SelectTest {
     void selectAll(String sql) throws SQLException {
         writeBeatles();
         ResultSet rs = conn.createStatement().executeQuery(sql);
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(NAMESPACE, md.getSchemaName(1));
+
+        int nColumns = md.getColumnCount();
+        assertEquals(5, nColumns);
+        Map<String, Integer> actualTypes = new HashMap<>();
+        for (int i = 0; i < nColumns; i++) {
+            actualTypes.put(md.getColumnName(i + 1), md.getColumnType(i +1));
+        }
+        Map<String, Integer> expectedTypes = new HashMap<>();
+        expectedTypes.put("first_name", VARCHAR);
+        expectedTypes.put("last_name", VARCHAR);
+        expectedTypes.put("id", Types.BIGINT);
+        expectedTypes.put("year_of_birth", Types.BIGINT);
+        expectedTypes.put("kids_count", Types.BIGINT);
+        assertEquals(expectedTypes, actualTypes);
+
 
         Map<Integer, String> selectedPeople = new HashMap<>();
         while (rs.next()) {
@@ -1365,7 +1382,7 @@ class SelectTest {
         write(PEOPLE, writePolicy, 4, person(4, "Ringo", "Starr", 1940, 3));
     }
 
-    //Julian Lennon 1963
+    //Juliawrin Lennon 1963
     //Sean Lennon 1975
     // Heather McCartney, 1962
     // Mary McCartney, 1969
@@ -1526,4 +1543,11 @@ class SelectTest {
             System.out.println(rs.getRecord().bins);
         }
     }
+
+    @Test
+    void fill() {
+        writeBeatles();
+        System.out.println("done");
+    }
+
 }
