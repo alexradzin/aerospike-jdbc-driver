@@ -360,6 +360,10 @@ class SelectTest {
     @DisplayName("select (1+2)*3 as nine")
     void selectIntExpressionNoFrom() throws SQLException {
         ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals("nine", md.getColumnLabel(1));
+        assertEquals(Types.INTEGER, md.getColumnType(1));
+
         assertTrue(rs.next());
         assertEquals("nine", rs.getMetaData().getColumnLabel(1));
         assertEquals(9, rs.getInt(1));
