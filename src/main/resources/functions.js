@@ -58,3 +58,7 @@ function reverse(str) {
 function now() {
     return new Date().getTime();
 }
+
+function year() {
+    return new Date().getYear() + 1900;
+}

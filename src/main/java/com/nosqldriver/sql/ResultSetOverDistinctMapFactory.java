@@ -42,6 +42,9 @@ public class ResultSetOverDistinctMapFactory {
 
             @Override
             protected <T> T get(int i, Class<T> type) {
+                if(currentIndex < 0) {
+                    return null; //TODO: is this correct? Should exception be thrown here?
+                }
                 int index = i - 1;
                 Entry<Object, Object> e = entries.get(currentIndex);
                 Object key = e.getKey();

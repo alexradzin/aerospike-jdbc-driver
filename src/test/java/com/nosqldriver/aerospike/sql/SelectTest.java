@@ -314,6 +314,14 @@ class SelectTest {
     void select1fromPeople() throws SQLException {
         writeBeatles();
         ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(1, md.getColumnCount());
+        //assertEquals("1", rs.getMetaData().getColumnName(1));
+        assertEquals("one", md.getColumnLabel(1));
+        assertEquals(Types.INTEGER, md.getColumnType(1));
+
+
         assertTrue(rs.next());
         assertEquals("one", rs.getMetaData().getColumnLabel(1));
         assertEquals(1, rs.getInt(1));
@@ -1544,7 +1552,7 @@ class SelectTest {
         }
     }
 
-    @Test
+    //@Test
     void fill() {
         writeBeatles();
         System.out.println("done");
