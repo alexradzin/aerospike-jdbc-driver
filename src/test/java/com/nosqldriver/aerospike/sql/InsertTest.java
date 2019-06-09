@@ -75,6 +75,19 @@ public class InsertTest {
         assertTrue(e.getMessage().contains("Duplicate entries"));
     }
 
+    @Test
+    void insertIgnoreDuplicateRow() throws SQLException {
+        insert("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2)", 1);
+        Record record = client.get(null, new Key("test", "people", 1));
+        assertNotNull(record);
+        assertEquals("John", record.getString("first_name"));
+
+        insert("insert ignore into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2)", 1);
+        assertNotNull(record);
+        assertEquals("John", record.getString("first_name"));
+    }
+
+
 
     @Test
     void insertSeveralRows() throws SQLException {

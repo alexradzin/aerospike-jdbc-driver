@@ -61,6 +61,7 @@ public class QueryHolder {
     private Collection<String> aggregatedFields = null;
     private Collection<String> groupByFields = null;
     private List<List<Object>> data = new ArrayList<>();
+    private boolean skipDuplicates = false;
 
     private final Statement statement;
     private AerospikeBatchQueryBySecondaryIndex secondayIndexQuery = null;
@@ -101,7 +102,7 @@ public class QueryHolder {
             return wrap(secondayIndexQuery);
         }
         if (!data.isEmpty()) {
-            return new AerospikeInsertQuery(schema, set, names.toArray(new String[0]), data, policyProvider.getWritePolicy());
+            return new AerospikeInsertQuery(schema, set, names.toArray(new String[0]), data, policyProvider.getWritePolicy(), skipDuplicates);
         }
 
         return wrap(createSecondaryIndexQuery());
@@ -530,5 +531,13 @@ public class QueryHolder {
 
     public void addData(List<Object> dataRow)  {
         data.add(new ArrayList<>(dataRow));
+    }
+
+    public boolean isSkipDuplicates() {
+        return skipDuplicates;
+    }
+
+    public void setSkipDuplicates(boolean skipDuplicates) {
+        this.skipDuplicates = skipDuplicates;
     }
 }

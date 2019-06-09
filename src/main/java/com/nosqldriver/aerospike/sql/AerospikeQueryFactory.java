@@ -330,6 +330,7 @@ public class AerospikeQueryFactory {
 
                 @Override
                 public void visit(Insert insert) {
+                    queries.setSkipDuplicates(insert.isModifierIgnore());
                     Table table = insert.getTable();
                     if (table.getSchemaName() != null) {
                         queries.setSchema(table.getSchemaName());

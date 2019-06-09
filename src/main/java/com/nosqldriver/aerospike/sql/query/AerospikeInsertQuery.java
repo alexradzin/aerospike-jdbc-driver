@@ -20,14 +20,16 @@ import static com.nosqldriver.sql.ResultSetInvocationHandler.METADATA;
 import static com.nosqldriver.sql.ResultSetInvocationHandler.NEXT;
 
 public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>, WritePolicy> {
-    private String set;
-    private int indexOfPK;
+    private final String set;
+    private final int indexOfPK;
+    private final boolean skipDuplicates;
     public final static ThreadLocal<Integer> updatedRecordsCount = new ThreadLocal<>();
 
 
-    public AerospikeInsertQuery(String schema, String set, String[] names, Iterable<List<Object>> data, WritePolicy policy) {
+    public AerospikeInsertQuery(String schema, String set, String[] names, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
         super(schema, names, data, policy);
         this.set = set;
+        this.skipDuplicates = skipDuplicates;
         Arrays.stream(names).filter("PK"::equals).findFirst().orElseThrow(() -> new IllegalArgumentException("PK is not specified"));
 
         indexOfPK =
@@ -41,12 +43,14 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
     public ResultSet apply(IAerospikeClient client) {
         updatedRecordsCount.remove();
 
-        List<Key> keys = new LinkedList<>();
-        for (List<Object> row : criteria) {
-            keys.add(key(row));
-        }
-        if (Arrays.stream(client.get(new BatchPolicy(), keys.toArray(new Key[0]))).anyMatch(Objects::nonNull)) {
-            sneakyThrow(new SQLException("Duplicate entries"));
+        if (!skipDuplicates) {
+            List<Key> keys = new LinkedList<>();
+            for (List<Object> row : criteria) {
+                keys.add(key(row));
+            }
+            if (Arrays.stream(client.get(new BatchPolicy(), keys.toArray(new Key[0]))).anyMatch(Objects::nonNull)) {
+                sneakyThrow(new SQLException("Duplicate entries"));
+            }
         }
 
         int n = 0;
