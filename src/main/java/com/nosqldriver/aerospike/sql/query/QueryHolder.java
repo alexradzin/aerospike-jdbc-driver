@@ -60,6 +60,7 @@ public class QueryHolder {
     private Collection<String> hiddenNames = new HashSet<>();
     private Collection<String> aggregatedFields = null;
     private Collection<String> groupByFields = null;
+    private List<List<Object>> data = new ArrayList<>();
 
     private final Statement statement;
     private AerospikeBatchQueryBySecondaryIndex secondayIndexQuery = null;
@@ -98,6 +99,9 @@ public class QueryHolder {
         if (secondayIndexQuery != null) {
             assertNull(pkQuery, pkBatchQuery);
             return wrap(secondayIndexQuery);
+        }
+        if (!data.isEmpty()) {
+            return new AerospikeInsertQuery(schema, set, names.toArray(new String[0]), data, policyProvider.getWritePolicy());
         }
 
         return wrap(createSecondaryIndexQuery());
@@ -518,5 +522,13 @@ public class QueryHolder {
             return null;
         }
         return new String[] {tables.get(index), names.get(index)};
+    }
+
+    public void addName(String name)  {
+        names.add(name);
+    }
+
+    public void addData(List<Object> dataRow)  {
+        data.add(new ArrayList<>(dataRow));
     }
 }

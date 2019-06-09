@@ -6,9 +6,9 @@ import com.aerospike.client.Record;
 import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.PredExp;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation;
+import com.nosqldriver.aerospike.sql.query.ColumnRefPredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
 import com.nosqldriver.aerospike.sql.query.QueryHolder;
-import com.nosqldriver.aerospike.sql.query.ColumnRefPredExp;
 import com.nosqldriver.aerospike.sql.query.ValueRefPredExp;
 import com.nosqldriver.sql.JoinType;
 import com.nosqldriver.sql.RecordPredicate;
@@ -16,9 +16,11 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DateValue;
+import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.ExpressionVisitorAdapter;
 import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.TimeValue;
 import net.sf.jsqlparser.expression.TimestampValue;
@@ -26,11 +28,13 @@ import net.sf.jsqlparser.expression.operators.relational.Between;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.ItemsListVisitorAdapter;
+import net.sf.jsqlparser.expression.operators.relational.MultiExpressionList;
 import net.sf.jsqlparser.parser.CCJSqlParserManager;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
 import net.sf.jsqlparser.statement.delete.Delete;
+import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.FromItemVisitorAdapter;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.PlainSelect;
@@ -38,6 +42,7 @@ import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItemVisitorAdapter;
 import net.sf.jsqlparser.statement.select.SelectVisitorAdapter;
+import net.sf.jsqlparser.statement.update.Update;
 
 import java.io.StringReader;
 import java.sql.ResultSet;
@@ -320,6 +325,89 @@ public class AerospikeQueryFactory {
                             }
                         }
                     });
+                }
+
+
+                @Override
+                public void visit(Insert insert) {
+                    Table table = insert.getTable();
+                    if (table.getSchemaName() != null) {
+                        queries.setSchema(table.getSchemaName());
+                    }
+                    queries.setSetName(table.getName(), ofNullable(table.getAlias()).map(Alias::getName).orElse(null));
+                    insert.getColumns().forEach(column -> queries.addName(column.getColumnName()));
+
+                    // Trick to support both single and multi expression list.
+                    // The row data is accumulated in values. queries.addData() copies collection of values to other list
+                    // After each row of multiple list the values list is cleaned. After this block queries.addData() is called
+                    // again for single data list only if valules is not empty. This prevents calling queries.addData() one more time
+                    // for multiple data list.
+                    List<Object> values = new ArrayList<>();
+                    insert.getItemsList().accept(new ItemsListVisitorAdapter() {
+                        @Override
+                        public void visit(MultiExpressionList multiExprList) {
+                            for (ExpressionList list : multiExprList.getExprList()) {
+                                values.clear();
+                                visit(list);
+                                queries.addData(values);
+                                values.clear();
+                            }
+                        }
+
+                        @Override
+                        public void visit(ExpressionList expressionList) {
+                            expressionList.accept(new ExpressionVisitorAdapter() {
+                                @Override
+                                public void visit(NullValue value) {
+                                    values.add(null);
+                                }
+
+                                @Override
+                                public void visit(DoubleValue value) {
+                                    values.add(value.getValue());
+                                }
+
+                                @Override
+                                public void visit(LongValue value) {
+                                    values.add(value.getValue());
+                                }
+
+
+                                @Override
+                                public void visit(DateValue value) {
+                                    values.add(value.getValue());
+                                }
+
+                                @Override
+                                public void visit(TimeValue value) {
+                                    values.add(value.getValue());
+                                }
+
+                                @Override
+                                public void visit(TimestampValue value) {
+                                    values.add(value.getValue());
+                                }
+
+                                @Override
+                                public void visit(StringValue value) {
+                                    values.add(value.getValue());
+                                }
+
+                            });
+                            System.out.println("visit expressions: " + expressionList);
+                        }
+                    });
+
+                    if (!values.isEmpty()) {
+                        queries.addData(values);
+                    }
+
+
+                }
+
+                @Override
+                public void visit(Update update) {
+                    super.visit(update);
                 }
             });
 

@@ -2,6 +2,7 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
+import com.nosqldriver.aerospike.sql.query.AerospikeInsertQuery;
 import com.nosqldriver.sql.ResultSetInvocationHandler;
 import com.nosqldriver.sql.ResultSetWrapperFactory;
 
@@ -30,6 +31,7 @@ public class AerospikeStatement implements java.sql.Statement {
     private final Collection<String> indexes;
     private final ConnectionParametersParser parametersParser = new ConnectionParametersParser();
     private ResultSet resultSet;
+    private int updateCount;
 
     private enum StatementType {
         SELECT {
@@ -44,7 +46,17 @@ public class AerospikeStatement implements java.sql.Statement {
                 return true;
             }
         },
-        INSERT,
+        INSERT {
+            int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
+                new AerospikeQueryFactory(statement.schema, statement.policyProvider, statement.indexes).createQuery(sql).apply(statement.client);
+                statement.setUpdateCount(AerospikeInsertQuery.updatedRecordsCount.get());
+
+                return statement.getUpdateCount();
+            }
+            boolean execute(AerospikeStatement statement, String sql) throws SQLException {
+                return executeUpdate(statement, sql) > 0;
+            }
+        },
         UPDATE,
         DELETE {
             @Override
@@ -173,7 +185,11 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public int getUpdateCount() throws SQLException {
-        return 0;
+        return updateCount;
+    }
+
+    public void setUpdateCount(int updateCount) {
+        this.updateCount = updateCount;
     }
 
     @Override
