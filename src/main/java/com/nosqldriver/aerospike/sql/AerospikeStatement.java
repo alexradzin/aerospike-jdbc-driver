@@ -57,7 +57,28 @@ public class AerospikeStatement implements java.sql.Statement {
                 return executeUpdate(statement, sql) > 0;
             }
         },
-        UPDATE,
+        UPDATE {
+            @Override
+            ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
+                executeUpdate(statement, sql);
+
+                return new ResultSetWrapperFactory().create(new ResultSetInvocationHandler<Object>(NEXT | METADATA, null, statement.schema, new String[0], new String[0]) {
+                    @Override
+                    protected boolean next() {
+                        return false;
+                    }
+                });
+            }
+            @Override
+            int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
+                return new AerospikeQueryFactory(statement.schema, statement.policyProvider, statement.indexes).createUpdate(sql).apply(statement.client);
+            }
+
+            @Override
+            boolean execute(AerospikeStatement statement, String sql) throws SQLException {
+                return executeUpdate(statement, sql) > 0;
+            }
+        },
         DELETE {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {

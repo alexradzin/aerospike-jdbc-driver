@@ -1,5 +1,6 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.aerospike.client.Bin;
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
@@ -24,6 +25,7 @@ import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.TimeValue;
 import net.sf.jsqlparser.expression.TimestampValue;
+import net.sf.jsqlparser.expression.UserVariable;
 import net.sf.jsqlparser.expression.operators.relational.Between;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
@@ -51,19 +53,23 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 import static java.lang.String.format;
+import static java.util.Collections.singletonMap;
 import static java.util.Optional.ofNullable;
 
 public class AerospikeQueryFactory {
@@ -432,6 +438,10 @@ public class AerospikeQueryFactory {
             AtomicBoolean useWhereRecord = new AtomicBoolean(false);
             AtomicBoolean filterByPk = new AtomicBoolean(false);
 
+            WritePolicy writePolicy = new WritePolicy();
+
+            AtomicReference<BiFunction<IAerospikeClient, Entry<Key, Record>, Boolean>> worker = new AtomicReference<>((c, e) -> false);
+
             parserManager.parse(new StringReader(sql)).accept(new StatementVisitorAdapter() {
                 @Override
                 public void visit(Delete delete) {
@@ -452,72 +462,95 @@ public class AerospikeQueryFactory {
                         });
                     }
                     Expression where = delete.getWhere();
-                    AtomicReference<String> column = new AtomicReference<>(null);
-                    List<Long> longParameters = new ArrayList<>();
-                    Collection<String> stringParameters = new ArrayList<>();
-
                     if (where != null) {
-                        where.accept(new ExpressionVisitorAdapter() {
-                            public void visit(Between expr) {
-                                System.out.println("visit(Between): " + expr);
-                                super.visit(expr);
-                                if (!stringParameters.isEmpty()) {
-                                    throw new IllegalArgumentException("BETWEEN cannot be applied to string");
-                                }
-
-                                if (!longParameters.isEmpty()) {
-                                    if (longParameters.size() != 2) {
-                                        throw new IllegalArgumentException("BETWEEN must have exactly 2 edges");
-                                    }
-                                    if ("PK".equals(column.get())) {
-                                        Collection<Key> keys = LongStream.rangeClosed(longParameters.get(0), longParameters.get(1)).boxed().map(i -> new Key(schema.get(), tableName.get(), i)).collect(Collectors.toSet());
-                                        keyPredicate.set(keys::contains);
-
-                                        filterByPk.set(true);
-                                    } else {
-                                        useWhereRecord.set(true);
-                                    }
-                                }
-                            }
-                            public void visit(InExpression expr) {
-                                super.visit(expr);
-                                System.out.println("visit(In): " + expr);
-                                if ("PK".equals(column.get())) {
-                                    Collection<Key> keys = longParameters.stream().map(i -> new Key(schema.get(), tableName.get(), i)).collect(Collectors.toSet());
-                                    keyPredicate.set(keys::contains);
-                                    filterByPk.set(true);
-                                } else {
-                                    useWhereRecord.set(true);
-                                }
-                            }
-                            protected void visitBinaryExpression(BinaryExpression expr) {
-                                System.out.println("visitBinaryExpression(BinaryExpression expr): " + expr);
-                                super.visitBinaryExpression(expr);
-
-                                if ("PK".equals(column.get())) {
-                                    Key condition = new Key(schema.get(), tableName.get(), longParameters.get(0));
-                                    keyPredicate.set(condition::equals);
-                                    filterByPk.set(true);
-                                } else {
-                                    useWhereRecord.set(true);
-                                }
-
-                            }
-                            public void visit(Column col) {
-                                column.set(col.getColumnName());
-                                System.out.println("visit(Column column): " + column);
-                            }
-                            public void visit(LongValue value) {
-                                System.out.println("visit(LongValue): " + value);
-                                longParameters.add(value.getValue());
-                            }
-                            public void visit(StringValue value) {
-                                System.out.println("visit(StringValue): " + value);
-                                stringParameters.add(value.getValue());
-                            }
-                        });
+                        WhereVisitor whereVisitor = new WhereVisitor(AerospikeQueryFactory.this.schema, tableName.get());
+                        where.accept(whereVisitor);
+                        useWhereRecord.set(whereVisitor.useWhereRecord);
+                        keyPredicate.set(whereVisitor.keyPredicate);
+                        filterByPk.set(whereVisitor.filterByPk);
                         whereExpr.set(delete.getWhere().toString());
                     }
+
+                    BiFunction<IAerospikeClient, Entry<Key, Record>, Boolean> deleter = (client, kr) -> client.delete(writePolicy, kr.getKey());
+                    worker.set(deleter);
+                }
+
+
+                @Override
+                public void visit(Update update) {
+                    List<Table> tables = update.getTables();
+                    if (tables.size() != 1) {
+                        throw new IllegalArgumentException("Update statement can proceed one table only but was " + tables.size());
+                    }
+                    Table table = tables.get(0);
+                    tableName.set(table.getName());
+                    if (table.getSchemaName() != null) {
+                        schema.set(table.getSchemaName());
+                    }
+
+                    List<String> columns = new ArrayList<>();
+                    ExpressionVisitorAdapter columnNamesVisitor = new ExpressionVisitorAdapter() {
+                        @Override
+                        public void visit(Column column) {
+                            columns.add(column.getColumnName());
+                        }
+                    };
+                    update.getColumns().forEach(c -> c.accept(columnNamesVisitor));
+
+                    List<Function<Record, Object>> valueSuppliers = new ArrayList<>();
+
+
+                    for (Expression expression : update.getExpressions()) {
+                        expression.accept(new ExpressionVisitorAdapter() {
+                            @Override
+                            public void visit(NullValue value) {
+                                valueSuppliers.add(record -> null);
+                            }
+
+                            @Override
+                            public void visit(StringValue value) {
+                                valueSuppliers.add(record -> value.getValue());
+                            }
+
+                            @Override
+                            public void visit(UserVariable var) {
+                                valueSuppliers.add(record -> record.getValue(var.getName()));
+                            }
+                            @Override
+                            public void visit(DoubleValue value) {
+                                valueSuppliers.add(record -> value.getValue());
+                            }
+
+                            @Override
+                            public void visit(LongValue value) {
+                                valueSuppliers.add(record -> value.getValue());
+                            }
+                        });
+                    }
+
+                    Map<String, Function<Record, Object>> columnValueSuppliers =
+                            IntStream.range(0, columns.size())
+                                    .boxed()
+                                    .collect(Collectors.toMap(columns::get, valueSuppliers::get));
+
+                    BiFunction<IAerospikeClient, Entry<Key, Record>, Boolean> updater = (client, kr) -> {
+                        client.put(writePolicy, kr.getKey(), bins(kr.getValue(), columnValueSuppliers));
+                        return true;
+                    };
+
+                    worker.set(updater);
+
+
+                    Expression where = update.getWhere();
+                    if (where != null) {
+                        WhereVisitor whereVisitor = new WhereVisitor(AerospikeQueryFactory.this.schema, tableName.get());
+                        where.accept(whereVisitor);
+                        useWhereRecord.set(whereVisitor.useWhereRecord);
+                        keyPredicate.set(whereVisitor.keyPredicate);
+                        filterByPk.set(whereVisitor.filterByPk);
+                        whereExpr.set(update.getWhere().toString());
+                    }
+
                 }
             });
 
@@ -532,7 +565,7 @@ public class AerospikeQueryFactory {
                 client.scanAll(policyProvider.getScanPolicy(), schema.get(), tableName.get(),
                         (key, record) -> {
                             if (keyPredicate.get().test(key) || recordPredicate.get().test(record)) {
-                                client.delete(new WritePolicy(), key);
+                                worker.get().apply(client, singletonMap(key, record).entrySet().iterator().next());
                                 count.incrementAndGet();
                             }
                         });
@@ -544,7 +577,108 @@ public class AerospikeQueryFactory {
     }
 
 
+    private Bin[] bins(Record record, Map<String, Function<Record, Object>> columnValueSuppliers) {
+        return columnValueSuppliers.entrySet().stream().map(e -> new Bin(e.getKey(), e.getValue().apply(record))).toArray(Bin[]::new);
+    }
+
     public static String operatorKey(Class<?> type, String operand) {
         return type.getName() + operand;
+    }
+
+
+    private static class WhereVisitor extends ExpressionVisitorAdapter {
+        private final String tableName;
+        private final String schema;
+
+        private Predicate<Key> keyPredicate = key -> false;
+        private boolean useWhereRecord = false;
+        private boolean filterByPk = false;
+
+
+        private String column = null;
+        private final List<Long> longParameters = new ArrayList<>();
+        private final Collection<String> stringParameters = new ArrayList<>();
+
+
+        private WhereVisitor(String schema, String tableName) {
+            this.schema = schema;
+            this.tableName = tableName;
+        }
+
+        public void visit(Between expr) {
+            System.out.println("visit(Between): " + expr);
+            super.visit(expr);
+            if (!stringParameters.isEmpty()) {
+                throw new IllegalArgumentException("BETWEEN cannot be applied to string");
+            }
+
+            if (!longParameters.isEmpty()) {
+                if (longParameters.size() != 2) {
+                    throw new IllegalArgumentException("BETWEEN must have exactly 2 edges");
+                }
+                if ("PK".equals(column)) {
+                    Collection<Key> keys = LongStream.rangeClosed(longParameters.get(0), longParameters.get(1)).boxed().map(i -> new Key(schema, tableName, i)).collect(Collectors.toSet());
+                    keyPredicate = keys::contains;
+
+                    filterByPk = true;
+                } else {
+                    useWhereRecord = true;
+                }
+            }
+        }
+        public void visit(InExpression expr) {
+            super.visit(expr);
+            System.out.println("visit(In): " + expr);
+            if ("PK".equals(column)) {
+                Collection<Key> keys = longParameters.stream().map(i -> new Key(schema, tableName, i)).collect(Collectors.toSet());
+                keyPredicate = keys::contains;
+                filterByPk = true;
+            } else {
+                useWhereRecord = true;
+            }
+        }
+        protected void visitBinaryExpression(BinaryExpression expr) {
+            System.out.println("visitBinaryExpression(BinaryExpression expr): " + expr);
+            super.visitBinaryExpression(expr);
+
+            if ("PK".equals(column)) {
+                Key condition = new Key(schema, tableName, longParameters.get(0));
+                keyPredicate = condition::equals;
+                filterByPk = true;
+            } else {
+                useWhereRecord = true;
+            }
+
+        }
+        public void visit(Column col) {
+            column = col.getColumnName();
+        }
+        public void visit(LongValue value) {
+            longParameters.add(value.getValue());
+        }
+        public void visit(StringValue value) {
+            stringParameters.add(value.getValue());
+        }
+    }
+
+
+    public CCJSqlParserManager getParserManager() {
+        return parserManager;
+    }
+
+    public String getSchema() {
+        return schema;
+    }
+
+    public AerospikePolicyProvider getPolicyProvider() {
+        return policyProvider;
+    }
+
+    public Collection<String> getIndexes() {
+        return indexes;
+    }
+
+    public static Map<String, Supplier<PredExp>> getPredExpOperators() {
+        return predExpOperators;
     }
 }

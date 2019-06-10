@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class InsertTest {
+class InsertTest {
     private static final String NAMESPACE = "test";
     private static final String PEOPLE = "people";
     private Connection conn;

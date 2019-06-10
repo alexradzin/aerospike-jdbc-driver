@@ -124,6 +124,9 @@ class SelectTest {
     void dropAll() {
         deleteAllRecords(NAMESPACE, PEOPLE);
         deleteAllRecords(NAMESPACE, INSTRUMENTS);
+        deleteAllRecords(NAMESPACE, GUITARS);
+        deleteAllRecords(NAMESPACE, KEYBOARDS);
+        deleteAllRecords(NAMESPACE, SUBJECT_SELECTION);
         dropIndexSafely("first_name");
         dropIndexSafely("year_of_birth");
     }
