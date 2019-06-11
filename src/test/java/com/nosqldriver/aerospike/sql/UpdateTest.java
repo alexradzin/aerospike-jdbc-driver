@@ -63,7 +63,22 @@ class UpdateTest {
 
 
     @Test
-    void updateOneRow() throws SQLException {
+    void updateAllEmptyDb() throws SQLException {
+        // check that DB is empty
+        AtomicInteger count = new AtomicInteger(0);
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {count.incrementAndGet();});
+        assertEquals(0, count.get());
+
+        executeUpdate("update people set band='Beatles'", 0);
+        // check that DB is still empty
+        count.set(0);
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {count.incrementAndGet();});
+        assertEquals(0, count.get());
+    }
+
+
+    @Test
+    void updateOneFieldSeveralRows() throws SQLException {
         writeBeatles();
 
         AtomicInteger count = new AtomicInteger(0);
@@ -81,7 +96,33 @@ class UpdateTest {
         assertEquals(4, count.get());
     }
 
+    @Test
+    void updateSeveralFieldsSeveralRows() throws SQLException {
+        writeBeatles();
 
+        AtomicInteger count = new AtomicInteger(0);
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {assertNull(rec.getString("band")); assertNull(rec.getString("occupation")); count.incrementAndGet();});
+        assertEquals(4, count.get());
+
+        executeUpdate("update people set band='Beatles', occupation='musician'", 4);
+        count.set(0);
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {assertEquals("Beatles", rec.getString("band")); assertEquals("musician", rec.getString("occupation")); count.incrementAndGet();}, "band", "occupation");
+        assertEquals(4, count.get());
+    }
+
+    @Test
+    void updateCopyFieldToFieldSeveralRows() throws SQLException {
+        writeBeatles();
+
+        AtomicInteger count = new AtomicInteger(0);
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {assertNull(rec.getString("given_name")); count.incrementAndGet();});
+        assertEquals(4, count.get());
+
+        executeUpdate("update people set given_name=first_name", 4);
+        count.set(0);
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {assertEquals(rec.getString("first_name"), rec.getString("given_name")); count.incrementAndGet();});
+        assertEquals(4, count.get());
+    }
 
 
     void executeUpdate(String sql, int expectedRowCount) throws SQLException {

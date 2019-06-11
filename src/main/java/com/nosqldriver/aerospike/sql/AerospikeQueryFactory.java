@@ -25,7 +25,6 @@ import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.TimeValue;
 import net.sf.jsqlparser.expression.TimestampValue;
-import net.sf.jsqlparser.expression.UserVariable;
 import net.sf.jsqlparser.expression.operators.relational.Between;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
@@ -513,9 +512,10 @@ public class AerospikeQueryFactory {
                             }
 
                             @Override
-                            public void visit(UserVariable var) {
-                                valueSuppliers.add(record -> record.getValue(var.getName()));
+                            public void visit(Column column) {
+                                valueSuppliers.add(record -> record.getValue(column.getColumnName()));
                             }
+
                             @Override
                             public void visit(DoubleValue value) {
                                 valueSuppliers.add(record -> value.getValue());
