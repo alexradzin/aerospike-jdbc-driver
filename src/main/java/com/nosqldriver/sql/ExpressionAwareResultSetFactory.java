@@ -196,7 +196,7 @@ public class ExpressionAwareResultSetFactory {
                 .collect(toCollection(LinkedHashSet::new));
     }
 
-    public Collection<String> getClientSideFuctionNames() {
+    public Collection<String> getClientSideFunctionNames() {
         return functionNames;
     }
 }

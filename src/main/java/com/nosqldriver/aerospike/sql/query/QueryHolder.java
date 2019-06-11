@@ -309,7 +309,7 @@ public class QueryHolder {
                 }
             },
 
-            new ColumnType(e -> e instanceof BinaryExpression || e instanceof LongValue ||  e instanceof DoubleValue || (e instanceof net.sf.jsqlparser.expression.Function && expressionResultSetWrappingFactory.getClientSideFuctionNames().contains(((net.sf.jsqlparser.expression.Function)e).getName()))) {
+            new ColumnType(e -> e instanceof BinaryExpression || e instanceof LongValue ||  e instanceof DoubleValue || (e instanceof net.sf.jsqlparser.expression.Function && expressionResultSetWrappingFactory.getClientSideFunctionNames().contains(((net.sf.jsqlparser.expression.Function)e).getName()))) {
                 @Override
                 protected String getTable(Expression expr) {
                     return null;
