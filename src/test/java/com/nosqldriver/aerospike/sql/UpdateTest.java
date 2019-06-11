@@ -5,6 +5,7 @@ import com.aerospike.client.Bin;
 import com.aerospike.client.Key;
 import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
+import com.nosqldriver.Person;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,12 @@ import org.junit.jupiter.api.Test;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,6 +29,14 @@ class UpdateTest {
     private static final String PEOPLE = "people";
     private Connection conn;
     private final AerospikeClient client = new AerospikeClient("localhost", 3000);
+
+    private static final Person[] beatles = new Person[] {
+            new Person(1, "John", "Lennon", 1940, 2),
+            new Person(2, "Paul", "McCartney", 1942, 5),
+            new Person(3, "George", "Harrison", 1943, 1),
+            new Person(4, "Ringo", "Starr", 1940, 3),
+    };
+
 
     @BeforeEach
     void init() throws SQLException {
@@ -122,6 +136,28 @@ class UpdateTest {
         count.set(0);
         client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {assertEquals(rec.getString("first_name"), rec.getString("given_name")); count.incrementAndGet();});
         assertEquals(4, count.get());
+    }
+
+    @Test
+    void updateCalculateColumn() throws SQLException {
+        writeBeatles();
+
+        AtomicInteger count = new AtomicInteger(0);
+        AtomicInteger nullsCount = new AtomicInteger(0);
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {if(rec.getValue("age") == null) nullsCount.incrementAndGet(); count.incrementAndGet();});
+        assertEquals(4, count.get());
+        assertEquals(4, nullsCount.get());
+
+        executeUpdate("update people set age=year()-year_of_birth", 4);
+        count.set(0);
+
+        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+        Map<String, Integer> expectedAges = Arrays.stream(beatles).collect(Collectors.toMap(Person::getFirstName, p -> currentYear - p.getYearOfBirth()));
+
+        Map<String, Integer> actualAges = new HashMap<>();
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {actualAges.put(rec.getString("first_name"), Double.valueOf(rec.getDouble("age")).intValue()); count.incrementAndGet();});
+        assertEquals(4, count.get());
+        assertEquals(expectedAges, actualAges);
     }
 
 

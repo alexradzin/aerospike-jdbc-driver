@@ -12,7 +12,7 @@ import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
 import com.nosqldriver.aerospike.sql.query.QueryHolder;
 import com.nosqldriver.aerospike.sql.query.ValueRefPredExp;
 import com.nosqldriver.sql.JoinType;
-import com.nosqldriver.sql.RecordPredicate;
+import com.nosqldriver.sql.RecordExpressionEvaluator;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -22,9 +22,15 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.ExpressionVisitorAdapter;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.NullValue;
+import net.sf.jsqlparser.expression.Parenthesis;
+import net.sf.jsqlparser.expression.SignedExpression;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.TimeValue;
 import net.sf.jsqlparser.expression.TimestampValue;
+import net.sf.jsqlparser.expression.operators.arithmetic.Addition;
+import net.sf.jsqlparser.expression.operators.arithmetic.Division;
+import net.sf.jsqlparser.expression.operators.arithmetic.Multiplication;
+import net.sf.jsqlparser.expression.operators.arithmetic.Subtraction;
 import net.sf.jsqlparser.expression.operators.relational.Between;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
@@ -500,32 +506,77 @@ public class AerospikeQueryFactory {
 
 
                     for (Expression expression : update.getExpressions()) {
+                        // If set statemnt uses any element of expression ()+-*/ or function call - treat it as expression.
+                        // Otherwise treat it either as column reference or simple value.
+                        Function<Record, Object> evaluator = new RecordExpressionEvaluator(expression.toString());
+                        AtomicReference<Function<Record, Object>> extractorRef = new AtomicReference<>();
+
                         expression.accept(new ExpressionVisitorAdapter() {
+                            // Expression related visitor
+                            @Override
+                            public void visit(net.sf.jsqlparser.expression.Function function) {
+                                extractorRef.set(evaluator);
+                            }
+
+                            @Override
+                            public void visit(Subtraction expr) {
+                                extractorRef.set(evaluator);
+                            }
+
+                            @Override
+                            public void visit(Addition expr) {
+                                extractorRef.set(evaluator);
+                            }
+
+                            @Override
+                            public void visit(Multiplication expr) {
+                                extractorRef.set(evaluator);
+                            }
+
+                            @Override
+                            public void visit(Division expr) {
+                                extractorRef.set(evaluator);
+                            }
+
+                            @Override
+                            public void visit(Parenthesis parenthesis) {
+                                extractorRef.set(evaluator);
+                            }
+
+                            @Override
+                            public void visit(SignedExpression expr) {
+                                extractorRef.set(evaluator);
+                            }
+
+                            // Column and value visitors
+
                             @Override
                             public void visit(NullValue value) {
-                                valueSuppliers.add(record -> null);
+                                extractorRef.compareAndSet(null, record -> null);
                             }
 
                             @Override
                             public void visit(StringValue value) {
-                                valueSuppliers.add(record -> value.getValue());
+                                extractorRef.compareAndSet(null, record -> value.getValue());
                             }
 
                             @Override
                             public void visit(Column column) {
-                                valueSuppliers.add(record -> record.getValue(column.getColumnName()));
+                                extractorRef.compareAndSet(null, record -> record.getValue(column.getColumnName()));
                             }
 
                             @Override
                             public void visit(DoubleValue value) {
-                                valueSuppliers.add(record -> value.getValue());
+                                extractorRef.compareAndSet(null, record -> value.getValue());
                             }
 
                             @Override
                             public void visit(LongValue value) {
-                                valueSuppliers.add(record -> value.getValue());
+                                extractorRef.compareAndSet(null, record -> value.getValue());
                             }
                         });
+
+                        valueSuppliers.add(extractorRef.get());
                     }
 
                     Map<String, Function<Record, Object>> columnValueSuppliers =
@@ -555,7 +606,7 @@ public class AerospikeQueryFactory {
             });
 
             if (useWhereRecord.get() && whereExpr.get() != null) {
-                recordPredicate.set(new RecordPredicate(whereExpr.get()));
+                recordPredicate.set(new RecordExpressionEvaluator(whereExpr.get()));
             } else if (filterByPk.get()) {
                 recordPredicate.set(r -> false);
             }
