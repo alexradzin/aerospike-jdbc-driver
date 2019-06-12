@@ -1,17 +1,10 @@
 package com.nosqldriver.aerospike.sql;
 
-import com.aerospike.client.AerospikeClient;
-import com.aerospike.client.Bin;
-import com.aerospike.client.Key;
-import com.aerospike.client.policy.ScanPolicy;
-import com.aerospike.client.policy.WritePolicy;
 import com.nosqldriver.Person;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -20,73 +13,42 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.beatles;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.conn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class UpdateTest {
-    private static final String NAMESPACE = "test";
-    private static final String PEOPLE = "people";
-    private Connection conn;
-    private final AerospikeClient client = new AerospikeClient("localhost", 3000);
-
-    private static final Person[] beatles = new Person[] {
-            new Person(1, "John", "Lennon", 1940, 2),
-            new Person(2, "Paul", "McCartney", 1942, 5),
-            new Person(3, "George", "Harrison", 1943, 1),
-            new Person(4, "Ringo", "Starr", 1940, 3),
-    };
-
 
     @BeforeEach
-    void init() throws SQLException {
-        conn = DriverManager.getConnection("jdbc:aerospike:localhost/test");
-        assertNotNull(conn);
-    }
-
-    @BeforeEach
-    @AfterEach
-    void dropAll() {
+    void init() {
         deleteAllRecords(NAMESPACE, PEOPLE);
+        writeBeatles();
     }
 
-    private void deleteAllRecords(String namespace, String table) {
-        client.scanAll(new ScanPolicy(), namespace, table, (key, record) -> client.delete(new WritePolicy(), key));
-    }
-
-
-    private void writeBeatles() {
-        WritePolicy writePolicy = new WritePolicy();
-        write(PEOPLE, writePolicy, 1, person(1, "John", "Lennon", 1940, 2));
-        write(PEOPLE, writePolicy, 2, person(2, "Paul", "McCartney", 1942, 5));
-        write(PEOPLE, writePolicy, 3, person(3, "George", "Harrison", 1943, 1));
-        write(PEOPLE, writePolicy, 4, person(4, "Ringo", "Starr", 1940, 3));
-    }
-
-    private void write(WritePolicy writePolicy, Key key, Bin... bins) {
-        client.put(writePolicy, key, bins);
-    }
-
-    private void write(String table, WritePolicy writePolicy, int id, Bin ... bins) {
-        write(writePolicy, new Key(NAMESPACE, table, id), bins);
-    }
-
-    private Bin[] person(int id, String firstName, String lastName, int yearOfBirth, int kidsCount) {
-        return new Bin[] {new Bin("id", id), new Bin("first_name", firstName), new Bin("last_name", lastName), new Bin("year_of_birth", yearOfBirth), new Bin("kids_count", kidsCount)};
+    @AfterAll
+    static void cleanup() {
+        deleteAllRecords(NAMESPACE, PEOPLE);
     }
 
 
     @Test
     void updateAllEmptyDb() throws SQLException {
+        deleteAllRecords(NAMESPACE, PEOPLE);
         // check that DB is empty
         AtomicInteger count = new AtomicInteger(0);
-        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {count.incrementAndGet();});
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> count.incrementAndGet());
         assertEquals(0, count.get());
 
         executeUpdate("update people set band='Beatles'", 0);
         // check that DB is still empty
         count.set(0);
-        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {count.incrementAndGet();});
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> count.incrementAndGet());
         assertEquals(0, count.get());
     }
 

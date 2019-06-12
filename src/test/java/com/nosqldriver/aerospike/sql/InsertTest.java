@@ -3,8 +3,6 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
-import com.aerospike.client.policy.ScanPolicy;
-import com.aerospike.client.policy.WritePolicy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,22 +13,21 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Tests of INSERT SQL statement
+ */
 class InsertTest {
     private static final String NAMESPACE = "test";
     private static final String PEOPLE = "people";
     private Connection conn;
     private final AerospikeClient client = new AerospikeClient("localhost", 3000);
 
-    @BeforeEach
-    void init() throws SQLException {
-        conn = DriverManager.getConnection("jdbc:aerospike:localhost/test");
-        assertNotNull(conn);
-    }
 
     @BeforeEach
     @AfterEach
@@ -38,9 +35,6 @@ class InsertTest {
         deleteAllRecords(NAMESPACE, PEOPLE);
     }
 
-    private void deleteAllRecords(String namespace, String table) {
-        client.scanAll(new ScanPolicy(), namespace, table, (key, record) -> client.delete(new WritePolicy(), key));
-    }
 
     @Test
     void insertOneRow() throws SQLException {
@@ -69,9 +63,9 @@ class InsertTest {
         expectedData.put("kids_count", 2L);
         assertEquals(expectedData, record.bins);
 
-        SQLException e = assertThrows(SQLException.class, () -> {
-            insert("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2)", 1);
-        });
+        SQLException e = assertThrows(SQLException.class, () ->
+            insert("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2)", 1)
+        );
         assertTrue(e.getMessage().contains("Duplicate entries"));
     }
 
