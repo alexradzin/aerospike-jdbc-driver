@@ -12,7 +12,9 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.RowIdLifetime;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -22,16 +24,20 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
     private final static ConnectionParametersParser parser = new ConnectionParametersParser();
     private final String url;
     private final Properties clientInfo;
+    private final IAerospikeClient client;
 
     private final Optional<Manifest> manifest;
     private final Map<String, String> dbInfo;
+    private final InfoPolicy infoPolicy = new InfoPolicy();
 
 
     public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client) {
         this.url = url;
         clientInfo = parser.clientInfo(url, info);
+        this.client = client;
         manifest = manifest();
-        dbInfo = Info.request(new InfoPolicy(), client.getNodes()[0]);
+        dbInfo = new HashMap<>();
+        Arrays.stream(client.getNodes()).forEach(node -> dbInfo.putAll(Info.request(infoPolicy, node)));
     }
 
     @Override
@@ -161,7 +167,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public String getIdentifierQuoteString() throws SQLException {
-        return null;
+        return " ";
     }
 
     @Override
@@ -171,12 +177,12 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public String getNumericFunctions() throws SQLException {
-        return "";
+        return "sum,avg,min,max,count,len,charIndex,now,year";
     }
 
     @Override
     public String getStringFunctions() throws SQLException {
-        return "";
+        return "char,concat,left,lower,upper,str,substring,space,reverse";
     }
 
     @Override
@@ -186,12 +192,12 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public String getTimeDateFunctions() throws SQLException {
-        return "";
+        return "year,now";
     }
 
     @Override
     public String getSearchStringEscape() throws SQLException {
-        return null; //TODO: ?
+        return "\\"; //TODO: ?
     }
 
     @Override
@@ -286,7 +292,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public boolean supportsMinimumSQLGrammar() throws SQLException {
-        return false;
+        return true;
     }
 
     @Override
@@ -321,7 +327,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public boolean supportsOuterJoins() throws SQLException {
-        return false;
+        return true;
     }
 
     @Override
@@ -331,17 +337,17 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public boolean supportsLimitedOuterJoins() throws SQLException {
-        return false;
+        return true;
     }
 
     @Override
     public String getSchemaTerm() throws SQLException {
-        return null;
+        return "namespace";
     }
 
     @Override
     public String getProcedureTerm() throws SQLException {
-        return null;
+        return "lua script";
     }
 
     @Override
@@ -641,6 +647,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public ResultSet getSchemas() throws SQLException {
+        //Info.request(infoPolicy, client.getNodes()[0], "namespaces");
         return null;
     }
 
@@ -826,12 +833,21 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getDatabaseMajorVersion() throws SQLException {
-        return 0;
+        try {
+            return Integer.parseInt(getDatabaseProductVersion().split("\\.")[0]);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     @Override
     public int getDatabaseMinorVersion() throws SQLException {
-        return 0;
+        try {
+            String[] fragments = getDatabaseProductVersion().split("\\.");
+            return Integer.parseInt(fragments[fragments.length - 1]);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     @Override
@@ -846,7 +862,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getSQLStateType() throws SQLException {
-        return 0;
+        return sqlStateSQL;
     }
 
     @Override
@@ -861,7 +877,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public RowIdLifetime getRowIdLifetime() throws SQLException {
-        return null;
+        return RowIdLifetime.ROWID_VALID_FOREVER;
     }
 
     @Override
