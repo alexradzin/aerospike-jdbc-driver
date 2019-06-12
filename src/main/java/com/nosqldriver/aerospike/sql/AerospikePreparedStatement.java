@@ -181,7 +181,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public void setObject(int parameterIndex, Object x, int targetSqlType) throws SQLException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override

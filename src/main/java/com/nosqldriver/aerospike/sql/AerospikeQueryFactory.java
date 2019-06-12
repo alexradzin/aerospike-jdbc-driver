@@ -6,6 +6,7 @@ import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.PredExp;
+import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation;
 import com.nosqldriver.aerospike.sql.query.ColumnRefPredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
@@ -105,12 +106,14 @@ public class AerospikeQueryFactory {
     }
 
 
+    @VisibleForPackage
     AerospikeQueryFactory(String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes) {
         this.schema = schema;
         this.policyProvider = policyProvider;
         this.indexes = indexes;
     }
 
+    @VisibleForPackage
     Function<IAerospikeClient, ResultSet> createQuery(String sql) throws SQLException {
         try {
             QueryHolder queries = new QueryHolder(schema, indexes, policyProvider);
@@ -429,6 +432,7 @@ public class AerospikeQueryFactory {
     }
 
 
+    @VisibleForPackage
     Function<IAerospikeClient, Integer> createUpdate(String sql) throws SQLException {
         try {
 

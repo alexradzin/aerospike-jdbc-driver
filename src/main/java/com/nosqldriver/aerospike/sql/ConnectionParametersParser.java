@@ -2,6 +2,7 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.Host;
 import com.aerospike.client.policy.ClientPolicy;
+import com.nosqldriver.VisibleForPackage;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -13,10 +14,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@VisibleForPackage
 class ConnectionParametersParser {
     private static final Pattern AS_JDBC_URL = Pattern.compile("^jdbc:aerospike:([^/?]+)");
     private static final Pattern AS_JDBC_SCHEMA = Pattern.compile("/([^?]+)");
 
+    @VisibleForPackage
     ClientPolicy policy(String url, Properties info) {
         ClientPolicy clientPolicy = new ClientPolicy();
 
@@ -31,6 +34,7 @@ class ConnectionParametersParser {
         return clientPolicy;
     }
 
+    @VisibleForPackage
     Host[] hosts(String url) {
         Matcher m = AS_JDBC_URL.matcher(url);
         if (!m.find()) {
@@ -42,6 +46,7 @@ class ConnectionParametersParser {
                 .toArray(Host[]::new);
     }
 
+    @VisibleForPackage
     String schema(String url) {
         Matcher m = AS_JDBC_SCHEMA.matcher(url);
         return m.find() ? m.group(1) : null;
@@ -55,6 +60,7 @@ class ConnectionParametersParser {
 //         *                                                      not be the same as the user name that was used
 //         *                                                      in establishing the connection.</li>
 //            * <li>ClientHostname   -       The hostname of the computer the application
+    @VisibleForPackage
     Properties clientInfo(String url, Properties info) {
         Properties all = new Properties(info);
         int questionPos = url.indexOf('?');
@@ -83,6 +89,7 @@ class ConnectionParametersParser {
         return object;
     }
 
+    @VisibleForPackage
     Properties subProperties(Properties properties, String prefix) {
         String filter = prefix.endsWith(".") ? prefix : prefix + ".";
         int prefixLength = filter.length();
@@ -93,6 +100,7 @@ class ConnectionParametersParser {
         return result;
     }
 
+    @VisibleForPackage
     Collection<String> indexesParser(String infos) {
         return Arrays.stream(infos.split(";")).map(info -> new StringReader(info.replace(":", "\n"))).map(r -> {
             Properties props = new Properties();

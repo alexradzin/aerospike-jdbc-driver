@@ -94,7 +94,7 @@ class InsertTest {
 
 
 
-    void insert(String sql, int expectedRowCount) throws SQLException {
+    private void insert(String sql, int expectedRowCount) throws SQLException {
         int rowCount = conn.createStatement().executeUpdate(sql);
         assertEquals(expectedRowCount, rowCount);
     }

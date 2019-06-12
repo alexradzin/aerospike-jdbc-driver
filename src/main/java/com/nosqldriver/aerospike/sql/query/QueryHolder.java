@@ -7,6 +7,7 @@ import com.aerospike.client.Value.StringValue;
 import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
+import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
 import com.nosqldriver.aerospike.sql.AerospikeQueryFactory;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
@@ -191,10 +192,12 @@ public class QueryHolder {
         return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, getNames(false), statement, policyProvider.getQueryPolicy());
     }
 
+    @VisibleForPackage
     void createPkQuery(Key key) {
         pkQuery = new AerospikeQueryByPk(schema, getNames(false), key, policyProvider.getPolicy());
     }
 
+    @VisibleForPackage
     void createPkBatchQuery(Key ... keys) {
         pkBatchQuery = new AerospikeBatchQueryByPk(schema, getNames(false), keys, policyProvider.getBatchPolicy());
     }
