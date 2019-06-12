@@ -6,5 +6,4 @@
 
 
 ## Motivation
-
 Simplify access to Aerospike DB.

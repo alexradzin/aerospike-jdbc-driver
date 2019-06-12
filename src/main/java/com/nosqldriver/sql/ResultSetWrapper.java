@@ -270,7 +270,7 @@ public class ResultSetWrapper implements ResultSet {
             });
 
             int[] actualTypesArray = new int[actualTypes.size()];
-            IntStream.range(0, actualTypesArray.length).forEach(i -> actualTypesArray[i] = actualTypes.get(i));
+            range(0, actualTypesArray.length).forEach(i -> actualTypesArray[i] = actualTypes.get(i));
 
             return new SimpleResultSetMetaData(rs.getMetaData(), null, actualNames.toArray(new String[0]), actualAliases.toArray(new String[0]), actualTypesArray);
         }
@@ -282,7 +282,7 @@ public class ResultSetWrapper implements ResultSet {
 
 
     private <T> List<T> list(ResultSetMetaData md, BiFunction<ResultSetMetaData, Integer, T> getter) throws SQLException {
-        return IntStream.range(0, md.getColumnCount()).mapToObj(i -> getter.apply(md, i + 1)).collect(Collectors.toList());
+        return range(0, md.getColumnCount()).mapToObj(i -> getter.apply(md, i + 1)).collect(Collectors.toList());
     }
 
     @Override

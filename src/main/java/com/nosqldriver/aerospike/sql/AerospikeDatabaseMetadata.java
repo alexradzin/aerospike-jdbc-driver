@@ -24,7 +24,6 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
     private final static ConnectionParametersParser parser = new ConnectionParametersParser();
     private final String url;
     private final Properties clientInfo;
-    private final IAerospikeClient client;
 
     private final Optional<Manifest> manifest;
     private final Map<String, String> dbInfo;
@@ -34,7 +33,6 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
     public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client) {
         this.url = url;
         clientInfo = parser.clientInfo(url, info);
-        this.client = client;
         manifest = manifest();
         dbInfo = new HashMap<>();
         Arrays.stream(client.getNodes()).forEach(node -> dbInfo.putAll(Info.request(infoPolicy, node)));

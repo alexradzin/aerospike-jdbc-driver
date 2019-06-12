@@ -18,6 +18,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.function.Function;
 
+import static com.aerospike.client.Log.setCallback;
+import static com.aerospike.client.Log.setLevel;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -34,8 +36,8 @@ class TestDataUtils {
     static final String SELECT_ALL = "select * from people";
 
     static {
-        com.aerospike.client.Log.setCallback((level, message) -> System.out.println(message));
-        com.aerospike.client.Log.setLevel(Log.Level.DEBUG);
+        setCallback((level, message) -> System.out.println(message));
+        setLevel(Log.Level.DEBUG);
     }
     static final AerospikeClient client = new AerospikeClient("localhost", 3000);
     static Connection conn;

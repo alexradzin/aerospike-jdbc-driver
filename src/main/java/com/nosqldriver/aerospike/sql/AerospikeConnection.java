@@ -145,7 +145,7 @@ public class AerospikeConnection implements Connection {
 
     @Override
     public void setTransactionIsolation(int level) throws SQLException {
-
+        // connection is not transactional
     }
 
     @Override

@@ -206,27 +206,27 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader, int length) throws SQLException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setRef(int parameterIndex, Ref x) throws SQLException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setBlob(int parameterIndex, Blob x) throws SQLException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setClob(int parameterIndex, Clob x) throws SQLException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setArray(int parameterIndex, Array x) throws SQLException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -236,22 +236,22 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public void setDate(int parameterIndex, Date x, Calendar cal) throws SQLException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setTime(int parameterIndex, Time x, Calendar cal) throws SQLException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override

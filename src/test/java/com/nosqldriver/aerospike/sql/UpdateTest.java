@@ -123,7 +123,7 @@ class UpdateTest {
     }
 
 
-    void executeUpdate(String sql, int expectedRowCount) throws SQLException {
+    private void executeUpdate(String sql, int expectedRowCount) throws SQLException {
         int rowCount = conn.createStatement().executeUpdate(sql);
         assertEquals(expectedRowCount, rowCount);
     }

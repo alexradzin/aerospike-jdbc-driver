@@ -117,6 +117,7 @@ public class ExpressionAwareResultSetFactory {
                                 case Types.BIGINT: case Types.INTEGER: case Types.SMALLINT: value = currentTimeMillis(); break;
                                 case Types.DOUBLE: case Types.FLOAT: value = Math.PI * Math.E; break;
                                 case Types.VARCHAR: case Types.LONGNVARCHAR: value = ""; break;
+                                default: break; // do nothing
                             }
                             if (value != null) {
                                 bindings.put(name, value);

@@ -60,7 +60,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -246,7 +245,7 @@ public class AerospikeQueryFactory {
                                     public void visit(Column column) {
                                         System.out.println("visit(Column column): " + column);
                                         if (operation.getColumn() == null) {
-                                            String table = Optional.ofNullable(column.getTable()).map(Table::getName).orElse(null);
+                                            String table = ofNullable(column.getTable()).map(Table::getName).orElse(null);
                                             String name = column.getColumnName();
                                             if (table == null) {
                                                 // assumen name is actually alias and try to retrieve real table and column name

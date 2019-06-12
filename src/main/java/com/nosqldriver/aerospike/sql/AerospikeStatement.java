@@ -9,6 +9,7 @@ import com.nosqldriver.sql.ResultSetWrapperFactory;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.util.Collection;
 
@@ -176,7 +177,7 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public void cancel() throws SQLException {
-
+        throw new SQLFeatureNotSupportedException("Statement cannot be canceled");
     }
 
     @Override
@@ -191,7 +192,7 @@ public class AerospikeStatement implements java.sql.Statement {
 
     @Override
     public void setCursorName(String name) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException("Named cursor is not supported");
     }
 
     @Override

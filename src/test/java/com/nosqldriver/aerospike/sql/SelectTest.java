@@ -805,7 +805,7 @@ class SelectTest {
         return stream.filter(filter).mapToInt(pf).min().orElseThrow(() -> new IllegalStateException("Cannot calculate minumum"));
     }
 
-    void assertAggregateOneField(String sql, String name, String label, int expected) throws SQLException {
+    private void assertAggregateOneField(String sql, String name, String label, int expected) throws SQLException {
         ResultSet rs = conn.createStatement().executeQuery(sql);
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
         assertEquals(1, rs.getMetaData().getColumnCount());
