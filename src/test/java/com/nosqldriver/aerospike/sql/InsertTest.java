@@ -1,18 +1,19 @@
 package com.nosqldriver.aerospike.sql;
 
-import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.conn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -23,12 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests of INSERT SQL statement
  */
 class InsertTest {
-    private static final String NAMESPACE = "test";
-    private static final String PEOPLE = "people";
-    private Connection conn;
-    private final AerospikeClient client = new AerospikeClient("localhost", 3000);
-
-
     @BeforeEach
     @AfterEach
     void dropAll() {
