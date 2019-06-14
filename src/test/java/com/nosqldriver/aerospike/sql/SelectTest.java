@@ -40,6 +40,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.dropIndexSafely;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQueryPreparedStatement;
 import static java.lang.String.format;
+import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
@@ -536,8 +537,10 @@ class SelectTest {
     void selectAllWithLimit2() throws SQLException {
         assertSelect(conn, "select * from people limit 2", 1, 2);
 
-        ResultSet rs = conn.createStatement().executeQuery("select * from people limit 2");
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        //ResultSet rs = conn.createStatement().executeQuery("select * from people limit 2");
+        // "id", "first_name", "last_name", "year_of_birth", "kids_count"
+        ResultSet rs = executeQuery("select * from people limit 2", NAMESPACE, false, "id", null, INTEGER, "first_name", null, VARCHAR, "last_name", null, VARCHAR, "year_of_birth", null, INTEGER, "kids_count", null, INTEGER);
+        //assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
         int n = 0;
         //noinspection StatementWithEmptyBody // counter
         for (; rs.next(); n++);
@@ -599,7 +602,7 @@ class SelectTest {
     @Test
     @DisplayName("select count(*) as n, min(year_of_birth) as min, max(year_of_birth) as max, avg(year_of_birth) as avg, sum(year_of_birth) as total from people")
     void callAllAggregations() throws SQLException {
-        ResultSet rs = executeQuery(getDisplayName(), "test",  //FIXME: types must be discovered here!
+        ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true,   //FIXME: types must be discovered here!
                 "count(*)", "n", null, //Types.INTEGER,
                 "min(year_of_birth)", "min", null, //Types.INTEGER,
                 "max(year_of_birth)", "max", null, //Types.INTEGER,
@@ -698,13 +701,7 @@ class SelectTest {
     @Test
     @DisplayName("select year_of_birth as year, sum(kids_count) as total_kids from people group by year_of_birth")
     void groupByYearOfBirthWithAggregation() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
-        ResultSetMetaData md = rs.getMetaData();
-        assertNotNull(md);
-        assertEquals(2, md.getColumnCount());
-        assertEquals("year_of_birth", md.getColumnName(1));
-        assertEquals("sum(kids_count)", md.getColumnName(2));
-        assertEquals("total_kids", md.getColumnLabel(2));
+        ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true, "year_of_birth", "year", null /*INTEGER*/, "sum(kids_count)", "total_kids", null /*INTEGER*/); // FIXME: types
 
         Collection<Integer> years = new HashSet<>();
         assertTrue(rs.next());

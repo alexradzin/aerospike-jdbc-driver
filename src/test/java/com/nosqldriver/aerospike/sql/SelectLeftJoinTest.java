@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -57,7 +56,7 @@ class SelectLeftJoinTest {
     @Test
     @DisplayName("select first_name, i.name as instrument from people as p join guitars as i on p.id=i.person_id")
     void joinGuitars() throws SQLException {
-        ResultSet rs = executeQuery(getDisplayName(), "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
+        ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
         Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(3, result.size());
         Collection<String> guitar  = new HashSet<>(singleton("guitar"));
@@ -67,7 +66,7 @@ class SelectLeftJoinTest {
     @Test
     @DisplayName("select first_name, i.name as instrument from people as p left join guitars as i on p.id=i.person_id")
     void leftJoinGuitars() throws SQLException {
-        ResultSet rs = executeQuery(getDisplayName(), "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
+        ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
         Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(4, result.size());
         asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
@@ -79,7 +78,7 @@ class SelectLeftJoinTest {
     @DisplayName("select first_name, g.name as guitar, k.name as keyboards from people as p join guitars as g on p.id=g.person_id join keyboards as k on p.id=k.person_id")
     void joinGuitarsAndKeyboards() throws SQLException {
         writeKeyboards();
-        ResultSet rs = executeQuery(getDisplayName(), "test", "first_name", null /*"first_name"*/, VARCHAR, "name", "guitar", null /*VARCHAR*/,  "name" , "keyboards", null /*VARCHAR*/); // FIXME: type of joined columns
+        ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true, "first_name", null /*"first_name"*/, VARCHAR, "name", "guitar", null /*VARCHAR*/,  "name" , "keyboards", null /*VARCHAR*/); // FIXME: type of joined columns
         Map<String, Collection<String>> result = collect(rs, "first_name", "guitar", "keyboards");
         assertEquals(2, result.size());
 

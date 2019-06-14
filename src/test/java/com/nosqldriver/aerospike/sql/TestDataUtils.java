@@ -17,7 +17,9 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.function.Function;
 
 import static com.aerospike.client.Log.setCallback;
@@ -251,11 +253,11 @@ class TestDataUtils {
 
 
     @VisibleForPackage
-    static ResultSet executeQuery(String sql, String expectedSchema, Object ... expectedMetadataFields) throws SQLException {
+    static ResultSet executeQuery(String sql, String expectedSchema, boolean orderedValidation, Object ... expectedMetadataFields) throws SQLException {
         ResultSet rs = conn.createStatement().executeQuery(sql);
 
         if (expectedMetadataFields.length > 0) {
-            validate(rs.getMetaData(), expectedSchema, expectedMetadataFields);
+            validate(rs.getMetaData(), expectedSchema, orderedValidation, expectedMetadataFields);
         }
 
         return rs;
@@ -269,9 +271,13 @@ class TestDataUtils {
      * @throws SQLException
      */
     @VisibleForPackage
-    static ResultSetMetaData validate(ResultSetMetaData md, String expectedSchema, Object ... expectedMetadataFields) throws SQLException {
+    static ResultSetMetaData validate(ResultSetMetaData md, String expectedSchema, boolean orderedValidation, Object ... expectedMetadataFields) throws SQLException {
         assertNotNull(md);
 
+        Map<String, String> expectedName2label = new HashMap<>();
+        Map<String, Integer> expectedName2type = new HashMap<>();
+        Map<String, String> name2label = new HashMap<>();
+        Map<String, Integer> name2type = new HashMap<>();
         int n = expectedMetadataFields.length / 3;
         assertEquals(n, md.getColumnCount());
         for (int i = 1, j = 0; i <= n; i++, j+=3) {
@@ -279,15 +285,31 @@ class TestDataUtils {
             String name = (String)expectedMetadataFields[j];
             String label = (String)expectedMetadataFields[j + 1];
             Integer type = (Integer)expectedMetadataFields[j + 2];
-            if (name != null) {
-                assertEquals(name, md.getColumnName(i));
+            if (orderedValidation) {
+                if (name != null) {
+                    assertEquals(name, md.getColumnName(i));
+                }
+                if (label != null) {
+                    assertEquals(label, md.getColumnLabel(i));
+                }
+                if (type != null) {
+                    assertEquals(type.intValue(), md.getColumnType(i));
+                }
+            } else if(name != null && md.getColumnName(i) != null) {
+                if (label != null) {
+                    expectedName2label.put(name, label);
+                    name2label.put(md.getColumnName(i), md.getColumnLabel(i));
+                }
+                if (type != null) {
+                    expectedName2type.put(name, type);
+                    name2type.put(name, type);
+                }
             }
-            if (label != null) {
-                assertEquals(label, md.getColumnLabel(i));
-            }
-            if (type != null) {
-                assertEquals(type.intValue(), md.getColumnType(i));
-            }
+        }
+
+        if (!orderedValidation) {
+            assertEquals(expectedName2label, name2label);
+            assertEquals(expectedName2type, name2type);
         }
         return md;
     }

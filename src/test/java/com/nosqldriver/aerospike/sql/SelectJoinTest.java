@@ -8,7 +8,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -55,7 +54,7 @@ class SelectJoinTest {
             "select first_name, i.name as instrument from people as p left join instruments as i on p.id=i.person_id",
     })
     void oneToManyJoin(String sql) throws SQLException {
-        ResultSet rs = executeQuery(sql, "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
+        ResultSet rs = executeQuery(sql, NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
         Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(4, result.size());
         assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
@@ -70,7 +69,7 @@ class SelectJoinTest {
             "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id where first_name='John'",
     })
     void oneToManyJoinWhereMainTable(String sql) throws SQLException {
-        ResultSet rs = executeQuery(sql, "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
+        ResultSet rs = executeQuery(sql, NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
         Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(1, result.size());
         assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
@@ -83,7 +82,7 @@ class SelectJoinTest {
             "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id where instrument='guitar'",
     })
     void oneToManyJoinWhereSecondaryTable(String sql) throws SQLException {
-        ResultSet rs = executeQuery(sql, "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
+        ResultSet rs = executeQuery(sql, NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
         Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(3, result.size());
         asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
@@ -97,7 +96,7 @@ class SelectJoinTest {
             "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id where first_name='Paul' and instrument='guitar'",
     })
     void oneToManyJoinWhereMainAndSecondaryTable(String sql) throws SQLException {
-        ResultSet rs = executeQuery(sql, "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
+        ResultSet rs = executeQuery(sql, NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
         Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(1, result.size());
         assertEquals(guitar, result.get("Paul"));
