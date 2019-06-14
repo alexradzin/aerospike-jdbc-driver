@@ -17,10 +17,12 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -40,6 +42,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.dropIndexSafely;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQueryPreparedStatement;
 import static java.lang.String.format;
+import static java.sql.Types.BIGINT;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
@@ -97,9 +100,16 @@ class SelectTest {
         int nColumns = md.getColumnCount();
         assertEquals(5, nColumns);
         Map<String, Integer> actualTypes = new HashMap<>();
+        List<String> columnNames = new ArrayList<>();
+        List<String> columnLabels = new ArrayList<>();
         for (int i = 0; i < nColumns; i++) {
-            actualTypes.put(md.getColumnName(i + 1), md.getColumnType(i +1));
+            String name = md.getColumnName(i + 1);
+            String label = md.getColumnLabel(i + 1);
+            columnNames.add(name);
+            columnLabels.add(label);
+            actualTypes.put(name, md.getColumnType(i +1));
         }
+        assertEquals(columnNames, columnLabels);
         Map<String, Integer> expectedTypes = new HashMap<>();
         expectedTypes.put("first_name", VARCHAR);
         expectedTypes.put("last_name", VARCHAR);
@@ -111,6 +121,14 @@ class SelectTest {
 
         Map<Integer, String> selectedPeople = new HashMap<>();
         while (rs.next()) {
+            for (int i = 0; i < nColumns; i++) {
+                String name = columnNames.get(i);
+                switch (actualTypes.get(name)) {
+                    case VARCHAR: assertEquals(rs.getString(i + 1), rs.getString(name)); break;
+                    case BIGINT: assertEquals(rs.getInt(i + 1), rs.getInt(name)); break;
+                    default: throw new IllegalArgumentException("Unexpected column type " + actualTypes.get(name));
+                }
+            }
             selectedPeople.put(rs.getInt("id"), rs.getString("first_name") + " " + rs.getString("last_name") + " " + rs.getInt("year_of_birth"));
         }
 
