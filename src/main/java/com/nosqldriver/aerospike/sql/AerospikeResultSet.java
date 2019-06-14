@@ -2,6 +2,7 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.Record;
 import com.nosqldriver.sql.SimpleResultSetMetaData;
+import com.nosqldriver.sql.TypeConversion;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -26,9 +27,7 @@ import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.sql.Types;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -45,19 +44,6 @@ abstract class AerospikeResultSet implements ResultSet {
     private volatile int index = 0;
     private volatile boolean done = false;
     private volatile boolean closed = false;
-
-    private static final Map<Class, Integer> sqlTypes = new HashMap<>();
-    static {
-        sqlTypes.put(Short.class, Types.SMALLINT);
-        sqlTypes.put(Integer.class, Types.INTEGER);
-        sqlTypes.put(Long.class, Types.BIGINT);
-        sqlTypes.put(Boolean.class, Types.BOOLEAN);
-        sqlTypes.put(Float.class, Types.FLOAT);
-        sqlTypes.put(Double.class, Types.DOUBLE);
-        sqlTypes.put(String.class, Types.VARCHAR);
-        sqlTypes.put(byte[].class, Types.BLOB);
-        sqlTypes.put(Date.class, Types.DATE);
-    }
 
 
     protected AerospikeResultSet(String schema, String[] names) {
@@ -269,7 +255,7 @@ abstract class AerospikeResultSet implements ResultSet {
         for(int i = 0; i < resultNames.length; i++) {
             Object value = sampleRecord.bins.get(resultNames[i]);
             if(value != null) {
-                Integer type = sqlTypes.get(value.getClass());
+                Integer type = TypeConversion.sqlTypes.get(value.getClass());
                 if (type != null) {
                     types[i] = type;
                 }

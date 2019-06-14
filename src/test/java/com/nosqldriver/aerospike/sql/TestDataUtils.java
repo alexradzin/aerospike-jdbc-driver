@@ -14,6 +14,7 @@ import com.nosqldriver.VisibleForPackage;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashSet;
@@ -22,6 +23,7 @@ import java.util.function.Function;
 import static com.aerospike.client.Log.setCallback;
 import static com.aerospike.client.Log.setLevel;
 import static java.lang.String.format;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -88,6 +90,17 @@ class TestDataUtils {
         public ResultSet apply(String sql) {
             try {
                 return conn.createStatement().executeQuery(sql);
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+    };
+
+    @VisibleForPackage static Function<String, ResultSet> executeQueryPreparedStatement = new Function<String, ResultSet>() {
+        @Override
+        public ResultSet apply(String sql) {
+            try {
+                return conn.prepareStatement(sql).executeQuery();
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }
@@ -237,4 +250,44 @@ class TestDataUtils {
     }
 
 
+    @VisibleForPackage
+    static ResultSet executeQuery(String sql, String expectedSchema, Object ... expectedMetadataFields) throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+
+        if (expectedMetadataFields.length > 0) {
+            validate(rs.getMetaData(), expectedSchema, expectedMetadataFields);
+        }
+
+        return rs;
+    }
+
+    /**
+     * Validates metadata against expected values
+     * @param md
+     * @param expectedMetadataFields expected fields: name,label,type
+     * @return the metadata sent as an argument
+     * @throws SQLException
+     */
+    static ResultSetMetaData validate(ResultSetMetaData md, String expectedSchema, Object ... expectedMetadataFields) throws SQLException {
+        assertNotNull(md);
+
+        int n = expectedMetadataFields.length / 3;
+        assertEquals(n, md.getColumnCount());
+        for (int i = 1, j = 0; i <= n; i++, j+=3) {
+            assertEquals(expectedSchema, md.getSchemaName(i));
+            String name = (String)expectedMetadataFields[j];
+            String label = (String)expectedMetadataFields[j + 1];
+            Integer type = (Integer)expectedMetadataFields[j + 2];
+            if (name != null) {
+                assertEquals(name, md.getColumnName(i));
+            }
+            if (label != null) {
+                assertEquals(label, md.getColumnLabel(i));
+            }
+            if (type != null) {
+                assertEquals(type.intValue(), md.getColumnType(i));
+            }
+        }
+        return md;
+    }
 }

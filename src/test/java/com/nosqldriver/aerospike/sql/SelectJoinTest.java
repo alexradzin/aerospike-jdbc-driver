@@ -1,13 +1,14 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.nosqldriver.VisibleForPackage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,20 +17,21 @@ import java.util.Map;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.INSTRUMENTS;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.conn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeAllPersonalInstruments;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
+import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 /**
  * Tests of SELECT with JOIN
  */
 class SelectJoinTest {
+    @VisibleForPackage static final Collection<String> guitar  = new HashSet<>(singleton("guitar"));
     @BeforeAll
     static void init() {
         writeBeatles();
@@ -53,28 +55,9 @@ class SelectJoinTest {
             "select first_name, i.name as instrument from people as p left join instruments as i on p.id=i.person_id",
     })
     void oneToManyJoin(String sql) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
-        ResultSetMetaData md = rs.getMetaData();
-        assertNotNull(md);
-        assertEquals(2, md.getColumnCount());
-        assertEquals("first_name", md.getColumnName(1));
-        assertEquals("name", md.getColumnName(2));
-        assertEquals("instrument", md.getColumnLabel(2));
-
-
-        Map<String, Collection<String>> result = new HashMap<>();
-        while(rs.next()) {
-            assertEquals(rs.getString(1), rs.getString("first_name"));
-            assertEquals(rs.getString(2), rs.getString("instrument"));
-            String firstName = rs.getString(1);
-
-            Collection<String> instruments = result.getOrDefault(firstName, new HashSet<>());
-            instruments.add(rs.getString(2));
-            result.put(firstName, instruments);
-        }
-
+        ResultSet rs = executeQuery(sql, "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
+        Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(4, result.size());
-
         assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
         assertEquals(new HashSet<>(asList("vocals", "bass guitar", "guitar", "keyboards")), result.get("Paul"));
         assertEquals(new HashSet<>(asList("vocals", "guitar", "sitar")), result.get("George"));
@@ -87,26 +70,8 @@ class SelectJoinTest {
             "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id where first_name='John'",
     })
     void oneToManyJoinWhereMainTable(String sql) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
-        ResultSetMetaData md = rs.getMetaData();
-        assertNotNull(md);
-        assertEquals(2, md.getColumnCount());
-        assertEquals("first_name", md.getColumnName(1));
-        assertEquals("name", md.getColumnName(2));
-        assertEquals("instrument", md.getColumnLabel(2));
-
-
-        Map<String, Collection<String>> result = new HashMap<>();
-        while(rs.next()) {
-            assertEquals(rs.getString(1), rs.getString("first_name"));
-            assertEquals(rs.getString(2), rs.getString("instrument"));
-            String firstName = rs.getString(1);
-
-            Collection<String> instruments = result.getOrDefault(firstName, new HashSet<>());
-            instruments.add(rs.getString(2));
-            result.put(firstName, instruments);
-        }
-
+        ResultSet rs = executeQuery(sql, "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
+        Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(1, result.size());
         assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
     }
@@ -118,31 +83,10 @@ class SelectJoinTest {
             "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id where instrument='guitar'",
     })
     void oneToManyJoinWhereSecondaryTable(String sql) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
-        ResultSetMetaData md = rs.getMetaData();
-        assertNotNull(md);
-        assertEquals(2, md.getColumnCount());
-        assertEquals("first_name", md.getColumnName(1));
-        assertEquals("name", md.getColumnName(2));
-        assertEquals("instrument", md.getColumnLabel(2));
-
-
-        Map<String, Collection<String>> result = new HashMap<>();
-        while(rs.next()) {
-            assertEquals(rs.getString(1), rs.getString("first_name"));
-            assertEquals(rs.getString(2), rs.getString("instrument"));
-            String firstName = rs.getString(1);
-
-            Collection<String> instruments = result.getOrDefault(firstName, new HashSet<>());
-            instruments.add(rs.getString(2));
-            result.put(firstName, instruments);
-        }
-
+        ResultSet rs = executeQuery(sql, "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
+        Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(3, result.size());
-
-        assertEquals(new HashSet<>(singleton("guitar")), result.get("John"));
-        assertEquals(new HashSet<>(singleton("guitar")), result.get("Paul"));
-        assertEquals(new HashSet<>(singleton("guitar")), result.get("George"));
+        Arrays.asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
     }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
@@ -153,28 +97,31 @@ class SelectJoinTest {
             "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id where first_name='Paul' and instrument='guitar'",
     })
     void oneToManyJoinWhereMainAndSecondaryTable(String sql) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
-        ResultSetMetaData md = rs.getMetaData();
-        assertNotNull(md);
-        assertEquals(2, md.getColumnCount());
-        assertEquals("first_name", md.getColumnName(1));
-        assertEquals("name", md.getColumnName(2));
-        assertEquals("instrument", md.getColumnLabel(2));
+        ResultSet rs = executeQuery(sql, "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
+        Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
+        assertEquals(1, result.size());
+        assertEquals(guitar, result.get("Paul"));
+    }
 
 
+    @VisibleForPackage static Map<String, Collection<String>> collect(ResultSet rs, String ... names) throws SQLException {
         Map<String, Collection<String>> result = new HashMap<>();
         while(rs.next()) {
-            assertEquals(rs.getString(1), rs.getString("first_name"));
-            assertEquals(rs.getString(2), rs.getString("instrument"));
-            String firstName = rs.getString(1);
+            for (int i = 0; i < names.length; i++) {
+                assertEquals(rs.getString(i + 1), rs.getString(names[i]));
+            }
 
-            Collection<String> instruments = result.getOrDefault(firstName, new HashSet<>());
-            instruments.add(rs.getString(2));
-            result.put(firstName, instruments);
+            String key = rs.getString(1);
+
+            Collection<String> values = result.getOrDefault(key, new HashSet<>());
+            for (int i = 1; i < names.length; i++) {
+                String value = rs.getString(i + 1);
+                if (value != null) {
+                    values.add(value);
+                }
+            }
+            result.put(key, values);
         }
-
-        assertEquals(1, result.size());
-
-        assertEquals(new HashSet<>(singleton("guitar")), result.get("Paul"));
+        return result;
     }
 }

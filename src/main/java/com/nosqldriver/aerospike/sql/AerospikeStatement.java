@@ -80,39 +80,35 @@ public class AerospikeStatement implements java.sql.Statement {
                 return executeUpdate(statement, sql) > 0;
             }
         },
-        DELETE {
-            @Override
-            ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
-                executeUpdate(statement, sql);
-
-                return new ResultSetWrapperFactory().create(new ResultSetInvocationHandler<Object>(NEXT | METADATA, null, statement.schema, new String[0], new String[0]) {
-                    @Override
-                    protected boolean next() {
-                        return false;
-                    }
-                });
-            }
-            @Override
-            int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
-                return new AerospikeQueryFactory(statement.schema, statement.policyProvider, statement.indexes).createUpdate(sql).apply(statement.client);
-            }
-
-            @Override
-            boolean execute(AerospikeStatement statement, String sql) throws SQLException {
-                return executeUpdate(statement, sql) > 0;
-            }
-        },
+        DELETE(UPDATE),
         SHOW,
         ;
 
+        private final StatementType prototype;
+
+        StatementType() {
+            this(null);
+        }
+        StatementType(StatementType prototype) {
+            this.prototype = prototype;
+        }
 
         ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
+            if (prototype != null) {
+                return prototype.executeQuery(statement, sql);
+            }
             throw new UnsupportedOperationException(name() + " does not support " + "executeQuery");
         }
         int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
+            if (prototype != null) {
+                return prototype.executeUpdate(statement, sql);
+            }
             throw new UnsupportedOperationException(format("%s does not support %s", name(), "executeUpdate"));
         }
         boolean execute(AerospikeStatement statement, String sql) throws SQLException {
+            if (prototype != null) {
+                return prototype.execute(statement, sql);
+            }
             throw new UnsupportedOperationException(format("%s does not support %s", name(), "execute"));
         }
     }

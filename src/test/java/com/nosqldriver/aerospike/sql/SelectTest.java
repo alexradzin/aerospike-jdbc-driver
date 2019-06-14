@@ -37,6 +37,8 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.beatles;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.conn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.createIndex;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.dropIndexSafely;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQueryPreparedStatement;
 import static java.lang.String.format;
 import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
@@ -72,15 +74,22 @@ class SelectTest {
     }
 
 
-
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {SELECT_ALL, "select * from people as p"})
+    void selectAll(String sql) throws SQLException {
+        selectAll(sql, executeQuery);
+    }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
-    @ValueSource(strings = {
-            SELECT_ALL,
-            "select * from people as p"
-    })
-    void selectAll(String sql) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+    @ValueSource(strings = {SELECT_ALL, "select * from people as p"})
+    void selectAllWithPreparedStatement(String sql) throws SQLException {
+        selectAll(sql, executeQueryPreparedStatement);
+    }
+
+
+    private void selectAll(String sql, Function<String, ResultSet> executor) throws SQLException {
+        ResultSet rs = executor.apply(sql);
+
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(NAMESPACE, md.getSchemaName(1));
 
@@ -110,25 +119,8 @@ class SelectTest {
         assertEquals("Ringo Starr 1940", selectedPeople.get(4));
     }
 
-    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
-    @ValueSource(strings = {
-            SELECT_ALL,
-            "select * from people as p"
-    })
-    void selectAllWithPreparedStatement(String sql) throws SQLException {
-        ResultSet rs = conn.prepareStatement(sql).executeQuery();
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
-        Map<Integer, String> selectedPeople = new HashMap<>();
-        while (rs.next()) {
-            selectedPeople.put(rs.getInt("id"), rs.getString("first_name") + " " + rs.getString("last_name") + " " + rs.getInt("year_of_birth"));
-        }
 
-        assertEquals("John Lennon 1940", selectedPeople.get(1));
-        assertEquals("Paul McCartney 1942", selectedPeople.get(2));
-        assertEquals("George Harrison 1943", selectedPeople.get(3));
-        assertEquals("Ringo Starr 1940", selectedPeople.get(4));
-    }
 
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
@@ -371,9 +363,9 @@ class SelectTest {
         for (int i = 0; i < beatles.length; i++) {
             int id = i + 1;
             ResultSet rs = conn.createStatement().executeQuery(format("select * from people where PK=%d", id));
-            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
             assertTrue(rs.next());
+            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
             assertEquals(beatles[i].getId(), rs.getInt("id"));
             assertEquals(beatles[i].getFirstName(), rs.getString("first_name"));
             assertEquals(beatles[i].getLastName(), rs.getString("last_name"));
@@ -385,9 +377,9 @@ class SelectTest {
     void selectByNotIndexedField() throws SQLException {
         for (Person person : beatles) {
             ResultSet rs = conn.createStatement().executeQuery(format("select * from people where last_name=%s", person.getLastName()));
-            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
             assertTrue(rs.next());
+            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
             assertEquals(person.getId(), rs.getInt("id"));
             assertEquals(person.getFirstName(), rs.getString("first_name"));
             assertEquals(person.getLastName(), rs.getString("last_name"));
@@ -400,9 +392,9 @@ class SelectTest {
         createIndex("first_name", IndexType.STRING);
         for (Person person : beatles) {
             ResultSet rs = conn.createStatement().executeQuery(format("select * from people where first_name=%s", person.getFirstName()));
-            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
 
             assertTrue(rs.next());
+            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
             assertEquals(person.getId(), rs.getInt("id"));
             assertEquals(person.getFirstName(), rs.getString("first_name"));
             assertEquals(person.getLastName(), rs.getString("last_name"));
@@ -607,21 +599,14 @@ class SelectTest {
     @Test
     @DisplayName("select count(*) as n, min(year_of_birth) as min, max(year_of_birth) as max, avg(year_of_birth) as avg, sum(year_of_birth) as total from people")
     void callAllAggregations() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
-        ResultSetMetaData md = rs.getMetaData();
-        assertEquals(NAMESPACE, md.getSchemaName(1));
-        assertEquals(5, rs.getMetaData().getColumnCount());
+        ResultSet rs = TestDataUtils.executeQuery(getDisplayName(), "test",  //FIXME: types must be discovered here!
+                "count(*)", "n", null, //Types.INTEGER,
+                "min(year_of_birth)", "min", null, //Types.INTEGER,
+                "max(year_of_birth)", "max", null, //Types.INTEGER,
+                "avg(year_of_birth)", "avg", null, //Types.INTEGER,
+                "sum(year_of_birth)", "total", null //Types.INTEGER,
+        );
 
-        assertEquals("count(*)", md.getColumnName(1));
-        assertEquals("n", md.getColumnLabel(1));
-        assertEquals("min(year_of_birth)", md.getColumnName(2));
-        assertEquals("min", md.getColumnLabel(2));
-        assertEquals("max(year_of_birth)", md.getColumnName(3));
-        assertEquals("max", md.getColumnLabel(3));
-        assertEquals("avg(year_of_birth)", md.getColumnName(4));
-        assertEquals("avg", md.getColumnLabel(4));
-        assertEquals("sum(year_of_birth)", md.getColumnName(5));
-        assertEquals("total", md.getColumnLabel(5));
 
         assertTrue(rs.next());
 
