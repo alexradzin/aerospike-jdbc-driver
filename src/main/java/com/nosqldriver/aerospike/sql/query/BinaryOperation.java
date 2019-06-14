@@ -12,6 +12,7 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 
 public class BinaryOperation {
     private String table;
@@ -57,28 +58,28 @@ public class BinaryOperation {
         GT(">") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                List<Object> values = Arrays.asList(((Number) operation.values.get(0)).longValue() + 1, Long.MAX_VALUE);
+                List<Object> values = asList(((Number) operation.values.get(0)).longValue() + 1, Long.MAX_VALUE);
                 return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
             }
         },
         GE(">=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                List<Object> values = Arrays.asList(operation.values.get(0), Long.MAX_VALUE);
+                List<Object> values = asList(operation.values.get(0), Long.MAX_VALUE);
                 return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
             }
         },
         LT("<") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                List<Object> values = Arrays.asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1);
+                List<Object> values = asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1);
                 return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
             }
         },
         LE("<=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                List<Object> values = Arrays.asList(Long.MIN_VALUE, operation.values.get(0));
+                List<Object> values = asList(Long.MIN_VALUE, operation.values.get(0));
                 return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
             }
         },

@@ -86,7 +86,7 @@ class SelectJoinTest {
         ResultSet rs = executeQuery(sql, "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
         Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(3, result.size());
-        Arrays.asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
+        asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
     }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)

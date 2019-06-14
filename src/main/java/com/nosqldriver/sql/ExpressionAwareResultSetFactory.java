@@ -28,22 +28,21 @@ import static java.util.stream.IntStream.range;
 
 public class ExpressionAwareResultSetFactory {
     private final List<String> functionNames = new ArrayList<>();
-    private final ScriptEngine engine = new JavascriptEngineFactory() {
-        {
-            try {
-                ScriptObjectMirror definedFunctions = (ScriptObjectMirror) getEngine().eval("functions");
-                range(0, definedFunctions.size()).boxed().forEach(i -> functionNames.add((String) definedFunctions.getSlot(i)));
-            } catch (ScriptException e) {
-                throw new IllegalStateException(e);
-            }
-        }
-    }.getEngine();
+    private final ScriptEngine engine;
 
     private static final Pattern EXPRESSION_DELIMITERS = Pattern.compile("[\\s()[],;.*+-/=><?:%^&!]]");
     private static final Pattern NUMBER = Pattern.compile("\\b[+-]?\\d+(:?\\.\\d+)?(:?e[+-]?\\d+)?\\b");
     private final ResultSetWrapperFactory wrapperFactory = new ResultSetWrapperFactory();
 
-
+    public ExpressionAwareResultSetFactory() {
+        engine = new JavascriptEngineFactory().getEngine();
+        try {
+            ScriptObjectMirror definedFunctions = (ScriptObjectMirror) engine.eval("functions");
+            range(0, definedFunctions.size()).boxed().forEach(i -> functionNames.add((String) definedFunctions.getSlot(i)));
+        } catch (ScriptException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
 
     public ResultSet wrap(ResultSet rs, Collection<String> names, List<String> evals, List<String> aliases) {

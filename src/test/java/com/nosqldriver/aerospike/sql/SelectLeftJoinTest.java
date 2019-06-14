@@ -61,7 +61,7 @@ class SelectLeftJoinTest {
         Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(3, result.size());
         Collection<String> guitar  = new HashSet<>(singleton("guitar"));
-        Arrays.asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
+        asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
     }
 
     @Test
@@ -70,7 +70,7 @@ class SelectLeftJoinTest {
         ResultSet rs = executeQuery(getDisplayName(), "test", "first_name", "first_name", VARCHAR, "name", "instrument", null /*VARCHAR*/); // FIXME: type of joined columns
         Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(4, result.size());
-        Arrays.asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
+        asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
         assertEquals(new HashSet<>(), result.get("Ringo"));
     }
 
@@ -84,7 +84,7 @@ class SelectLeftJoinTest {
         assertEquals(2, result.size());
 
         Collection<String> guitarAndKeyboards = new HashSet<>(asList("guitar", "keyboards"));
-        Arrays.asList("John", "Paul").forEach(name -> assertEquals(guitarAndKeyboards, result.get(name)));
+        asList("John", "Paul").forEach(name -> assertEquals(guitarAndKeyboards, result.get(name)));
     }
 
 

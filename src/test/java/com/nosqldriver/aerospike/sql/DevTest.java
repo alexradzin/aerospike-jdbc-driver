@@ -8,6 +8,7 @@ import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
+import com.nosqldriver.VisibleForPackage;
 
 import java.util.Map;
 
@@ -23,6 +24,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.writeSubjectSelection;
  */
 public class DevTest {
     //@Test
+    @VisibleForPackage
     void testFunction() {
         writeBeatles();
         writeSubjectSelection();
@@ -65,6 +67,7 @@ public class DevTest {
 
 
     //@Test
+    @VisibleForPackage
     void testFunction2() {
         writeSubjectSelection();
 
@@ -95,6 +98,7 @@ public class DevTest {
 
 
     //@Test
+    @VisibleForPackage
     void select() {
         //writeMainPersonalInstruments();
         writeAllPersonalInstruments();

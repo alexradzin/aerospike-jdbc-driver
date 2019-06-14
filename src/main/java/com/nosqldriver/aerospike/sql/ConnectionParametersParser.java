@@ -75,6 +75,7 @@ class ConnectionParametersParser {
         return all;
     }
 
+    @VisibleForPackage
     <T> T initProperties(T object, Properties props) {
         @SuppressWarnings("unchecked")
         Class<T> clazz = (Class<T>)object.getClass();

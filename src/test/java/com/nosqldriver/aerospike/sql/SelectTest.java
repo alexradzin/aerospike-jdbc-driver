@@ -599,7 +599,7 @@ class SelectTest {
     @Test
     @DisplayName("select count(*) as n, min(year_of_birth) as min, max(year_of_birth) as max, avg(year_of_birth) as avg, sum(year_of_birth) as total from people")
     void callAllAggregations() throws SQLException {
-        ResultSet rs = TestDataUtils.executeQuery(getDisplayName(), "test",  //FIXME: types must be discovered here!
+        ResultSet rs = executeQuery(getDisplayName(), "test",  //FIXME: types must be discovered here!
                 "count(*)", "n", null, //Types.INTEGER,
                 "min(year_of_birth)", "min", null, //Types.INTEGER,
                 "max(year_of_birth)", "max", null, //Types.INTEGER,
