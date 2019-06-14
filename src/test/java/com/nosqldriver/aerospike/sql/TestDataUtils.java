@@ -268,6 +268,7 @@ class TestDataUtils {
      * @return the metadata sent as an argument
      * @throws SQLException
      */
+    @VisibleForPackage
     static ResultSetMetaData validate(ResultSetMetaData md, String expectedSchema, Object ... expectedMetadataFields) throws SQLException {
         assertNotNull(md);
 
