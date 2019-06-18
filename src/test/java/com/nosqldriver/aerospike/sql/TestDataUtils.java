@@ -205,7 +205,7 @@ class TestDataUtils {
         write(KEYBOARDS, writePolicy, 8, personalInstrument(8, 2, "keyboards")); // Paul McCartney
     }
 
-    private static void write(WritePolicy writePolicy, Key key, Bin... bins) {
+    @VisibleForPackage static void write(WritePolicy writePolicy, Key key, Bin... bins) {
         client.put(writePolicy, key, bins);
     }
 
@@ -213,7 +213,7 @@ class TestDataUtils {
         write(writePolicy, new Key(NAMESPACE, table, id), bins);
     }
 
-    private static Bin[] person(int id, String firstName, String lastName, int yearOfBirth, int kidsCount) {
+    @VisibleForPackage static Bin[] person(int id, String firstName, String lastName, int yearOfBirth, int kidsCount) {
         return new Bin[] {new Bin("id", id), new Bin("first_name", firstName), new Bin("last_name", lastName), new Bin("year_of_birth", yearOfBirth), new Bin("kids_count", kidsCount)};
     }
 

@@ -117,7 +117,7 @@ public class AerospikeConnection implements Connection {
 
     @Override
     public DatabaseMetaData getMetaData() {
-        return new AerospikeDatabaseMetadata(url, props, client); //TODO First thing to implement!
+        return new AerospikeDatabaseMetadata(url, props, client, this);
     }
 
     @Override

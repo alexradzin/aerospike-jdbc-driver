@@ -18,4 +18,18 @@ public class TypeConversion {
         sqlTypes.put(byte[].class, Types.BLOB);
         sqlTypes.put(Date.class, Types.DATE);
     }
+
+    public static final Map<Integer, String> sqlTypeNames = new HashMap<>();
+    static {
+        sqlTypeNames.put(Types.SMALLINT, "short");
+        sqlTypeNames.put(Types.INTEGER, "integer");
+        sqlTypeNames.put(Types.BIGINT, "long");
+        sqlTypeNames.put(Types.BOOLEAN, "boolean");
+        sqlTypeNames.put(Types.FLOAT, "float");
+        sqlTypeNames.put(Types.DOUBLE, "double");
+        sqlTypeNames.put(Types.VARCHAR, "varchar");
+        sqlTypeNames.put(Types.BLOB, "blob");
+        sqlTypeNames.put(Types.DATE, "date");
+    }
+
 }

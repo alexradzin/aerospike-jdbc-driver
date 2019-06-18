@@ -16,7 +16,6 @@ import static com.nosqldriver.sql.ResultSetInvocationHandler.NEXT;
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy> {
     public AerospikeBatchQueryBySecondaryIndex(String schema, String[] names, Statement statement, QueryPolicy policy) {
         super(schema, names, statement, policy);
-
     }
 
     @Override

@@ -3,22 +3,46 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
 import com.aerospike.client.policy.InfoPolicy;
+import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
+import com.nosqldriver.sql.ResultSetFactory;
+import com.nosqldriver.sql.ResultSetWrapperFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.RowIdLifetime;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.jar.Manifest;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.lang.String.format;
+import static java.sql.Types.BIGINT;
+import static java.sql.Types.BLOB;
+import static java.sql.Types.CHAR;
+import static java.sql.Types.DOUBLE;
+import static java.sql.Types.INTEGER;
+import static java.sql.Types.SMALLINT;
+import static java.sql.Types.TINYINT;
+import static java.sql.Types.VARCHAR;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 
 public class AerospikeDatabaseMetadata implements DatabaseMetaData {
     private final static ConnectionParametersParser parser = new ConnectionParametersParser();
@@ -27,12 +51,19 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     private final Optional<Manifest> manifest;
     private final Map<String, String> dbInfo;
+    private final IAerospikeClient client;
+    private final Connection connection;
     private final InfoPolicy infoPolicy = new InfoPolicy();
+    private static final String newLine = System.lineSeparator();
 
 
-    public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client) {
+    private final ResultSetWrapperFactory wrapperFactory = new ResultSetWrapperFactory();
+
+    public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client, Connection connection) {
         this.url = url;
         clientInfo = parser.clientInfo(url, info);
+        this.client = client;
+        this.connection = connection;
         manifest = manifest();
         dbInfo = new HashMap<>();
         Arrays.stream(client.getNodes()).forEach(node -> dbInfo.putAll(Info.request(infoPolicy, node)));
@@ -200,7 +231,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public String getExtraNameCharacters() throws SQLException {
-        return null;
+        return "";
     }
 
     @Override
@@ -255,7 +286,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public boolean supportsGroupBy() throws SQLException {
-        return false;
+        return true;
     }
 
     @Override
@@ -350,17 +381,17 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public String getCatalogTerm() throws SQLException {
-        return null;
+        return "namespace";
     }
 
     @Override
     public boolean isCatalogAtStart() throws SQLException {
-        return false;
+        return true;
     }
 
     @Override
     public String getCatalogSeparator() throws SQLException {
-        return null;
+        return ".";
     }
 
     @Override
@@ -390,7 +421,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public boolean supportsCatalogsInDataManipulation() throws SQLException {
-        return false;
+        return true;
     }
 
     @Override
@@ -400,12 +431,12 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public boolean supportsCatalogsInTableDefinitions() throws SQLException {
-        return false;
+        return true;
     }
 
     @Override
     public boolean supportsCatalogsInIndexDefinitions() throws SQLException {
-        return false;
+        return true;
     }
 
     @Override
@@ -500,7 +531,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getMaxColumnNameLength() throws SQLException {
-        return 0;
+        return 14;
     }
 
     @Override
@@ -510,7 +541,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getMaxColumnsInIndex() throws SQLException {
-        return 0;
+        return 1;
     }
 
     @Override
@@ -520,12 +551,12 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getMaxColumnsInSelect() throws SQLException {
-        return 0;
+        return 32767;
     }
 
     @Override
     public int getMaxColumnsInTable() throws SQLException {
-        return 0;
+        return 32767;
     }
 
     @Override
@@ -540,7 +571,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getMaxIndexLength() throws SQLException {
-        return 0;
+        return 256;
     }
 
     @Override
@@ -555,7 +586,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getMaxCatalogNameLength() throws SQLException {
-        return 0;
+        return 31;
     }
 
     @Override
@@ -580,7 +611,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getMaxTableNameLength() throws SQLException {
-        return 0;
+        return 63;
     }
 
     @Override
@@ -630,88 +661,248 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public ResultSet getProcedures(String catalog, String schemaPattern, String procedureNamePattern) throws SQLException {
-        return null;
+        String[] columns = new String[] {"PROCEDURE_CAT", "PROCEDURE_SCHEM", "PROCEDURE_NAME", "reserved1", "reserved2", "reserved3", "REMARKS", "PROCEDURE_TYPE"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, CHAR, CHAR, CHAR, VARCHAR, SMALLINT};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getProcedureColumns(String catalog, String schemaPattern, String procedureNamePattern, String columnNamePattern) throws SQLException {
-        return null;
+        String[] columns = new String[] {"PROCEDURE_CAT", "PROCEDURE_SCHEM", "PROCEDURE_NAME", "COLUMN_NAME", "COLUMN_TYPE", "DATA_TYPE", "TYPE_NAME", "PRECISION", "LENGTH", "SCALE", "RADIX", "NULLABLE", "REMARKS", "COLUMN_DEF", "SQL_DATA_TYPE", "SQL_DATETIME_SUB", "CHAR_OCTET_LENGTH", "ORDINAL_POSITION", "IS_NULLABLE", "SPECIFIC_NAME"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT, INTEGER, VARCHAR, INTEGER, SMALLINT, SMALLINT, SMALLINT, VARCHAR, VARCHAR, INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) throws SQLException {
-        return null;
+        Pattern tableNameRegex = tableNamePattern == null || "".equals(tableNamePattern) ? null : Pattern.compile(tableNamePattern.replace("%", ".*"));
+
+        Iterable<List<?>> tables =
+                getTablesData(catalog)
+                        .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
+                        .filter(p -> tableNameRegex == null || tableNameRegex.matcher(p.getProperty("set")).matches())
+                        .map(p -> asList("".equals(tableNamePattern) ? "" : p.getProperty("ns"), null, p.getProperty("set"), "TABLE", null, null, null, null, null, null))
+                        .collect(Collectors.toList());
+
+        String[] columns = new String[] {"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "TABLE_TYPE", "REMARKS", "TYPE_CAT", "TYPE_SCHEM", "TYPE_NAME", "SELF_REFERENCING_COL_NAME", "REF_GENERATION"};
+        int[] sqlTypes = new int[columns.length];
+        Arrays.fill(sqlTypes, VARCHAR);
+
+        System.out.println("TTTTTTT: " + tables);
+
+        return new ResultSetFactory().create("system", columns, sqlTypes, tables);
     }
 
     @Override
     public ResultSet getSchemas() throws SQLException {
-        //Info.request(infoPolicy, client.getNodes()[0], "namespaces");
-        return null;
+        return new ResultSetFactory().create("system", new String[] {"TABLE_SCHEM", "TABLE_CATALOG"}, new int[] {VARCHAR, VARCHAR}, emptyList());
     }
 
     @Override
     public ResultSet getCatalogs() throws SQLException {
-        return null;
+        Iterable<List<?>> catalogs = getCatalogNames().stream().map(Collections::singletonList).collect(Collectors.toList());
+        System.out.println("CATALOGS: " + catalogs);
+        return new ResultSetFactory().create("system", new String[] {"TABLE_CAT"}, new int[] {VARCHAR}, catalogs);
+    }
+
+    private List<String> getCatalogNames() {
+        return Arrays.stream(client.getNodes())
+                .map(node -> Info.request(infoPolicy, node, "namespaces"))
+                .map(str -> str.split(";"))
+                .map(Arrays::asList)
+                .flatMap(Collection::stream)
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
     }
 
     @Override
     public ResultSet getTableTypes() throws SQLException {
-        return null;
+        return new ResultSetFactory().create("system", new String[] {"TABLE_TYPE"}, new int[] {VARCHAR}, singletonList(singletonList("TABLE")));
     }
 
     @Override
     public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException {
-        return null;
+        // for some reason this code causes retrieving of DB metadata to fail even if the result is not returned.
+        // TODO: uncomment and fix this code
+
+//        Pattern tableNameRegex = tableNamePattern == null || "".equals(tableNamePattern) ? null : Pattern.compile(tableNamePattern.replace("%", ".*"));
+
+//        Iterable<ResultSetMetaData> mds =
+//                getTablesData(catalog)
+//                        .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
+//                        .filter(p -> tableNameRegex == null || tableNameRegex.matcher(p.getProperty("set")).matches())
+//                        .map(p -> {
+//                            try {
+//                                return connection.createStatement().executeQuery(String.format("select * from %s.%s limit 1", p.getProperty("ns"), p.getProperty("set"))).getMetaData();
+//                            } catch (SQLException e) {
+//                                sneakyThrow(e);
+//                                return null;
+//                            }
+//                        })
+//                        .collect(Collectors.toList());
+//
+//
+//
+//        List<List<?>> result = new ArrayList<>();
+//        for(ResultSetMetaData md : mds) {
+//            int n = md.getColumnCount();
+//            for (int i = 1; i <= n; i++) {
+//                result.add(asList("".equals(tableNamePattern) ? "" : md.getCatalogName(i), null, md.getTableName(1), "TABLE", md.getColumnName(i), md.getColumnType(i), md.getColumnTypeName(i), 0, 0, 0, 0, 1, null, null, TypeConversion.sqlTypeNames.get(md.getColumnType(i)), null, null, null, 1, md.getCatalogName(i), null, md.getColumnTypeName(i), null, 0, 0));
+//            }
+//        }
+//
+//
+//
+//        System.out.println("------------------------------------------------------------\n" + result);
+
+        //TODO: populate this!
+        String[] columns = new String[] {"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME", "COLUMN_SIZE", "BUFFER_LENGTH", "DECIMAL_DIGITS", "NUM_PREC_RADIX", "NULLABLE", "REMARKS", "COLUMN_DEF", "SQL_DATA_TYPE", "SQL_DATETIME_SUB", "CHAR_OCTET_LENGTH", "ORDINAL_POSITION", "IS_NULLABLE", "SCOPE_CATALOG", "SCOPE_SCHEMA", "SCOPE_TABLE", "SOURCE_DATA_TYPE", "IS_AUTOINCREMENT", "IS_GENERATEDCOLUMN"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, INTEGER, VARCHAR, INTEGER, SMALLINT, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT, VARCHAR, VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getColumnPrivileges(String catalog, String schema, String table, String columnNamePattern) throws SQLException {
-        return null;
+        String[] columns = new String[] {"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "GRANTOR", "GRANTEE", "PRIVILEGE", "IS_GRANTABLE"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR,VARCHAR, VARCHAR, VARCHAR, VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getTablePrivileges(String catalog, String schemaPattern, String tableNamePattern) throws SQLException {
-        return null;
+        String[] columns = new String[] {"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "GRANTOR", "GRANTEE", "PRIVILEGE", "IS_GRANTABLE"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR,VARCHAR, VARCHAR, VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope, boolean nullable) throws SQLException {
-        return null;
+        String[] columns = new String[]{"SCOPE", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME", "COLUMN_SIZE", "BUFFER_LENGTH", "DECIMAL_DIGITS", "PSEUDO_COLUMN"};
+        int[] sqlTypes = new int[]{SMALLINT, VARCHAR, INTEGER, VARCHAR, INTEGER, INTEGER, SMALLINT, SMALLINT};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getVersionColumns(String catalog, String schema, String table) throws SQLException {
-        return null;
+        String[] columns = new String[]{"SCOPE", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME", "COLUMN_SIZE", "BUFFER_LENGTH", "DECIMAL_DIGITS", "PSEUDO_COLUMN"};
+        int[] sqlTypes = new int[]{SMALLINT, VARCHAR, INTEGER, VARCHAR, INTEGER, INTEGER, SMALLINT, SMALLINT};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
-        return null;
+        Iterable<List<?>> tables =
+                getTablesData(catalog)
+                        .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
+                        .filter(p -> table == null || table.equals(p.getProperty("set")))
+                        .map(p -> asList(p.getProperty("ns"), null, p.getProperty("set"), "PK", 1, "PK"))
+                        .collect(Collectors.toList());
+
+        String[] columns = new String[]{"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "KEY_SEQ", "PK_NAME"};
+        int[] sqlTypes = new int[]{VARCHAR,VARCHAR,VARCHAR,VARCHAR,SMALLINT,VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, tables);
+    }
+
+    private Stream<Properties> getTablesData(String catalog) {
+        return Arrays.stream(client.getNodes())
+                .map(node -> Info.request(infoPolicy, node, catalog == null ? "sets" : format("sets/%s", catalog)))
+                .map(s -> s.split(";"))
+                .flatMap(Arrays::stream)
+                .map(s -> s.replace(":", newLine))
+                .map(s -> {
+                    Properties props = new Properties();
+                    try {
+                        props.load(new StringReader(s));
+                        return props;
+                    } catch (IOException e) {
+                        throw new IllegalStateException(e);
+                    }
+                });
     }
 
     @Override
     public ResultSet getImportedKeys(String catalog, String schema, String table) throws SQLException {
-        return null;
+        String[] columns = new String[]{"PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME", "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME", "KEY_SEQ", "UPDATE_RULE", "DELETE_RULE", "FK_NAME", "PK_NAME", "DEFERRABILITY",};
+        int[] sqlTypes = new int[]{VARCHAR,VARCHAR,VARCHAR,VARCHAR,VARCHAR,VARCHAR,VARCHAR,VARCHAR,SMALLINT,SMALLINT,SMALLINT,VARCHAR,VARCHAR,SMALLINT};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getExportedKeys(String catalog, String schema, String table) throws SQLException {
-        return null;
+        String[] columns = new String[]{"PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME", "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME", "KEY_SEQ", "UPDATE_RULE", "DELETE_RULE", "FK_NAME", "PK_NAME", "DEFERRABILITY"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT, SMALLINT, SMALLINT, VARCHAR, VARCHAR, SMALLINT};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getCrossReference(String parentCatalog, String parentSchema, String parentTable, String foreignCatalog, String foreignSchema, String foreignTable) throws SQLException {
-        return null;
+        String[] columns = new String[]{"PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME", "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME", "KEY_SEQ", "UPDATE_RULE", "DELETE_RULE", "FK_NAME", "PK_NAME", "DEFERRABILITY"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT, SMALLINT, SMALLINT, VARCHAR, VARCHAR, SMALLINT};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getTypeInfo() throws SQLException {
-        return null;
+        String[] columns = new String[] {
+                "TYPE_NAME", "DATA_TYPE", "PRECISION", "LITERAL_PREFIX", "LITERAL_SUFFIX", "CREATE_PARAMS", "NULLABLE",
+                "CASE_SENSITIVE", "SEARCHABLE", "UNSIGNED_ATTRIBUTE", "FIXED_PREC_SCALE", "AUTO_INCREMENT", "LOCAL_TYPE_NAME",
+                "MINIMUM_SCALE", "MAXIMUM_SCALE", "SQL_DATA_TYPE", "SQL_DATETIME_SUB", "NUM_PREC_RADIX",
+        };
+
+
+        Iterable<List<?>> data =
+                asList(
+                        asList("VARCHAR", VARCHAR, 65535, "'", "'", "(M) [CHARACTER SET charset_name] [COLLATE collation_name]", (short)typeNullable,
+                                true, (short)typeSearchable, false, false, false, "string",
+                                (short)0, (short)0, 0, 0, 10
+                        ),
+                        asList("INT", INTEGER, 3, "", "", "[(M)] [UNSIGNED] [ZEROFILL]", (short)typeNullable,
+                                true, (short)typeSearchable, false, false, false, "integer",
+                                (short)0, (short)0, 0, 0, 10
+                        ),
+                        asList("DOUBLE", DOUBLE, 22, "", "", "[(M,D)] [UNSIGNED] [ZEROFILL]", (short)typeNullable,
+                                true, (short)typeSearchable, false, false, false, "double",
+                                (short)0, (short)0, 0, 0, 10
+                        ),
+                        asList("BLOB", BLOB, 65535, "", "", "[(M)]", (short)typeNullable,
+                                true, (short)typeSearchable, false, false, false, "double",
+                                (short)0, (short)0, 0, 0, 10
+                        )
+                        // TODO: list, map, GeoJson
+                );
+
+
+        return new ResultSetFactory().create(null, columns, data);
     }
 
     @Override
     public ResultSet getIndexInfo(String catalog, String schema, String table, boolean unique, boolean approximate) throws SQLException {
-        return null;
+/*
+TABLE_CAT String => table catalog (may be null)
+TABLE_SCHEM String => table schema (may be null)
+TABLE_NAME String => table name
+NON_UNIQUE boolean => Can index values be non-unique. false when TYPE is tableIndexStatistic
+INDEX_QUALIFIER String => index catalog (may be null); null when TYPE is tableIndexStatistic
+INDEX_NAME String => index name; null when TYPE is tableIndexStatistic
+TYPE short => index type:
+tableIndexStatistic - this identifies table statistics that are returned in conjunction with a table's index descriptions
+tableIndexClustered - this is a clustered index
+tableIndexHashed - this is a hashed index
+tableIndexOther - this is some other style of index
+ORDINAL_POSITION short => column sequence number within index; zero when TYPE is tableIndexStatistic
+COLUMN_NAME String => column name; null when TYPE is tableIndexStatistic
+ASC_OR_DESC String => column sort sequence, "A" => ascending, "D" => descending, may be null if sort sequence is not supported; null when TYPE is tableIndexStatistic
+CARDINALITY long => When TYPE is tableIndexStatistic, then this is the number of rows in the table; otherwise, it is the number of unique values in the index.
+PAGES long => When TYPE is tableIndexStatistic then this is the number of pages used for the table, otherwise it is the number of pages used for the current index.
+FILTER_CONDITION String => Filter condition, if any. (may be null)
+ */
+
+        // TODO: fill the data!
+
+        String[] columns = new String[]{"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "NON_UNIQUE", "INDEX_QUALIFIER", "INDEX_NAME", "TYPE", "ORDINAL_POSITION", "COLUMN_NAME", "ASC_OR_DESC", "CARDINALITY", "PAGES", "FILTER_CONDITION"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, TINYINT, VARCHAR, VARCHAR, SMALLINT, SMALLINT, VARCHAR, VARCHAR, BIGINT, BIGINT, VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
@@ -776,12 +967,14 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public ResultSet getUDTs(String catalog, String schemaPattern, String typeNamePattern, int[] types) throws SQLException {
-        return null;
+        String[] columns = new String[] {"TYPE_CAT", "TYPE_SCHEM", "TYPE_NAME", "CLASS_NAME", "DATA_TYPE", "REMARKS", "BASE_TYPE"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, INTEGER, VARCHAR, SMALLINT};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public Connection getConnection() throws SQLException {
-        return null;
+        return connection;
     }
 
     @Override
@@ -806,17 +999,29 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public ResultSet getSuperTypes(String catalog, String schemaPattern, String typeNamePattern) throws SQLException {
-        return null;
+        List<List<?>> types = asList(
+                asList(catalog, null, "list", null, null, Object.class.getName()),
+                asList(catalog, null, "map", null, null, Object.class.getName()),
+                asList(catalog, null, "GeoJSON", null, null, Object.class.getName())
+        );
+
+        String[] columns = new String[]{"TYPE_CAT", "TYPE_SCHEM", "TYPE_NAME", "SUPERTYPE_CAT", "SUPERTYPE_SCHEM", "SUPERTYPE_NAME"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, types);
     }
 
     @Override
     public ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern) throws SQLException {
-        return null;
+        String[] columns = new String[]{"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "SUPERTABLE_NAME"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getAttributes(String catalog, String schemaPattern, String typeNamePattern, String attributeNamePattern) throws SQLException {
-        return null;
+        String[] columns = new String[]{"TYPE_CAT", "TYPE_SCHEM", "TYPE_NAME", "ATTR_NAME", "DATA_TYPE", "ATTR_TYPE_NAME", "ATTR_SIZE", "DECIMAL_DIGITS", "NUM_PREC_RADIX", "NULLABLE", "REMARKS", "ATTR_DEF", "SQL_DATA_TYPE", "SQL_DATETIME_SUB", "CHAR_OCTET_LENGTH", "ORDINAL_POSITION", "IS_NULLABLE", "SCOPE_CATALOG", "SCOPE_SCHEMA", "SCOPE_TABLE", "SOURCE_DATA_TYPE"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, INTEGER, VARCHAR, INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
@@ -880,7 +1085,9 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public ResultSet getSchemas(String catalog, String schemaPattern) throws SQLException {
-        return null;
+        String[] columns = new String[]{"TABLE_SCHEM", "TABLE_CATALOG"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
@@ -895,22 +1102,41 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public ResultSet getClientInfoProperties() throws SQLException {
-        return null;
+        // The driver does not support any properties right now but hopefully will.
+        // TODO: do not forget to add properties here once implemented.
+        String[] columns = new String[]{"NAME", "MAX_LEN", "DEFAULT_VALUE", "DESCRIPTION",};
+        int[] sqlTypes = new int[]{VARCHAR,INTEGER,VARCHAR,VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern) throws SQLException {
-        return null;
+        List<List<?>> jsFunctions = new ExpressionAwareResultSetFactory().getClientSideFunctionNames().stream().map(name -> asList(null, null, name, "JavaScript", functionResultUnknown, name)).collect(Collectors.toList());
+        List<List<?>> luaFunctions = Stream.of("min", "max", "sum", "avg", "count", "distinct").map(name -> asList(null, null, name, "Lua", functionResultUnknown, name)).collect(Collectors.toList());
+
+        List<List<?>> functions = new ArrayList<>();
+        functions.addAll(jsFunctions);
+        functions.addAll(luaFunctions);
+        functions.sort(Comparator.comparing(o -> ((String) o.get(2))));
+
+        String[] columns = new String[]{"FUNCTION_CAT", "FUNCTION_SCHEM", "FUNCTION_NAME", "REMARKS", "FUNCTION_TYPE", "SPECIFIC_NAME"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT, VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, functions);
     }
 
     @Override
     public ResultSet getFunctionColumns(String catalog, String schemaPattern, String functionNamePattern, String columnNamePattern) throws SQLException {
-        return null;
+        // TODO: implement this method: add kind of annotations that describe the functions parameters to JavaScript and Lua code and  parse them here.
+        String[] columns = new String[]{"FUNCTION_CAT", "FUNCTION_SCHEM", "FUNCTION_NAME", "COLUMN_NAME", "COLUMN_TYPE", "DATA_TYPE", "TYPE_NAME", "PRECISION", "LENGTH", "SCALE", "RADIX", "NULLABLE", "REMARKS", "CHAR_OCTET_LENGTH", "ORDINAL_POSITION", "IS_NULLABLE", "SPECIFIC_NAME"};
+        int[] sqlTypes = new int[]{VARCHAR,VARCHAR,VARCHAR,VARCHAR,SMALLINT,INTEGER,VARCHAR,INTEGER,INTEGER,SMALLINT,SMALLINT,SMALLINT,VARCHAR,INTEGER,INTEGER,VARCHAR,VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
     public ResultSet getPseudoColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException {
-        return null;
+        String[] columns = new String[]{"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "DATA_TYPE", "COLUMN_SIZE", "DECIMAL_DIGITS", "NUM_PREC_RADIX", "COLUMN_USAGE", "REMARKS", "CHAR_OCTET_LENGTH", "IS_NULLABLE"};
+        int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, INTEGER, VARCHAR};
+        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
     }
 
     @Override
@@ -920,12 +1146,20 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        return null;
+        // The implementation is taken from MySQL driver
+        try {
+            // This works for classes that aren't actually wrapping anything
+            return iface.cast(this);
+        } catch (ClassCastException cce) {
+            throw new SQLException("Common.UnableToUnwrap " + iface.toString());
+        }
     }
 
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return false;
+        // The implementation is taken from MySQL driver
+        // This works for classes that aren't actually wrapping anything
+        return iface.isInstance(this);
     }
 
     private Optional<Manifest> manifest() {
@@ -954,6 +1188,11 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <E extends Throwable> void sneakyThrow(Throwable e) throws E {
+        throw (E) e;
     }
 
 }

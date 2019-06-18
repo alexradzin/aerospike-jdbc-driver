@@ -1,16 +1,17 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.Info;
+import com.aerospike.client.Key;
 import com.aerospike.client.Language;
 import com.aerospike.client.Value;
 import com.aerospike.client.policy.InfoPolicy;
 import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.QueryPolicy;
+import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
-
-import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SUBJECT_SELECTION;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
@@ -117,19 +118,19 @@ public class DevTest {
         }
     }
 
-    //@Test
+    @Test
     @VisibleForPackage
     void fill() {
-        //writeBeatles();
+        writeBeatles();
 
-//        System.out.println(Info.request(new InfoPolicy(), client.getNodes()[0], "namespaces")); // test;bar
+        System.out.println(Info.request(new InfoPolicy(), client.getNodes()[0], "namespaces")); // test;bar
 //        System.out.println(Info.request(new InfoPolicy(), client.getNodes()[0], "sets")); // ns=test:set=people:objects=0:tombstones=0:memory_data_bytes=0:truncate_lut=0:stop-writes-count=0:set-enable-xdr=use-default:disable-eviction=false;ns=test:set=instruments:objects=0:tombstones=0:memory_data_bytes=0:truncate_lut=0:stop-writes-count=0:set-enable-xdr=use-default:disable-eviction=false;ns=test:set=subject_selection:objects=0:tombstones=0:memory_data_bytes=0:truncate_lut=0:stop-writes-count=0:set-enable-xdr=use-default:disable-eviction=false;ns=test:set=guitars:objects=0:tombstones=0:memory_data_bytes=0:truncate_lut=0:stop-writes-count=0:set-enable-xdr=use-default:disable-eviction=false;ns=test:set=keyboards:objects=0:tombstones=0:memory_data_bytes=0:truncate_lut=0:stop-writes-count=0:set-enable-xdr=use-default:disable-eviction=false;
 
         //System.out.println(Info.request(new InfoPolicy(), client.getNodes()[0]));
 
-        for (Map.Entry<String, String> e : Info.request(new InfoPolicy(), client.getNodes()[0]).entrySet()) {
-            System.out.printf("key=%s, value=%s\n", e.getKey(), e.getValue());
-        }
+//        for (Map.Entry<String, String> e : Info.request(new InfoPolicy(), client.getNodes()[0]).entrySet()) {
+//            System.out.printf("key=%s, value=%s\n", e.getKey(), e.getValue());
+//        }
 
 
         //String[] commands = {"build", "get-config", "logs", "namespaces", "namespace/test", "service", "services", "sets/test", "statistics"};
@@ -192,6 +193,13 @@ cluster_size=1;cluster_key=C91AC4780FA5;cluster_generation=1;cluster_principal=B
 
          */
         System.out.println("done");
+    }
+
+
+    //@Test
+    @VisibleForPackage
+    void writeToBar() {
+        TestDataUtils.write(new WritePolicy(), new Key("bar", "people2", 1), TestDataUtils.person(1, "John", "Lennon", 1940, 2));
     }
 
 }

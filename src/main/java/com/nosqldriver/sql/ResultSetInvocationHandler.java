@@ -17,6 +17,7 @@ public class ResultSetInvocationHandler<R> implements InvocationHandler {
     private final String[] names;
     private final String[] aliases;
     private final int features;
+    private boolean wasNull = false;
 
 
     public ResultSetInvocationHandler(int features, R resultSet, String schema, String[] names, String[] aliases) {
@@ -37,15 +38,29 @@ public class ResultSetInvocationHandler<R> implements InvocationHandler {
             return getMetadata();
         }
         if ((features & GET_INDEX) != 0 && isGetByIndex(method)) {
-            return get((int)args[0], method.getReturnType());
+            return updateWasNull(get((int)args[0], method.getReturnType()));
         }
         if ((features & GET_NAME) != 0 && isGetByName(method)) {
-            return get((String)args[0], method.getReturnType());
+            return updateWasNull(get((String)args[0], method.getReturnType()));
+        }
+        if ("close".equals(method.getName())) {
+            if (resultSet != null) {
+                other(method, args);
+            }
+            return null;
+        }
+        if (isWasNull(method)) {
+            return wasNull;
         }
         if ((features & OTHER) != 0) {
             return other(method, args);
         }
         throw new IllegalStateException("There is no handler for " + method);
+    }
+
+    private Object updateWasNull(Object value) {
+        wasNull = value == null;
+        return value;
     }
 
     protected boolean next() throws SQLException {
@@ -85,5 +100,8 @@ public class ResultSetInvocationHandler<R> implements InvocationHandler {
 
     private boolean isGet(Method method, Class<?> paramType) {
         return method.getName().startsWith("get") && method.getParameterTypes().length == 1 && paramType.equals(method.getParameterTypes()[0]);
+    }
+    protected boolean isWasNull(Method method) {
+        return "wasNull".equals(method.getName()) && boolean.class.equals(method.getReturnType()) && method.getParameterTypes().length == 0;
     }
 }
