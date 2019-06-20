@@ -1,6 +1,5 @@
 package com.nosqldriver.aerospike.sql;
 
-import com.aerospike.client.Record;
 import com.nosqldriver.sql.SimpleResultSetMetaData;
 import com.nosqldriver.sql.TypeConversion;
 
@@ -29,20 +28,20 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
+import static java.util.Optional.ofNullable;
 
-abstract class AerospikeResultSet implements ResultSet {
+abstract class AerospikeResultSet<R> implements ResultSet {
     private final String schema;
     private final String[] names;
     private boolean wasNull = false;
     private volatile SQLWarning sqlWarning;
     private volatile int index = 0;
-    private volatile boolean done = false;
+    protected volatile boolean done = false;
     private volatile boolean closed = false;
 
 
@@ -104,6 +103,7 @@ abstract class AerospikeResultSet implements ResultSet {
     }
 
     @Override
+    @Deprecated//(since="1.2")
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
         return getBigDecimal(getName(columnIndex));
     }
@@ -134,6 +134,7 @@ abstract class AerospikeResultSet implements ResultSet {
     }
 
     @Override
+    @Deprecated//(since="1.2")
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
         return getUnicodeStream(getName(columnIndex));
     }
@@ -145,52 +146,53 @@ abstract class AerospikeResultSet implements ResultSet {
 
     @Override
     public String getString(String columnLabel) throws SQLException {
-        return getRecord().getString(columnLabel);
+        return getString(getRecord(), columnLabel);
     }
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        return getRecord().getBoolean(columnLabel);
+        return getBoolean(getRecord(), columnLabel);
     }
 
     @Override
     public byte getByte(String columnLabel) throws SQLException {
-        return getRecord().getByte(columnLabel);
+        return getByte(getRecord(), columnLabel);
     }
 
     @Override
     public short getShort(String columnLabel) throws SQLException {
-        return getRecord().getShort(columnLabel);
+        return getShort(getRecord(), columnLabel);
     }
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
-        return getRecord().getInt(columnLabel);
+        return getInt(getRecord(), columnLabel);
     }
 
     @Override
     public long getLong(String columnLabel) throws SQLException {
-        return getRecord().getLong(columnLabel);
+        return getLong(getRecord(), columnLabel);
     }
 
     @Override
     public float getFloat(String columnLabel) throws SQLException {
-        return getRecord().getFloat(columnLabel);
+        return getFloat(getRecord(), columnLabel);
     }
 
     @Override
     public double getDouble(String columnLabel) throws SQLException {
-        return getRecord().getDouble(columnLabel);
+        return getDouble(getRecord(), columnLabel);
     }
 
     @Override
+    @Deprecated//(since="1.2")
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
         throw new SQLFeatureNotSupportedException("getBigDecimal(String, scale) is deprecated in java.sql API and is not supported here");
     }
 
     @Override
     public byte[] getBytes(String columnLabel) throws SQLException {
-        return (byte[])getRecord().getValue(columnLabel);
+        return (byte[])getValue(getRecord(), columnLabel);
     }
 
     @Override
@@ -214,6 +216,7 @@ abstract class AerospikeResultSet implements ResultSet {
     }
 
     @Override
+    @Deprecated//(since="1.2")
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {
         return getBinaryStream(columnLabel);
     }
@@ -240,20 +243,18 @@ abstract class AerospikeResultSet implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-//        if (names.length != 0) {
-//            return new SimpleResultSetMetaData(null, schema, names, names);
-//        }
-        Record sampleRecord = getSampleRecord();
+        R sampleRecord = getSampleRecord();
         if (sampleRecord == null) {
             return new SimpleResultSetMetaData(null, schema, names, names);
         }
 
-        String[] resultNames = names.length != 0 ? names : sampleRecord.bins.keySet().toArray(new String[0]);
+        Map<String, Object> data = getData(sampleRecord);
+        String[] resultNames = names.length != 0 ? names : data.keySet().toArray(new String[0]);
 
         int[] types = new int[resultNames.length];
 
         for(int i = 0; i < resultNames.length; i++) {
-            Object value = sampleRecord.bins.get(resultNames[i]);
+            Object value = data.get(resultNames[i]);
             if(value != null) {
                 Integer type = TypeConversion.sqlTypes.get(value.getClass());
                 if (type != null) {
@@ -275,8 +276,7 @@ abstract class AerospikeResultSet implements ResultSet {
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
-        Record record = getRecord();
-        return record == null ? null : record.getValue(columnLabel);
+        return ofNullable(getRecord()).map(r -> getValue(r, columnLabel)).orElse(null);
     }
 
     @Override
@@ -1039,7 +1039,7 @@ abstract class AerospikeResultSet implements ResultSet {
         if (type == null) {
             throw new SQLException("Type is null");
         }
-        Object value = getRecord().getValue(columnLabel);
+        Object value = getValue(getRecord(), columnLabel);
         if (value == null) {
             return null;
         }
@@ -1065,7 +1065,7 @@ abstract class AerospikeResultSet implements ResultSet {
     }
 
     private <T> T getValue(String columnLabel, Function<Object, T> mapper) {
-        return Optional.ofNullable(getRecord().getValue(columnLabel)).map(mapper).orElse(null);
+        return ofNullable(getValue(getRecord(), columnLabel)).map(mapper).orElse(null);
     }
 
 
@@ -1075,13 +1075,27 @@ abstract class AerospikeResultSet implements ResultSet {
         }
     }
 
-    protected abstract Record getRecord();
+    protected abstract R getRecord();
 
     /**
      * Retrieves record used for schema discovery.
      * @return the sample record or null if result set is empty
      */
-    protected abstract Record getSampleRecord();
+    protected abstract R getSampleRecord();
+
+
+    protected abstract Map<String, Object> getData(R record);
+
+    protected abstract Object getValue(R record, String label);
+    protected abstract String getString(R record, String label);
+    protected abstract boolean getBoolean(R record, String label);
+
+    protected abstract byte getByte(R record, String label);
+    protected abstract short getShort(R record, String label);
+    protected abstract int getInt(R record, String label);
+    protected abstract long getLong(R record, String label);
+    protected abstract float getFloat(R record, String label);
+    protected abstract double getDouble(R record, String label);
 
 
 }

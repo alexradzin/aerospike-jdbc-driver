@@ -6,7 +6,7 @@ import com.aerospike.client.query.RecordSet;
 import java.sql.SQLException;
 
 
-public class ResultSetOverAerospikeRecordSet extends AerospikeResultSet {
+public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
     private final RecordSet rs;
     private int index = 0;
     private boolean done = false;
@@ -34,6 +34,26 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeResultSet {
         return result;
     }
 
+
+    @Override
+    protected Record getSampleRecord() {
+        if (index > 0) {
+            return getRecord();
+        }
+
+        try {
+            if (next()) {
+                firstNextWasCalled = true;
+                return getRecord();
+            }
+        } catch (SQLException e) {
+            return null;
+        }
+
+        return null;
+    }
+
+
     @Override
     public void close() throws SQLException {
         rs.close();
@@ -54,21 +74,4 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeResultSet {
     }
 
 
-    @Override
-    protected Record getSampleRecord() {
-        if (index > 0) {
-            return getRecord();
-        }
-
-        try {
-            if (next()) {
-                firstNextWasCalled = true;
-                return getRecord();
-            }
-        } catch (SQLException e) {
-            return null;
-        }
-
-        return null;
-    }
 }

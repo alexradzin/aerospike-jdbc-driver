@@ -3,7 +3,7 @@ package com.nosqldriver.aerospike.sql.query;
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.query.Statement;
-import com.nosqldriver.sql.ResultSetOverIterableFactory;
+import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeResultSet;
 
 import java.sql.ResultSet;
 
@@ -17,6 +17,6 @@ public class AerospikeAggregationQuery extends AerospikeQuery<Statement, QueryPo
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverIterableFactory().create(schema, names, aliases, client.queryAggregate(policy, criteria));
+        return new ResultSetOverAerospikeResultSet(schema, names, client.queryAggregate(policy, criteria));
     }
 }

@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Objects;
 
-public class ResultSetOverAerospikeRecords extends AerospikeResultSet {
+public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
     private final Record[] records;
     private volatile int currentIndex = -1;
 

@@ -43,6 +43,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQueryPreparedStatement;
 import static java.lang.String.format;
 import static java.sql.Types.BIGINT;
+import static java.sql.Types.DOUBLE;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
@@ -620,12 +621,12 @@ class SelectTest {
     @Test
     @DisplayName("select count(*) as n, min(year_of_birth) as min, max(year_of_birth) as max, avg(year_of_birth) as avg, sum(year_of_birth) as total from people")
     void callAllAggregations() throws SQLException {
-        ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true,   //FIXME: types must be discovered here!
-                "count(*)", "n", null, //Types.INTEGER,
-                "min(year_of_birth)", "min", null, //Types.INTEGER,
-                "max(year_of_birth)", "max", null, //Types.INTEGER,
-                "avg(year_of_birth)", "avg", null, //Types.INTEGER,
-                "sum(year_of_birth)", "total", null //Types.INTEGER,
+        ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true,
+                "count(*)", "n", BIGINT,
+                "min(year_of_birth)", "min", BIGINT,
+                "max(year_of_birth)", "max", BIGINT,
+                "avg(year_of_birth)", "avg", DOUBLE,
+                "sum(year_of_birth)", "total", BIGINT
         );
 
 
@@ -808,9 +809,11 @@ class SelectTest {
     private void assertAggregateOneField(String sql, String name, String label, int expected) throws SQLException {
         ResultSet rs = conn.createStatement().executeQuery(sql);
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
-        assertEquals(1, rs.getMetaData().getColumnCount());
-        assertEquals(name, rs.getMetaData().getColumnName(1));
-        assertEquals(label, rs.getMetaData().getColumnLabel(1));
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(1, md.getColumnCount());
+        assertEquals(name, md.getColumnName(1));
+        assertEquals(label, md.getColumnLabel(1));
+        assertEquals(BIGINT, md.getColumnType(1));
         assertTrue(rs.next());
         assertEquals(expected, rs.getInt(1));
         assertEquals(expected, rs.getInt(label));

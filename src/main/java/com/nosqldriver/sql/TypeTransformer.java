@@ -14,6 +14,7 @@ public class TypeTransformer {
         typeTransformers.put(Float.class, Number::floatValue);
         typeTransformers.put(Double.class, Number::doubleValue);
 
+        // TODO: add default values for primitives to avoid NPE
         typeTransformers.put(byte.class, Number::byteValue);
         typeTransformers.put(short.class, Number::shortValue);
         typeTransformers.put(int.class, Number::intValue);
