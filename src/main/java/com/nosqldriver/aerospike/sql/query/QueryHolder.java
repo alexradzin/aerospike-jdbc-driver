@@ -25,6 +25,7 @@ import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,6 +37,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -244,7 +246,7 @@ public class QueryHolder {
         Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? limited : client -> rsWrapperFactory.create(
                 new JoinedResultSetInvocationHandler(
                         limited.apply(client),
-                        joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), join.skipIfMissing)).collect(Collectors.toList()),
+                        joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), new ResultSetMetadataSupplier(client, join), join.skipIfMissing)).collect(Collectors.toList()),
                         schema,
                         names.toArray(new String[0]),
                         aliases.toArray(new String[0])));
@@ -542,5 +544,31 @@ public class QueryHolder {
 
     public void setSkipDuplicates(boolean skipDuplicates) {
         this.skipDuplicates = skipDuplicates;
+    }
+
+    private static class ResultSetMetadataSupplier implements Supplier<ResultSetMetaData> {
+        private final IAerospikeClient client;
+        private final QueryHolder metadataQueryHolder;
+        private ResultSetMetaData metaData;
+
+        public ResultSetMetadataSupplier(IAerospikeClient client, QueryHolder queryHolder) {
+            this.client = client;
+            this.metadataQueryHolder = new QueryHolder(queryHolder.schema, queryHolder.indexes, queryHolder.policyProvider);
+            this.metadataQueryHolder.setSetName(queryHolder.getSetName(), queryHolder.setAlias);
+            queryHolder.copyColumnsForTable(queryHolder.setAlias, this.metadataQueryHolder);
+            this.metadataQueryHolder.setLimit(1);
+        }
+
+        @Override
+        public ResultSetMetaData get() {
+            try {
+                if (metaData == null) {
+                    metaData = metadataQueryHolder.getQuery().apply(client).getMetaData();
+                }
+                return metaData;
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        }
     }
 }

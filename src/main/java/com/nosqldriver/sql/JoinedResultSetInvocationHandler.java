@@ -32,7 +32,7 @@ public class JoinedResultSetInvocationHandler extends ResultSetInvocationHandler
                 resultSets.clear();
                 moveMainResultSet = false;
                 for (JoinHolder jh : joinHolders) {
-                    ResultSet rs = jh.getResultSetRetriver().apply(resultSet);
+                    ResultSet rs = jh.getResultSetRetriever().apply(resultSet);
                     boolean hasNext = rs != null && rs.next();
                     if (jh.isSkipIfMissing() && !hasNext) {
                         continue SUPER;
@@ -70,10 +70,11 @@ public class JoinedResultSetInvocationHandler extends ResultSetInvocationHandler
     protected ResultSetMetaData getMetadata() throws SQLException {
         Collection<ResultSetMetaData> metadata = new ArrayList<>();
         metadata.add(resultSet.getMetaData());
-        for (ResultSet rs : resultSets) {
-            metadata.add(rs.getMetaData());
+
+        for (JoinHolder jh : joinHolders) {
+            metadata.add(jh.getMetaDataSupplier().get());
         }
-        return new CompositeResultSetMetaData(metadata);
+        return new CompositeResultSetMetaDataFactory().compose(metadata);
     }
 
     @Override
