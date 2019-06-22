@@ -688,10 +688,10 @@ class SelectTest {
     }
 
     @Test
-    @DisplayName("select year_of_birth as year, count(*) as n from people group by year_of_birth")
+    @DisplayName("select year_of_birth as yob, count(*) as n from people group by year_of_birth")
     void groupByYearOfBirthWithAliases() throws SQLException {
         ResultSetMetaData md = assertGroupByYearOfBirth(getDisplayName());
-        assertEquals("year", md.getColumnLabel(1));
+        assertEquals("yob", md.getColumnLabel(1));
         assertEquals("n", md.getColumnLabel(2));
     }
 
@@ -702,7 +702,9 @@ class SelectTest {
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());
         assertEquals("year_of_birth", md.getColumnName(1));
+        assertEquals(INTEGER, md.getColumnType(1));
         assertEquals("count(*)", md.getColumnName(2));
+        assertEquals(BIGINT, md.getColumnType(2));
 
         Collection<Integer> years = new HashSet<>();
         assertTrue(rs.next());
@@ -716,6 +718,18 @@ class SelectTest {
         return md;
     }
 
+    @Test
+    void groupByYearOfBirthWithoutRequestingMetadata() throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery("select year_of_birth, count(*) from people group by year_of_birth");
+        Collection<Integer> years = new HashSet<>();
+        assertTrue(rs.next());
+        years.add(assertCounts(rs));
+        assertTrue(rs.next());
+        years.add(assertCounts(rs));
+        assertTrue(rs.next());
+        years.add(assertCounts(rs));
+        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(Collectors.toSet()), years);
+    }
 
     @Test
     @DisplayName("select year_of_birth as year, sum(kids_count) as total_kids from people group by year_of_birth")

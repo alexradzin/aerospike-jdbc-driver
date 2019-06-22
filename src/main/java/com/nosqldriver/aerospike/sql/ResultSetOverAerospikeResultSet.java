@@ -9,7 +9,7 @@ import static com.nosqldriver.sql.TypeTransformer.cast;
 
 
 public class ResultSetOverAerospikeResultSet extends AerospikeResultSet<Map<String, Object>> {
-    private final ResultSet rs;
+    protected final ResultSet rs;
     private int index = 0;
     //private boolean done = false;
     private boolean firstNextWasCalled = false;

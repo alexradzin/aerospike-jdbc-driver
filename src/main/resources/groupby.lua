@@ -16,7 +16,7 @@ function groupby(stream, ...)
             if i > 1 then
                 result = result .. delimiter
             end
-            result = result .. list[i]
+            result = result .. type(list[i]) .. ":" .. list[i]
         end
         return result
     end

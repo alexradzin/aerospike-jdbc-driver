@@ -113,7 +113,7 @@ public class ExpressionAwareResultSetFactory {
 
                 if (eval != null) {
                     Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-                    Collection<String> bound = bind(rs, names, evals,bindings);
+                    Collection<String> bound = bind(rs, names, evals, bindings);
                     try {
                         return cast(engine.eval(eval), method.getReturnType());
                     } finally {

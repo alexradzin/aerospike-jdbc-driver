@@ -10,7 +10,7 @@ function distinct(stream, name)
 
 	local function mapper(rec)
         local val = ((rec and rec[name]) or nil)
-        existing[val] = name
+        existing[type(val) .. ":" .. val] = name
 		return existing
 	end
     return stream : map(mapper) : reduce(reducer)
