@@ -22,7 +22,7 @@ function groupby(stream, ...)
     end
 
 
-    -- Important: corresponding constant is defined in com.nosqldriver.sql.ResultSetOverDistinctMapFactory
+    -- Important: corresponding constant is defined in com.nosqldriver.aerospike.sql.ResultSetOverDistinctMap
     local DELIMITER = '_nsqld_as_d_'
 	local groups = map()
     local parm={...}
