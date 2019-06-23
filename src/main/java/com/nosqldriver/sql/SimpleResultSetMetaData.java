@@ -27,6 +27,11 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
     }
 
 
+    // This method is temporary patch. Schema does not belong to metadata but to each column separately
+    public String getSchema() {
+        return schema;
+    }
+
     @Override
     public int getColumnCount() throws SQLException {
         return names.length == 0 && md != null ? md.getColumnCount() : names.length;
@@ -99,7 +104,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getCatalogName(int column) {
-        return null;
+        return schema;
     }
 
     @Override

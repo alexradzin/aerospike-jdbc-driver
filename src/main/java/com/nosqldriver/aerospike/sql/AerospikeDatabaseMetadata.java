@@ -14,6 +14,7 @@ import java.net.URL;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.RowIdLifetime;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -723,43 +724,35 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException {
-        // for some reason this code causes retrieving of DB metadata to fail even if the result is not returned.
-        // TODO: uncomment and fix this code
+        Pattern tableNameRegex = tableNamePattern == null || "".equals(tableNamePattern) ? null : Pattern.compile(tableNamePattern.replace("%", ".*"));
 
-//        Pattern tableNameRegex = tableNamePattern == null || "".equals(tableNamePattern) ? null : Pattern.compile(tableNamePattern.replace("%", ".*"));
+        Iterable<ResultSetMetaData> mds =
+                getTablesData(catalog)
+                        .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
+                        .filter(p -> tableNameRegex == null || tableNameRegex.matcher(p.getProperty("set")).matches())
+                        .map(p -> {
+                            try {
+                                return connection.createStatement().executeQuery(String.format("select * from %s.%s limit 1", p.getProperty("ns"), p.getProperty("set"))).getMetaData();
+                            } catch (SQLException e) {
+                                sneakyThrow(e);
+                                return null;
+                            }
+                        })
+                        .collect(Collectors.toList());
 
-//        Iterable<ResultSetMetaData> mds =
-//                getTablesData(catalog)
-//                        .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
-//                        .filter(p -> tableNameRegex == null || tableNameRegex.matcher(p.getProperty("set")).matches())
-//                        .map(p -> {
-//                            try {
-//                                return connection.createStatement().executeQuery(String.format("select * from %s.%s limit 1", p.getProperty("ns"), p.getProperty("set"))).getMetaData();
-//                            } catch (SQLException e) {
-//                                sneakyThrow(e);
-//                                return null;
-//                            }
-//                        })
-//                        .collect(Collectors.toList());
-//
-//
-//
-//        List<List<?>> result = new ArrayList<>();
-//        for(ResultSetMetaData md : mds) {
-//            int n = md.getColumnCount();
-//            for (int i = 1; i <= n; i++) {
-//                result.add(asList("".equals(tableNamePattern) ? "" : md.getCatalogName(i), null, md.getTableName(1), "TABLE", md.getColumnName(i), md.getColumnType(i), md.getColumnTypeName(i), 0, 0, 0, 0, 1, null, null, TypeConversion.sqlTypeNames.get(md.getColumnType(i)), null, null, null, 1, md.getCatalogName(i), null, md.getColumnTypeName(i), null, 0, 0));
-//            }
-//        }
-//
-//
-//
-//        System.out.println("------------------------------------------------------------\n" + result);
 
-        //TODO: populate this!
+
+        List<List<?>> result = new ArrayList<>();
+        for(ResultSetMetaData md : mds) {
+            int n = md.getColumnCount();
+            for (int i = 1; i <= n; i++) {
+                result.add(asList("".equals(tableNamePattern) ? "" : md.getCatalogName(i), null, md.getTableName(1), md.getColumnName(i), md.getColumnType(i), md.getColumnTypeName(i), 0, 0, 0, 0, columnNullable, null, null, md.getColumnType(i), null, null, null, "YES", md.getCatalogName(i), null, md.getColumnTypeName(i), null, "NO", "NO"));
+            }
+        }
+
         String[] columns = new String[] {"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME", "COLUMN_SIZE", "BUFFER_LENGTH", "DECIMAL_DIGITS", "NUM_PREC_RADIX", "NULLABLE", "REMARKS", "COLUMN_DEF", "SQL_DATA_TYPE", "SQL_DATETIME_SUB", "CHAR_OCTET_LENGTH", "ORDINAL_POSITION", "IS_NULLABLE", "SCOPE_CATALOG", "SCOPE_SCHEMA", "SCOPE_TABLE", "SOURCE_DATA_TYPE", "IS_AUTOINCREMENT", "IS_GENERATEDCOLUMN"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, INTEGER, VARCHAR, INTEGER, SMALLINT, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT, VARCHAR, VARCHAR};
-        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
+        return new ResultSetFactory().create("system", columns, sqlTypes, result);
     }
 
     @Override

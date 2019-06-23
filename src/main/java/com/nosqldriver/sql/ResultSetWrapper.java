@@ -1,5 +1,7 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.VisibleForPackage;
+
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -35,7 +37,7 @@ public class ResultSetWrapper implements ResultSet {
     private List<String> names;
     private List<String> aliases;
 
-    public ResultSetWrapper(ResultSet rs) {
+    @VisibleForPackage ResultSetWrapper(ResultSet rs) {
         this(rs, Collections.emptyList(), Collections.emptyList());
     }
 
@@ -245,33 +247,35 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
+        // TODO: this if is a patch to work around problem of select *. Better solution must be found here.
         if (names.isEmpty()) {
-            List<String> actualNames = list(rs.getMetaData(), (md, i) -> {
+            ResultSetMetaData metadata = rs.getMetaData();
+            List<String> actualNames = list(metadata, (md, i) -> {
                 try {
                     return md.getColumnName(i);
                 } catch (SQLException e) {
                     throw new IllegalStateException(e);
                 }
             });
-            List<String> actualAliases = list(rs.getMetaData(), (md, i) -> {
+            List<String> actualAliases = list(metadata, (md, i) -> {
                 try {
                     return md.getColumnLabel(i);
                 } catch (SQLException e) {
                     throw new IllegalStateException(e);
                 }
             });
-            List<Integer> actualTypes = list(rs.getMetaData(), (md, i) -> {
+            List<Integer> actualTypes = list(metadata, (md, i) -> {
                 try {
                     return md.getColumnType(i);
                 } catch (SQLException e) {
                     throw new IllegalStateException(e);
                 }
             });
-
+            String schemaName = metadata instanceof SimpleResultSetMetaData ? ((SimpleResultSetMetaData)metadata).getSchema() : null;
             int[] actualTypesArray = new int[actualTypes.size()];
             range(0, actualTypesArray.length).forEach(i -> actualTypesArray[i] = actualTypes.get(i));
 
-            return new SimpleResultSetMetaData(rs.getMetaData(), null, actualNames.toArray(new String[0]), actualAliases.toArray(new String[0]), actualTypesArray);
+            return new SimpleResultSetMetaData(rs.getMetaData(), schemaName, actualNames.toArray(new String[0]), actualAliases.toArray(new String[0]), actualTypesArray);
         }
 
 
