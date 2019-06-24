@@ -730,17 +730,8 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
                 getTablesData(catalog)
                         .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
                         .filter(p -> tableNameRegex == null || tableNameRegex.matcher(p.getProperty("set")).matches())
-                        .map(p -> {
-                            try {
-                                return connection.createStatement().executeQuery(String.format("select * from %s.%s limit 1", p.getProperty("ns"), p.getProperty("set"))).getMetaData();
-                            } catch (SQLException e) {
-                                sneakyThrow(e);
-                                return null;
-                            }
-                        })
+                        .map(p -> getMetadata(p.getProperty("ns"), p.getProperty("set")))
                         .collect(Collectors.toList());
-
-
 
         List<List<?>> result = new ArrayList<>();
         for(ResultSetMetaData md : mds) {
@@ -797,9 +788,14 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
         return new ResultSetFactory().create("system", columns, sqlTypes, tables);
     }
 
+
     private Stream<Properties> getTablesData(String catalog) {
+        return getInfo(catalog == null ? "sets" : format("sets/%s", catalog));
+    }
+
+    private Stream<Properties> getInfo(String command) {
         return Arrays.stream(client.getNodes())
-                .map(node -> Info.request(infoPolicy, node, catalog == null ? "sets" : format("sets/%s", catalog)))
+                .map(node -> Info.request(infoPolicy, node, command))
                 .map(s -> s.split(";"))
                 .flatMap(Arrays::stream)
                 .map(s -> s.replace(":", newLine))
@@ -871,31 +867,42 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public ResultSet getIndexInfo(String catalog, String schema, String table, boolean unique, boolean approximate) throws SQLException {
-/*
-TABLE_CAT String => table catalog (may be null)
-TABLE_SCHEM String => table schema (may be null)
-TABLE_NAME String => table name
-NON_UNIQUE boolean => Can index values be non-unique. false when TYPE is tableIndexStatistic
-INDEX_QUALIFIER String => index catalog (may be null); null when TYPE is tableIndexStatistic
-INDEX_NAME String => index name; null when TYPE is tableIndexStatistic
-TYPE short => index type:
-tableIndexStatistic - this identifies table statistics that are returned in conjunction with a table's index descriptions
-tableIndexClustered - this is a clustered index
-tableIndexHashed - this is a hashed index
-tableIndexOther - this is some other style of index
-ORDINAL_POSITION short => column sequence number within index; zero when TYPE is tableIndexStatistic
-COLUMN_NAME String => column name; null when TYPE is tableIndexStatistic
-ASC_OR_DESC String => column sort sequence, "A" => ascending, "D" => descending, may be null if sort sequence is not supported; null when TYPE is tableIndexStatistic
-CARDINALITY long => When TYPE is tableIndexStatistic, then this is the number of rows in the table; otherwise, it is the number of unique values in the index.
-PAGES long => When TYPE is tableIndexStatistic then this is the number of pages used for the table, otherwise it is the number of pages used for the current index.
-FILTER_CONDITION String => Filter condition, if any. (may be null)
- */
+        Iterable<List<?>> indexes =
+                getInfo("sindex-list:")
+                        .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
+                        .filter(p -> table == null || table.equals(p.getProperty("set")))
+                        .map(p -> {
+                            int ordinal = 0;
+                            String indexedColumnName = p.getProperty("bin");
+                            try {
+                                ResultSetMetaData md = getMetadata(p.getProperty("ns"), p.getProperty("set"));
+                                int n = md.getColumnCount();
+                                for (int i = 1; i <= n; i++) {
+                                    if (indexedColumnName.equals(md.getColumnName(i))) {
+                                        ordinal = i;
+                                        break;
+                                    }
+                                }
+                            } catch (SQLException e) {
+                                // ignore exception
+                                // TODO: add logging
+                            }
+                            return asList(p.getProperty("ns"), null, p.getProperty("set"), 0, null, p.getProperty("indexname"), tableIndexClustered, ordinal, p.getProperty("bin"), null, null /*TODO number of unique values in index: stat index returns relevant information */, 0, null);
+                        })
+                        .collect(Collectors.toList());
 
-        // TODO: fill the data!
 
         String[] columns = new String[]{"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "NON_UNIQUE", "INDEX_QUALIFIER", "INDEX_NAME", "TYPE", "ORDINAL_POSITION", "COLUMN_NAME", "ASC_OR_DESC", "CARDINALITY", "PAGES", "FILTER_CONDITION"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, TINYINT, VARCHAR, VARCHAR, SMALLINT, SMALLINT, VARCHAR, VARCHAR, BIGINT, BIGINT, VARCHAR};
-        return new ResultSetFactory().create("system", columns, sqlTypes, emptyList());
+        return new ResultSetFactory().create("system", columns, sqlTypes, indexes);
+    }
+
+    private ResultSetMetaData getMetadata(String namespace, String table) {
+        try {
+            return connection.createStatement().executeQuery(String.format("select * from %s.%s limit 1", namespace, table)).getMetaData();
+        } catch (SQLException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Override
@@ -1188,6 +1195,10 @@ FILTER_CONDITION String => Filter condition, if any. (may be null)
         throw (E) e;
     }
 
+
+    public static void main(String[] args) {
+        System.out.println(String.format("select * from %s.%s limit 1", "nnn", "ttt"));
+    }
 }
 
 //Name: java/util/

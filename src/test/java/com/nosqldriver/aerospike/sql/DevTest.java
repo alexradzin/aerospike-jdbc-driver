@@ -4,10 +4,12 @@ import com.aerospike.client.Info;
 import com.aerospike.client.Key;
 import com.aerospike.client.Language;
 import com.aerospike.client.Value;
+import com.aerospike.client.cluster.Node;
 import com.aerospike.client.policy.InfoPolicy;
 import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.policy.WritePolicy;
+import com.aerospike.client.query.IndexType;
 import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
@@ -195,6 +197,26 @@ cluster_size=1;cluster_key=C91AC4780FA5;cluster_generation=1;cluster_principal=B
         System.out.println("done");
     }
 
+    @Test
+    void indexes() {
+        String namespace = "test";
+        //client.dropIndex(new Policy(), "bar", "people", "bar_people_id");
+        //client.dropIndex(new Policy(), "bar", "people", "bar_people_first_name");
+        //client.dropIndex(new Policy(), "test", "people", "test_people_year_of_birth");
+//        client.createIndex(new Policy(), "bar", "people", "bar_people_id", "id", IndexType.NUMERIC);
+//        client.createIndex(new Policy(), "bar", "people", "bar_people_first_name", "first_name", IndexType.STRING);
+//        client.createIndex(new Policy(), "test", "people", "test_people_year_of_birth", "year_of_birth", IndexType.NUMERIC);
+        fill();
+        request("sindex-list:");
+        request("sindex/test");
+        request("sindex/bar");
+    }
+
+
+    private void request(String command) {
+        Node node = client.getNodes()[0];
+        System.out.println(command + ": " + Info.request(node, command));
+    }
 
     //@Test
     @VisibleForPackage
