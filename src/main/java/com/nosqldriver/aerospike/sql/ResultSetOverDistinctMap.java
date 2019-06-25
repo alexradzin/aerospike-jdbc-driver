@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.function.Function;
 
 import static java.lang.Double.parseDouble;
@@ -106,7 +105,7 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
         if (value instanceof String) {
             String key = (String)value;
             String[] tk = key.split(":", 2);
-            return Optional.ofNullable(parsers.get(tk[0])).map(p -> p.apply(tk[1])).orElseThrow(() -> new IllegalStateException("Cannot identify type: " + key));
+            return ofNullable(parsers.get(tk[0])).map(p -> p.apply(tk[1])).orElseThrow(() -> new IllegalStateException("Cannot identify type: " + key));
         } else {
             return value;
         }

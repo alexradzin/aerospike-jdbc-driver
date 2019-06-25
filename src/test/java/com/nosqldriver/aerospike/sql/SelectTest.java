@@ -114,9 +114,9 @@ class SelectTest {
         Map<String, Integer> expectedTypes = new HashMap<>();
         expectedTypes.put("first_name", VARCHAR);
         expectedTypes.put("last_name", VARCHAR);
-        expectedTypes.put("id", Types.BIGINT);
-        expectedTypes.put("year_of_birth", Types.BIGINT);
-        expectedTypes.put("kids_count", Types.BIGINT);
+        expectedTypes.put("id", BIGINT);
+        expectedTypes.put("year_of_birth", BIGINT);
+        expectedTypes.put("kids_count", BIGINT);
         assertEquals(expectedTypes, actualTypes);
 
 
@@ -250,7 +250,7 @@ class SelectTest {
         assertEquals(1, md.getColumnCount());
         //assertEquals("1", rs.getMetaData().getColumnName(1));
         assertEquals("one", md.getColumnLabel(1));
-        assertEquals(Types.INTEGER, md.getColumnType(1));
+        assertEquals(INTEGER, md.getColumnType(1));
 
 
         assertTrue(rs.next());

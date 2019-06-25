@@ -9,11 +9,9 @@ import com.aerospike.client.policy.InfoPolicy;
 import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.policy.WritePolicy;
-import com.aerospike.client.query.IndexType;
 import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
-import org.junit.jupiter.api.Test;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SUBJECT_SELECTION;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
@@ -120,7 +118,7 @@ public class DevTest {
         }
     }
 
-    @Test
+    //@Test
     @VisibleForPackage
     void fill() {
         writeBeatles();
@@ -197,9 +195,9 @@ cluster_size=1;cluster_key=C91AC4780FA5;cluster_generation=1;cluster_principal=B
         System.out.println("done");
     }
 
-    @Test
+    //@Test
+    @VisibleForPackage
     void indexes() {
-        String namespace = "test";
         //client.dropIndex(new Policy(), "bar", "people", "bar_people_id");
         //client.dropIndex(new Policy(), "bar", "people", "bar_people_first_name");
         //client.dropIndex(new Policy(), "test", "people", "test_people_year_of_birth");

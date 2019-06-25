@@ -5,7 +5,6 @@ import com.aerospike.client.Info;
 import com.aerospike.client.policy.InfoPolicy;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.ResultSetFactory;
-import com.nosqldriver.sql.ResultSetWrapperFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,8 +56,6 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
     private final InfoPolicy infoPolicy = new InfoPolicy();
     private static final String newLine = System.lineSeparator();
 
-
-    private final ResultSetWrapperFactory wrapperFactory = new ResultSetWrapperFactory();
 
     public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client, Connection connection) {
         this.url = url;
@@ -899,7 +896,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
 
     private ResultSetMetaData getMetadata(String namespace, String table) {
         try {
-            return connection.createStatement().executeQuery(String.format("select * from %s.%s limit 1", namespace, table)).getMetaData();
+            return connection.createStatement().executeQuery(format("select * from %s.%s limit 1", namespace, table)).getMetaData();
         } catch (SQLException e) {
             throw new IllegalStateException(e);
         }
@@ -1189,22 +1186,4 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
             throw new IllegalStateException(e);
         }
     }
-
-    @SuppressWarnings("unchecked")
-    private <E extends Throwable> void sneakyThrow(Throwable e) throws E {
-        throw (E) e;
-    }
-
-
-    public static void main(String[] args) {
-        System.out.println(String.format("select * from %s.%s limit 1", "nnn", "ttt"));
-    }
 }
-
-//Name: java/util/
-//Specification-Version: 1.2
-//Specification-Vendor: Example Tech, Inc.
-//Implementation-Title: java.util
-//Specification-Title: Java Utility Classes
-//Implementation-Version: build57
-//Implementation-Vendor: Example Tech, Inc.
