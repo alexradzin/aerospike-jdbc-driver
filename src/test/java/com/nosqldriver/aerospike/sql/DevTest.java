@@ -12,6 +12,7 @@ import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
+import org.junit.jupiter.api.Test;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SUBJECT_SELECTION;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
@@ -198,16 +199,16 @@ cluster_size=1;cluster_key=C91AC4780FA5;cluster_generation=1;cluster_principal=B
     //@Test
     @VisibleForPackage
     void indexes() {
-        //client.dropIndex(new Policy(), "bar", "people", "bar_people_id");
-        //client.dropIndex(new Policy(), "bar", "people", "bar_people_first_name");
-        //client.dropIndex(new Policy(), "test", "people", "test_people_year_of_birth");
+        client.dropIndex(new Policy(), "bar", "people", "bar_people_id").waitTillComplete();
+        client.dropIndex(new Policy(), "bar", "people", "bar_people_first_name").waitTillComplete();
+        client.dropIndex(new Policy(), "test", "people", "test_people_year_of_birth").waitTillComplete();
 //        client.createIndex(new Policy(), "bar", "people", "bar_people_id", "id", IndexType.NUMERIC);
 //        client.createIndex(new Policy(), "bar", "people", "bar_people_first_name", "first_name", IndexType.STRING);
 //        client.createIndex(new Policy(), "test", "people", "test_people_year_of_birth", "year_of_birth", IndexType.NUMERIC);
-        fill();
-        request("sindex-list:");
-        request("sindex/test");
-        request("sindex/bar");
+//        fill();
+//        request("sindex-list:");
+//        request("sindex/test");
+//        request("sindex/bar");
     }
 
 

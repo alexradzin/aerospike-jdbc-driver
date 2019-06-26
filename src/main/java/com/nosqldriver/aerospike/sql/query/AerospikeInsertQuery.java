@@ -5,19 +5,16 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.policy.WritePolicy;
-import com.nosqldriver.sql.ResultSetInvocationHandler;
-import com.nosqldriver.sql.ResultSetWrapperFactory;
+import com.nosqldriver.aerospike.sql.ListRecordSet;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
-
-import static com.nosqldriver.sql.ResultSetInvocationHandler.METADATA;
-import static com.nosqldriver.sql.ResultSetInvocationHandler.NEXT;
 
 public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>, WritePolicy> {
     private final String set;
@@ -61,12 +58,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
         updatedRecordsCount.set(n);
 
-        return new ResultSetWrapperFactory().create(new ResultSetInvocationHandler<Object>(NEXT | METADATA, null, schema, new String[]{"count"}, new String[0]) {
-            @Override
-            protected boolean next() {
-                return false;
-            }
-        });
+        return new ListRecordSet(schema, new String[0], new int[0], Collections.emptyList());
     }
 
     private Key key(List<Object> row) {

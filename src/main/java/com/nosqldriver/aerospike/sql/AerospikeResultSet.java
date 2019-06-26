@@ -36,7 +36,7 @@ import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 
 abstract class AerospikeResultSet<R> implements ResultSet {
-    private final String schema;
+    protected final String schema;
     private final String[] names;
     private boolean wasNull = false;
     private volatile SQLWarning sqlWarning;

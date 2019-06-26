@@ -3,8 +3,6 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
 import com.nosqldriver.aerospike.sql.query.AerospikeInsertQuery;
-import com.nosqldriver.sql.ResultSetInvocationHandler;
-import com.nosqldriver.sql.ResultSetWrapperFactory;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -12,9 +10,8 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.util.Collection;
+import java.util.Collections;
 
-import static com.nosqldriver.sql.ResultSetInvocationHandler.METADATA;
-import static com.nosqldriver.sql.ResultSetInvocationHandler.NEXT;
 import static java.lang.String.format;
 import static java.sql.ResultSet.CLOSE_CURSORS_AT_COMMIT;
 import static java.sql.ResultSet.CONCUR_READ_ONLY;
@@ -30,7 +27,6 @@ public class AerospikeStatement implements java.sql.Statement {
     private volatile SQLWarning sqlWarning;
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
-    private final ConnectionParametersParser parametersParser = new ConnectionParametersParser();
     private ResultSet resultSet;
     private int updateCount;
 
@@ -62,13 +58,7 @@ public class AerospikeStatement implements java.sql.Statement {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-
-                return new ResultSetWrapperFactory().create(new ResultSetInvocationHandler<Object>(NEXT | METADATA, null, statement.schema, new String[0], new String[0]) {
-                    @Override
-                    protected boolean next() {
-                        return false;
-                    }
-                });
+                return new ListRecordSet(statement.schema, new String[0], new int[0], Collections.emptyList());
             }
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
@@ -118,7 +108,7 @@ public class AerospikeStatement implements java.sql.Statement {
         this.connection = connection;
         this.schema = schema;
         this.policyProvider = policyProvider;
-        indexes = parametersParser.indexesParser(Info.request(client.getNodes()[0], "sindex"));
+        indexes = new ConnectionParametersParser().indexesParser(Info.request(client.getNodes()[0], "sindex"));
     }
 
     @Override
