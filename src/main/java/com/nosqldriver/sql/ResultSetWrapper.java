@@ -34,8 +34,8 @@ import static java.util.stream.IntStream.range;
 public class ResultSetWrapper implements ResultSet {
     private final ResultSet rs;
     private final Map<String, String> aliasToName; // alias to name map
-    private List<String> names;
-    private List<String> aliases;
+    protected List<String> names;
+    protected List<String> aliases;
 
     @VisibleForPackage ResultSetWrapper(ResultSet rs) {
         this(rs, Collections.emptyList(), Collections.emptyList());
@@ -48,7 +48,7 @@ public class ResultSetWrapper implements ResultSet {
         aliasToName = range(0, names.size()).boxed().filter(i -> names.get(i) != null && aliases.get(i) != null).collect(toMap(aliases::get, names::get));
     }
     
-    private String getName(String alias) {
+    protected String getName(String alias) {
         return aliasToName.getOrDefault(alias, alias);
     }
 
@@ -1047,5 +1047,17 @@ public class ResultSetWrapper implements ResultSet {
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return rs.isWrapperFor(iface);
+    }
+
+//    private String validate(String alias) {
+//        if (!aliases.contains(alias) && !names.contains(alias) && !names.isEmpty()) {
+//            throwAny(new SQLException(format("Column '%s' not found", alias)));
+//        }
+//        return alias;
+//    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void throwAny(Throwable e) throws E {
+        throw (E)e;
     }
 }

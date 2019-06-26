@@ -13,8 +13,8 @@ import com.nosqldriver.aerospike.sql.AerospikeQueryFactory;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.FilteredResultSet;
 import com.nosqldriver.sql.JoinedResultSetInvocationHandler;
+import com.nosqldriver.sql.NameCheckResultSetWrapper;
 import com.nosqldriver.sql.OffsetLimit;
-import com.nosqldriver.sql.ResultSetInvocationHandler;
 import com.nosqldriver.sql.ResultSetWrapper;
 import com.nosqldriver.sql.ResultSetWrapperFactory;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -43,9 +43,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.nosqldriver.sql.ResultSetInvocationHandler.GET_NAME;
-import static com.nosqldriver.sql.ResultSetInvocationHandler.OTHER;
-import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Optional.ofNullable;
@@ -251,22 +248,7 @@ public class QueryHolder {
                         names.toArray(new String[0]),
                         aliases.toArray(new String[0])));
 
-        return client -> rsWrapperFactory.create(new ResultSetInvocationHandler<ResultSet>(GET_NAME | OTHER, joined.apply(client), schema, names.toArray(new String[0]), aliases.toArray(new String[0])) {
-            @Override
-            protected <T> T get(String alias, Class<T> type) {
-                if (!aliases.contains(alias) && !names.contains(alias) && !names.isEmpty()) {
-                    throwAny(new SQLException(format("Column '%s' not found", alias)));
-                }
-
-                try {
-                    return cast(resultSet.getObject(alias), type);
-                } catch (SQLException e) {
-                    throwAny(e);
-                    return null; // just to satisfy compiler: the exception is thrown in previous line.
-                }
-            }
-
-        });
+        return client -> new NameCheckResultSetWrapper(joined.apply(client), names, aliases);
     }
 
     @SuppressWarnings("unchecked")

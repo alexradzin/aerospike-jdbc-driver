@@ -6,6 +6,7 @@ import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -120,7 +121,14 @@ public class ExpressionAwareResultSetFactory {
                         bound.forEach(bindings::remove);
                     }
                 }
-                return method.invoke(rs, args);
+                try {
+                    return method.invoke(rs, args);
+                } catch (InvocationTargetException e) {
+                    if (e.getCause() != null) {
+                        throw e.getCause();
+                    }
+                    throw e;
+                }
             }
         });
     }
@@ -128,8 +136,12 @@ public class ExpressionAwareResultSetFactory {
     private Collection<String> bind(ResultSet rs, Collection<String> names, List<String> evals, Bindings bindings) throws SQLException {
         Collection<String> bound = new HashSet<>();
         for (String name : names) {
-            bindings.put(name, rs.getObject(name));
-            bound.add(name);
+            try {
+                bindings.put(name, rs.getObject(name));
+                bound.add(name);
+            } catch (SQLException e) {
+                // ignore exception thrown by specific field
+            }
         }
 
         ResultSetMetaData md = rs.getMetaData();
