@@ -280,7 +280,7 @@ public class ResultSetWrapper implements ResultSet {
 
 
 
-        return new SimpleResultSetMetaData(rs.getMetaData(), null, names.toArray(new String[0]), aliases.toArray(new String[0]));
+        return new SimpleResultSetMetaData(rs == null ? null : rs.getMetaData(), null, names.toArray(new String[0]), aliases.toArray(new String[0]));
     }
 
 
