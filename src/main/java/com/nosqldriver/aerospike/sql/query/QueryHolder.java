@@ -12,11 +12,10 @@ import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
 import com.nosqldriver.aerospike.sql.AerospikeQueryFactory;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.FilteredResultSet;
-import com.nosqldriver.sql.JoinedResultSetInvocationHandler;
+import com.nosqldriver.sql.JoinedResultSet;
 import com.nosqldriver.sql.NameCheckResultSetWrapper;
 import com.nosqldriver.sql.OffsetLimit;
 import com.nosqldriver.sql.ResultSetWrapper;
-import com.nosqldriver.sql.ResultSetWrapperFactory;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
@@ -235,18 +234,9 @@ public class QueryHolder {
 
 
     private Function<IAerospikeClient, ResultSet> wrap(Function<IAerospikeClient, ResultSet> nakedQuery) {
-        ResultSetWrapperFactory rsWrapperFactory = new ResultSetWrapperFactory();
-
         Function<IAerospikeClient, ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), names, aliases), hiddenNames, expressions, aliases);
         Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(expressioned.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) : expressioned;
-
-        Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? limited : client -> rsWrapperFactory.create(
-                new JoinedResultSetInvocationHandler(
-                        limited.apply(client),
-                        joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), new ResultSetMetadataSupplier(client, join), join.skipIfMissing)).collect(Collectors.toList()),
-                        schema,
-                        names.toArray(new String[0]),
-                        aliases.toArray(new String[0])));
+        Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? limited : client -> new JoinedResultSet(limited.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), new ResultSetMetadataSupplier(client, join), join.skipIfMissing)).collect(Collectors.toList()));
 
         return client -> new NameCheckResultSetWrapper(joined.apply(client), names, aliases);
     }
