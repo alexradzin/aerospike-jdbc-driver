@@ -1,6 +1,7 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.query.ResultSet;
+import com.nosqldriver.sql.BaseSchemalessResultSet;
 
 import java.sql.SQLException;
 import java.util.Map;
@@ -8,7 +9,7 @@ import java.util.Map;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 
 
-public class ResultSetOverAerospikeResultSet extends AerospikeResultSet<Map<String, Object>> {
+public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map<String, Object>> {
     protected final ResultSet rs;
     public ResultSetOverAerospikeResultSet(String schema, String[] names, ResultSet rs) {
         super(schema, names);

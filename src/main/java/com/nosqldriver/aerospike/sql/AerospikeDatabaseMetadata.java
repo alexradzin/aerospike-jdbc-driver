@@ -4,6 +4,7 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
 import com.aerospike.client.policy.InfoPolicy;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
+import com.nosqldriver.sql.ListRecordSet;
 
 import java.io.IOException;
 import java.io.InputStream;

@@ -1,7 +1,4 @@
-package com.nosqldriver.aerospike.sql;
-
-import com.nosqldriver.sql.SimpleResultSetMetaData;
-import com.nosqldriver.sql.TypeConversion;
+package com.nosqldriver.sql;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -35,7 +32,7 @@ import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 
-abstract class AerospikeResultSet<R> implements ResultSet {
+public abstract class BaseSchemalessResultSet<R> implements ResultSet {
     protected final String schema;
     private final String[] names;
     private boolean wasNull = false;
@@ -45,7 +42,7 @@ abstract class AerospikeResultSet<R> implements ResultSet {
     private volatile boolean closed = false;
 
 
-    protected AerospikeResultSet(String schema, String[] names) {
+    protected BaseSchemalessResultSet(String schema, String[] names) {
         this.schema = schema;
         this.names = names;
     }

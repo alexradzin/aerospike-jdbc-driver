@@ -1,11 +1,11 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.Record;
+import com.nosqldriver.sql.BaseSchemalessResultSet;
 
-import java.sql.SQLException;
 import java.util.Map;
 
-abstract class AerospikeRecordResultSet extends AerospikeResultSet<Record> {
+abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> {
     protected AerospikeRecordResultSet(String schema, String[] names) {
         super(schema, names);
     }

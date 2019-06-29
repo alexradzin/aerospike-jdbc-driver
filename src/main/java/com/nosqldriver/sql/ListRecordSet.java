@@ -1,7 +1,4 @@
-package com.nosqldriver.aerospike.sql;
-
-import com.nosqldriver.sql.SimpleResultSetMetaData;
-import com.nosqldriver.sql.TypeConversion;
+package com.nosqldriver.sql;
 
 import java.sql.ResultSetMetaData;
 import java.util.Iterator;
@@ -10,7 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class ListRecordSet extends SimpleAerospikeResultSet<List<?>> {
+public class ListRecordSet extends ValueTypedResultSet<List<?>> {
     private String[] names;
     private int[] types;
     private final Iterator<List<?>> it;

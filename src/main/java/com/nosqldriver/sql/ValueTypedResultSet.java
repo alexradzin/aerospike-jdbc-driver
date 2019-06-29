@@ -1,9 +1,9 @@
-package com.nosqldriver.aerospike.sql;
+package com.nosqldriver.sql;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 
-abstract class SimpleAerospikeResultSet<R> extends AerospikeResultSet<R> {
-    protected SimpleAerospikeResultSet(String schema, String[] names) {
+abstract class ValueTypedResultSet<R> extends BaseSchemalessResultSet<R> {
+    protected ValueTypedResultSet(String schema, String[] names) {
         super(schema, names);
     }
 

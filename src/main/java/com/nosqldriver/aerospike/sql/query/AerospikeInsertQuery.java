@@ -5,7 +5,7 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.policy.WritePolicy;
-import com.nosqldriver.aerospike.sql.ListRecordSet;
+import com.nosqldriver.sql.ListRecordSet;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

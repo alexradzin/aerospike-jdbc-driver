@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
 import com.nosqldriver.aerospike.sql.query.AerospikeInsertQuery;
+import com.nosqldriver.sql.ListRecordSet;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
