@@ -10,11 +10,6 @@ import static com.nosqldriver.sql.TypeTransformer.cast;
 
 public class ResultSetOverAerospikeResultSet extends AerospikeResultSet<Map<String, Object>> {
     protected final ResultSet rs;
-    private int index = 0;
-    //private boolean done = false;
-    private boolean firstNextWasCalled = false;
-
-
     public ResultSetOverAerospikeResultSet(String schema, String[] names, ResultSet rs) {
         super(schema, names);
         this.rs = rs;
@@ -27,14 +22,6 @@ public class ResultSetOverAerospikeResultSet extends AerospikeResultSet<Map<Stri
         rs.close();
         super.close();
     }
-
-
-    // Although this method is optional and can return null according the spec but it is better to simulate correct behavior and return sql statement generated from Aerospike query
-//    @Override
-//    public java.sql.Statement getStatement() throws SQLException {
-//        return null;
-//    }
-
 
     @SuppressWarnings("unchecked")
     @Override
@@ -92,38 +79,7 @@ public class ResultSetOverAerospikeResultSet extends AerospikeResultSet<Map<Stri
         return cast(getValue(record, label), double.class);
     }
 
-
-    @Override
-    public boolean next() throws SQLException {
-        if (firstNextWasCalled && index == 1) {
-            firstNextWasCalled = false;
-            return true;
-        }
-        boolean result = rs.next();
-        if (result) {
-            index++;
-        } else {
-            done = true;
-        }
-        return result;
+    protected boolean moveToNext() {
+        return rs.next();
     }
-
-    @Override
-    protected Map<String, Object> getSampleRecord() {
-        if (index > 0) {
-            return getRecord();
-        }
-
-        try {
-            if (next()) {
-                firstNextWasCalled = true;
-                return getRecord();
-            }
-        } catch (SQLException e) {
-            return null;
-        }
-
-        return null;
-    }
-
 }

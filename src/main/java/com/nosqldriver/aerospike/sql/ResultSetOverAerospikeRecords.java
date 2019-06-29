@@ -8,7 +8,7 @@ import java.util.Objects;
 
 public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
     private final Record[] records;
-    private volatile int currentIndex = -1;
+    private int currentIndex = -1;
 
     public ResultSetOverAerospikeRecords(String schema, String[] names, Record[] records) {
         super(schema, names);
@@ -36,4 +36,10 @@ public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
     protected Record getSampleRecord() {
         return currentIndex >= 0 ? records[currentIndex] : records.length > 0 ? records[0] : null;
     }
+
+    // This method just thows exception. It is not implemented here since this class implements getSampleRecord() and next() itself without using the base calss' implementation
+    protected boolean moveToNext() {
+        throw new IllegalStateException("This method is not expected to be called here. ");
+    }
+
 }

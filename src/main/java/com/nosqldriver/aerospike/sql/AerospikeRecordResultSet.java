@@ -10,15 +10,8 @@ abstract class AerospikeRecordResultSet extends AerospikeResultSet<Record> {
         super(schema, names);
     }
 
-
-    @Override
-    public abstract boolean next() throws SQLException;
-
     @Override
     protected abstract Record getRecord();
-
-    @Override
-    protected abstract Record getSampleRecord();
 
     @Override
     protected Map<String, Object> getData(Record record) {

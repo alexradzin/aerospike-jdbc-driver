@@ -4,8 +4,6 @@ import com.nosqldriver.sql.SimpleResultSetMetaData;
 import com.nosqldriver.sql.TypeConversion;
 
 import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -17,9 +15,6 @@ public class ListRecordSet extends SimpleAerospikeResultSet<List<?>> {
     private int[] types;
     private final Iterator<List<?>> it;
     private final Map<String, Integer> nameToIndex;
-
-    private int index = 0;
-    private boolean firstNextWasCalled = false;
     private List<?> currentRecord = null;
 
     public ListRecordSet(String schema, String[] names, Iterable<List<?>> data) {
@@ -54,40 +49,11 @@ public class ListRecordSet extends SimpleAerospikeResultSet<List<?>> {
     }
 
 
-    @Override
-    public boolean next() throws SQLException {
-        if (firstNextWasCalled && index == 1) {
-            firstNextWasCalled = false;
-            return true;
-        }
-        boolean result = it.hasNext();
-        if (result) {
-            index++;
-            currentRecord = null;
-        } else {
-            done = true;
-        }
-        return result;
+    protected boolean moveToNext() {
+        return it.hasNext();
     }
 
 
-    @Override
-    protected List<?> getSampleRecord() {
-        if (index > 0) {
-            return getRecord();
-        }
-
-        try {
-            if (next()) {
-                firstNextWasCalled = true;
-                return getRecord();
-            }
-        } catch (SQLException e) {
-            return null;
-        }
-
-        return null;
-    }
 
     @Override
     public ResultSetMetaData getMetaData() {
@@ -117,7 +83,6 @@ public class ListRecordSet extends SimpleAerospikeResultSet<List<?>> {
             }
             rowIndex++;
         }
-        System.out.println("types: " + Arrays.toString(types));
         return types;
     }
 

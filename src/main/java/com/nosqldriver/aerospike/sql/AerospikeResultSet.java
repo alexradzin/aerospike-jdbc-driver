@@ -1076,15 +1076,43 @@ abstract class AerospikeResultSet<R> implements ResultSet {
     }
 
     protected abstract R getRecord();
-
-    /**
-     * Retrieves record used for schema discovery.
-     * @return the sample record or null if result set is empty
-     */
-    protected abstract R getSampleRecord();
-
-
     protected abstract Map<String, Object> getData(R record);
+    private boolean firstNextWasCalled = false;
+
+    @Override
+    public boolean next() throws SQLException {
+        if (firstNextWasCalled && index == 1) {
+            firstNextWasCalled = false;
+            return true;
+        }
+        boolean result = moveToNext();
+        if (result) {
+            index++;
+        } else {
+            done = true;
+        }
+        return result;
+    }
+
+
+    protected R getSampleRecord() {
+        if (index > 0) {
+            return getRecord();
+        }
+
+        try {
+            if (next()) {
+                firstNextWasCalled = true;
+                return getRecord();
+            }
+        } catch (SQLException e) {
+            return null;
+        }
+
+        return null;
+    }
+
+    protected abstract boolean moveToNext();
 
     protected abstract Object getValue(R record, String label);
     protected abstract String getString(R record, String label);
