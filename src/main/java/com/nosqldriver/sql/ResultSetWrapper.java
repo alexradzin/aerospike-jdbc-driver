@@ -1048,16 +1048,4 @@ public class ResultSetWrapper implements ResultSet {
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return rs.isWrapperFor(iface);
     }
-
-//    private String validate(String alias) {
-//        if (!aliases.contains(alias) && !names.contains(alias) && !names.isEmpty()) {
-//            throwAny(new SQLException(format("Column '%s' not found", alias)));
-//        }
-//        return alias;
-//    }
-
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> void throwAny(Throwable e) throws E {
-        throw (E)e;
-    }
 }
