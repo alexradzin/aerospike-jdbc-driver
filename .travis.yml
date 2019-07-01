@@ -2,20 +2,11 @@ language: java
 jdk:
   - oraclejdk8
 install:
-  - lsb_release -a
-  - wget -O aerospike-server.tgz https://www.aerospike.com/download/server/4.5.0.5/artifact/ubuntu18
+  - wget -O aerospike-server.tgz https://www.aerospike.com/download/server/4.5.3.4/artifact/ubuntu14
   - tar xvzf aerospike-server.tgz
-  - cp -f .travis/aerospike.conf ./aerospike-server/share/etc
-  - cd aerospike-server
-  - mkdir instance1
-  - mkdir instance2
-  - ./bin/aerospike init --home instance1 --instance 1 --service-port 3000
-  - ./bin/aerospike init --home instance2 --instance 2 --service-port 3010
-  - cd instance1
-  - sudo ./bin/aerospike start
-  - ../../.travis/wait_for_node.sh var/log/aerospike.log
-  - cd ../..
-  - pwd
+  - cd aerospike-server-community-4.5.3.4-ubuntu14.04
+  - ./asinstall
+  - service aerospike start
 before_script:
   - chmod +x gradlew
 script:
