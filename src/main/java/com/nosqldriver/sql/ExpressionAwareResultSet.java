@@ -240,7 +240,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        String eval = evals.get(columnIndex);
+        String eval = getEval(columnIndex);
         return eval != null ? eval(eval) : super.getObject(columnIndex);
     }
 

@@ -28,9 +28,6 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
 
     @Override
     protected List<?> getRecord() {
-        if (currentRecord == null) {
-            currentRecord = it.next();
-        }
         return currentRecord;
     }
 
@@ -47,7 +44,9 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
 
 
     protected boolean moveToNext() {
-        return it.hasNext();
+        boolean hasNext = it.hasNext();
+        currentRecord = hasNext ? it.next() : null;
+        return hasNext;
     }
 
 

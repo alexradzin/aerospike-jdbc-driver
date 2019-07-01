@@ -25,6 +25,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.jar.Manifest;
@@ -808,6 +809,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
     private Stream<Properties> getInfo(String command) {
         return Arrays.stream(client.getNodes())
                 .map(node -> Info.request(infoPolicy, node, command))
+                .filter(Objects::nonNull)
                 .map(s -> s.split(";"))
                 .flatMap(Arrays::stream)
                 .map(s -> s.replace(":", newLine))
