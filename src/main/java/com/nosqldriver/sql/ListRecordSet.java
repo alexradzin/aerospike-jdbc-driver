@@ -7,23 +7,17 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
+
 public class ListRecordSet extends ValueTypedResultSet<List<?>> {
-    private String[] names;
-    private int[] types;
     private final Iterator<List<?>> it;
     private final Map<String, Integer> nameToIndex;
     private List<?> currentRecord = null;
 
-    public ListRecordSet(String schema, String[] names, Iterable<List<?>> data) {
-        this(schema, names, discoverTypes(names.length, data), data);
-    }
-
-    public ListRecordSet(String schema, String[] names, int[] types, Iterable<List<?>> data) {
-        super(schema, names);
-        this.names = names;
-        this.types = types;
+    public ListRecordSet(String schema, String table, List<DataColumn> columns, Iterable<List<?>> data) {
+        super(schema, table, columns);
         this.it = data.iterator();
-        nameToIndex = IntStream.range(0, names.length).boxed().collect(Collectors.toMap(i -> names[i], i -> i));
+        nameToIndex = IntStream.range(0, columns.size()).boxed().collect(Collectors.toMap(i -> columns.get(i).getName(), i -> i));
     }
 
     @Override
@@ -34,7 +28,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
 
     @Override
     protected Map<String, Object> getData(List<?> record) {
-        return IntStream.range(0, names.length).boxed().collect(Collectors.toMap(i -> names[i], record::get));
+        return IntStream.range(0, columns.size()).boxed().collect(Collectors.toMap(i -> columns.get(i).getName(), record::get));
     }
 
     @Override
@@ -53,14 +47,14 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
 
     @Override
     public ResultSetMetaData getMetaData() {
-        return new SimpleResultSetMetaData(null, schema, names, names, types);
+        return new DataColumnBasedResultSetMetaData(columns);
     }
 
-    private static int[] discoverTypes(int nColumns, Iterable<List<?>> data) {
+    public static int[] discoverTypes(int nColumns, Iterable<List<?>> data) {
         int[] types = new int[nColumns];
         int rowIndex = 0;
         for (List<?> row : data) {
-            Integer[] rowTypes = row.stream().map(v -> v == null ? null : v.getClass()).map(c -> TypeConversion.sqlTypes.getOrDefault(c, 0)).toArray(Integer[]::new);
+            Integer[] rowTypes = row.stream().map(v -> v == null ? null : v.getClass()).map(c -> sqlTypes.getOrDefault(c, 0)).toArray(Integer[]::new);
             for (int i = 0; i < nColumns; i++) {
                 int type = types[i];
                 int rowType = rowTypes[i];

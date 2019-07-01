@@ -9,7 +9,7 @@ import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
-import com.nosqldriver.aerospike.sql.AerospikeQueryFactory;
+import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.FilteredResultSet;
 import com.nosqldriver.sql.JoinedResultSet;
@@ -42,6 +42,11 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
+import static com.nosqldriver.sql.SqlLiterals.operatorKey;
+import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Optional.ofNullable;
@@ -52,13 +57,9 @@ public class QueryHolder {
     private final AerospikePolicyProvider policyProvider;
     private String set;
     private String setAlias;
-    private List<String> tables = new ArrayList<>();
-    private List<String> names = new ArrayList<>();
-    private List<String> aliases = new ArrayList<>();
-    private List<String> expressions = new ArrayList<>();
-    private Collection<String> hiddenNames = new HashSet<>();
     private Collection<String> aggregatedFields = null;
     private Collection<String> groupByFields = null;
+    private List<DataColumn> columns = new ArrayList<>();
     private List<List<Object>> data = new ArrayList<>();
     private boolean skipDuplicates = false;
 
@@ -101,12 +102,10 @@ public class QueryHolder {
             return wrap(secondayIndexQuery);
         }
         if (!data.isEmpty()) {
-            return new AerospikeInsertQuery(schema, set, names.toArray(new String[0]), data, policyProvider.getWritePolicy(), skipDuplicates);
+            return new AerospikeInsertQuery(schema, set, columns, data, policyProvider.getWritePolicy(), skipDuplicates);
         }
 
         return wrap(createSecondaryIndexQuery());
-        //return new AerospikeBatchQueryBySecondaryIndex(schema, getNames(), statement, policyProvider.getQueryPolicy());
-        //throw new IllegalStateException("Query was not created"); //TODO: pass SQL here to attach it to the exception
     }
 
     @SafeVarargs
@@ -116,12 +115,8 @@ public class QueryHolder {
         }
     }
 
-    private String[] getNames(boolean hidden) {
-        List<String> all = new ArrayList<>(names);
-        if (hidden) {
-            all.addAll(hiddenNames);
-        }
-        return all.toArray(new String[0]);
+    private String[] getNames() {
+        return columns.stream().filter(c -> c.getName() != null).map(DataColumn::getName).toArray(String[]::new);
     }
 
     public void setSchema(String schema) {
@@ -153,10 +148,10 @@ public class QueryHolder {
         if (groupByFields != null) {
             Value[] args = Stream.concat(
                     groupByFields.stream().map(f -> "groupby:" + f),
-                    names.stream().filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
+                    columns.stream().filter(c -> DATA.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
-            return new AerospikeDistinctQuery(schema, getNames(false), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
+            return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy());
         }
 
         if (aggregatedFields != null) {
@@ -177,27 +172,26 @@ public class QueryHolder {
                 }
                 String groupField = m.group(1);
                 statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new StringValue(groupField));
-                names = new ArrayList<>(aggregatedFields);
-                return new AerospikeDistinctQuery(schema, aggregatedFields.toArray(new String[0]), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
+                return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy());
             }
 
 
             statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", fieldsForAggregation);
-            return new AerospikeAggregationQuery(schema, getNames(false), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
+            return new AerospikeAggregationQuery(schema, set, columns, statement, policyProvider.getQueryPolicy());
         }
 
 
-        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, getNames(false), statement, policyProvider.getQueryPolicy());
+        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, columns, statement, policyProvider.getQueryPolicy());
     }
 
     @VisibleForPackage
     void createPkQuery(Key key) {
-        pkQuery = new AerospikeQueryByPk(schema, getNames(false), key, policyProvider.getPolicy());
+        pkQuery = new AerospikeQueryByPk(schema, columns, key, policyProvider.getPolicy());
     }
 
     @VisibleForPackage
     void createPkBatchQuery(Key ... keys) {
-        pkBatchQuery = new AerospikeBatchQueryByPk(schema, getNames(false), keys, policyProvider.getBatchPolicy());
+        pkBatchQuery = new AerospikeBatchQueryByPk(schema, set, columns, keys, policyProvider.getBatchPolicy());
     }
 
     public String getSetName() {
@@ -234,11 +228,11 @@ public class QueryHolder {
 
 
     private Function<IAerospikeClient, ResultSet> wrap(Function<IAerospikeClient, ResultSet> nakedQuery) {
-        Function<IAerospikeClient, ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), names, aliases), hiddenNames, expressions, aliases);
+        Function<IAerospikeClient, ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns), columns);
         Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(expressioned.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) : expressioned;
         Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? limited : client -> new JoinedResultSet(limited.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), new ResultSetMetadataSupplier(client, join), join.skipIfMissing)).collect(Collectors.toList()));
 
-        return client -> new NameCheckResultSetWrapper(joined.apply(client), names, aliases);
+        return client -> new NameCheckResultSetWrapper(joined.apply(client), columns);
     }
 
     @SuppressWarnings("unchecked")
@@ -252,12 +246,10 @@ public class QueryHolder {
         protected ColumnType(Predicate<Object> locator) {
             this.locator = locator;
         }
+        protected abstract String getCatalog(Expression expr);
         protected abstract String getTable(Expression expr);
         protected abstract String getText(Expression expr);
-        public abstract void addColumn(Expression expr, String alias, boolean visible);
-        public void addColumn(Expression expr, String alias) {
-            addColumn(expr, alias, true);
-        }
+        public abstract void addColumn(Expression expr, String alias, boolean visible, String schema, String table);
     }
 
 
@@ -266,8 +258,13 @@ public class QueryHolder {
             new ColumnType((e) -> e instanceof Column) {
 
                 @Override
+                protected String getCatalog(Expression expr) {
+                    return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(schema);
+                }
+
+                @Override
                 protected String getTable(Expression expr) {
-                    return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(null);
+                    return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(set);
                 }
 
                 @Override
@@ -276,20 +273,21 @@ public class QueryHolder {
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias, boolean visible) {
-                    tables.add(getTable(expr));
-                    (visible ? names : hiddenNames).add(getText(expr));
-                    //names.add(getText(expr));
-                    expressions.add(null);
-                    aliases.add(alias);
-                    statement.setBinNames(getNames(true));
+                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
+                    columns.add((visible ? DATA : HIDDEN).create(getCatalog(expr), getTable(expr), getText(expr), alias));
+                    statement.setBinNames(getNames());
                 }
             },
 
             new ColumnType(e -> e instanceof BinaryExpression || e instanceof LongValue ||  e instanceof DoubleValue || (e instanceof net.sf.jsqlparser.expression.Function && expressionResultSetWrappingFactory.getClientSideFunctionNames().contains(((net.sf.jsqlparser.expression.Function)e).getName()))) {
                 @Override
+                protected String getCatalog(Expression expr) {
+                    return schema;
+                }
+
+                @Override
                 protected String getTable(Expression expr) {
-                    return null;
+                    return set;
                 }
 
                 @Override
@@ -298,21 +296,24 @@ public class QueryHolder {
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias, boolean visible) {
+                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     String column = getText(expr);
-                    names.add(null);
-                    expressions.add(column);
-                    aliases.add(alias);
-                    hiddenNames.addAll(expressionResultSetWrappingFactory.getVariableNames(column));
-                    statement.setBinNames(getNames(true));
+                    columns.add(EXPRESSION.create(getCatalog(expr), getTable(expr), getText(expr), alias));
+                    expressionResultSetWrappingFactory.getVariableNames(column).forEach(v -> columns.add(HIDDEN.create(getCatalog(expr), getTable(expr), v, alias)));
+                    statement.setBinNames(getNames());
                 }
             },
 
 
             new ColumnType(e -> e instanceof net.sf.jsqlparser.expression.Function) {
                 @Override
+                protected String getCatalog(Expression expr) {
+                    return schema;
+                }
+
+                @Override
                 protected String getTable(Expression expr) {
-                    return null;
+                    return set;
                 }
 
                 @Override
@@ -321,18 +322,23 @@ public class QueryHolder {
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias, boolean visible) {
+                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     if (aggregatedFields == null) { // && !addition.isEmpty()) {
                         aggregatedFields = new HashSet<>();
                     }
                     List<String> addition = ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(Collectors.toList())).orElse(Collections.emptyList());
                     aggregatedFields.addAll(addition);
-                    names.add(expr.toString());
-                    aliases.add(alias);
+                    columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
+
                 }
             },
 
             new ColumnType(e -> e instanceof String && ((String)e).startsWith("distinct")) {
+                @Override
+                protected String getCatalog(Expression expr) {
+                    return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(null);
+                }
+
                 @Override
                 protected String getTable(Expression expr) {
                     return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(null);
@@ -340,17 +346,16 @@ public class QueryHolder {
 
                 @Override
                 protected String getText(Expression expr) {
-                    return expr.toString();
+                    return "distinct" + expr.toString();
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias, boolean visible) {
+                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     if (aggregatedFields == null) {
                         aggregatedFields = new HashSet<>();
                     }
                     aggregatedFields.add("distinct" + expr.toString());
-                    names.add(expr.toString());
-                    aliases.add(alias);
+                    columns.add(DATA.create(catalog, table, getText(expr), alias));
                 }
             },
     };
@@ -372,11 +377,6 @@ public class QueryHolder {
         joins.add(join);
         return join;
     }
-
-//    public QueryHolder getCurrentJoin() {
-//        return joins.get(joins.size() - 1);
-//    }
-
 
     private static class JoinRetriever implements Function<ResultSet, ResultSet> {
         private final IAerospikeClient client;
@@ -418,12 +418,12 @@ public class QueryHolder {
                         if (i > 0 && result.get(i - 1) instanceof ColumnRefPredExp) {
                             result.set(i - 1, PredExp.stringBin(((ColumnRefPredExp)result.get(i - 1)).getName()));
                             if (i < n - 1 && result.get(i + 1) instanceof OperatorRefPredExp) {
-                                result.set(i + 1, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(String.class, ((OperatorRefPredExp)result.get(i + 1)).getOp())).get());
+                                result.set(i + 1, predExpOperators.get(operatorKey(String.class, ((OperatorRefPredExp)result.get(i + 1)).getOp())).get());
                             }
                         } else if (i < n - 1 && result.get(i + 1) instanceof ColumnRefPredExp) {
                             result.set(i + 1, PredExp.stringBin(((ColumnRefPredExp)result.get(i + 1)).getName()));
                             if (i < n - 2 && result.get(i + 2) instanceof OperatorRefPredExp) {
-                                result.set(i + 2, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(String.class, ((OperatorRefPredExp)result.get(i + 2)).getOp())).get());
+                                result.set(i + 2, predExpOperators.get(operatorKey(String.class, ((OperatorRefPredExp)result.get(i + 2)).getOp())).get());
                             }
                         }
                     } else if (value instanceof Number) {
@@ -431,12 +431,12 @@ public class QueryHolder {
                         if (i > 0 && result.get(i - 1) instanceof ColumnRefPredExp) {
                             result.set(i - 1, PredExp.integerBin(((ColumnRefPredExp)result.get(i - 1)).getName()));
                             if (i < n - 1 && result.get(i + 1) instanceof OperatorRefPredExp) {
-                                result.set(i + 1, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(Long.class, ((OperatorRefPredExp)result.get(i + 1)).getOp())).get());
+                                result.set(i + 1, predExpOperators.get(operatorKey(Long.class, ((OperatorRefPredExp)result.get(i + 1)).getOp())).get());
                             }
                         } else if (i < n - 1 && result.get(i + 1) instanceof ColumnRefPredExp) {
                             result.set(i + 1, PredExp.integerBin(((ColumnRefPredExp)result.get(i + 1)).getName()));
                             if (i < n - 2 && result.get(i + 2) instanceof OperatorRefPredExp) {
-                                result.set(i + 2, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(Long.class, ((OperatorRefPredExp)result.get(i + 2)).getOp())).get());
+                                result.set(i + 2, predExpOperators.get(operatorKey(Long.class, ((OperatorRefPredExp)result.get(i + 2)).getOp())).get());
                             }
                         }
                     } else {
@@ -481,11 +481,10 @@ public class QueryHolder {
 
 
     public void copyColumnsForTable(String tableAlias, QueryHolder other) {
-        int n = names.size();
+        int n = columns.size();
         for (int i = 0; i < n; i++) {
-            if (tableAlias.equals(tables.get(i))) {
-                other.names.add(names.get(i));
-                other.aliases.add(aliases.get(i));
+            if (tableAlias.equals(columns.get(i).getTable())) {
+                other.columns.add(columns.get(i));
             }
         }
     }
@@ -494,16 +493,12 @@ public class QueryHolder {
         return table == null || table.equals(setAlias) ? this : joins.stream().filter(j -> table.equals(j.setAlias)).findFirst().orElseThrow(() -> new IllegalArgumentException(format("Cannot find query for table  %s", table)));
     }
 
-    public String[] getByAlias(String alias) {
-        int index = aliases.indexOf(alias);
-        if (index < 0) {
-            return null;
-        }
-        return new String[] {tables.get(index), names.get(index)};
+    public Optional<DataColumn> getColumnByAlias(String alias) {
+        return columns.stream().filter(c -> alias.equals(c.getLabel())).findFirst();
     }
 
     public void addName(String name)  {
-        names.add(name);
+        columns.add(DATA.create(schema, set, name, null));
     }
 
     public void addData(List<Object> dataRow)  {

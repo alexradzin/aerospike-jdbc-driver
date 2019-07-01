@@ -30,8 +30,8 @@ public class ExpressionAwareResultSetFactory {
     }
 
 
-    public ResultSet wrap(ResultSet rs, Collection<String> names, List<String> expressions, List<String> aliases) {
-        return new ExpressionAwareResultSet(rs, new ArrayList<>(names), expressions, aliases);
+    public ResultSet wrap(ResultSet rs, List<DataColumn> columns) {
+        return new ExpressionAwareResultSet(rs, columns);
     }
 
     public Collection<String> getVariableNames(String expr) {

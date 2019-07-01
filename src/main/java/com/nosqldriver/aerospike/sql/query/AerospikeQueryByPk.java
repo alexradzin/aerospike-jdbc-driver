@@ -5,16 +5,18 @@ import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import com.aerospike.client.policy.Policy;
 import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeRecords;
+import com.nosqldriver.sql.DataColumn;
 
 import java.sql.ResultSet;
+import java.util.List;
 
 public class AerospikeQueryByPk extends AerospikeQuery<Key, Policy> {
-    public AerospikeQueryByPk(String schema, String[] names, Key key, Policy policy) {
-        super(schema, names, key, policy);
+    public AerospikeQueryByPk(String schema, List<DataColumn> columns, Key key, Policy policy) {
+        super(schema, key.setName, columns, key, policy);
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeRecords(schema, names, new Record[] {client.get(policy, criteria)});
+        return new ResultSetOverAerospikeRecords(schema, set, columns, new Record[] {client.get(policy, criteria)});
     }
 }

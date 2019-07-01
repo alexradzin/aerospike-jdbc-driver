@@ -5,33 +5,33 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.policy.WritePolicy;
+import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ListRecordSet;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
+import static java.util.Collections.emptyList;
+
 public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>, WritePolicy> {
-    private final String set;
     private final int indexOfPK;
     private final boolean skipDuplicates;
     public final static ThreadLocal<Integer> updatedRecordsCount = new ThreadLocal<>();
 
 
-    public AerospikeInsertQuery(String schema, String set, String[] names, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
-        super(schema, names, data, policy);
-        this.set = set;
+    public AerospikeInsertQuery(String schema, String set, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
+        super(schema, set, columns, data, policy);
         this.skipDuplicates = skipDuplicates;
-        Arrays.stream(names).filter("PK"::equals).findFirst().orElseThrow(() -> new IllegalArgumentException("PK is not specified"));
+        columns.stream().map(DataColumn::getName).filter("PK"::equals).findFirst().orElseThrow(() -> new IllegalArgumentException("PK is not specified"));
 
         indexOfPK =
-                IntStream.range(0, names.length)
-                        .filter(i -> "PK".equals(names[i]))
+                IntStream.range(0, columns.size())
+                        .filter(i -> "PK".equals(columns.get(i).getName()))
                         .findFirst()
                         .orElseThrow(() -> new IllegalStateException("No PK in insert statement"));
     }
@@ -58,7 +58,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
         updatedRecordsCount.set(n);
 
-        return new ListRecordSet(schema, new String[0], new int[0], Collections.emptyList());
+        return new ListRecordSet(schema, set, emptyList(), emptyList());
     }
 
     private Key key(List<Object> row) {
@@ -81,10 +81,10 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
 
     private Bin[] bins(List<Object> row) {
-        Bin[] bins = new Bin[names.length - 1];
-        for (int i = 0, j = 0; i < names.length; i++) {
+        Bin[] bins = new Bin[columns.size() - 1];
+        for (int i = 0, j = 0; i < columns.size(); i++) {
             if (i != indexOfPK) {
-                bins[j] = new Bin(names[i], row.get(i));
+                bins[j] = new Bin(columns.get(i).getName(), row.get(i));
                 j++;
             }
         }

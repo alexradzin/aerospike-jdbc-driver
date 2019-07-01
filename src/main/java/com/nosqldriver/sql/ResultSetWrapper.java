@@ -1,7 +1,5 @@
 package com.nosqldriver.sql;
 
-import com.nosqldriver.VisibleForPackage;
-
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -25,27 +23,21 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.IntStream.range;
 
 public class ResultSetWrapper implements ResultSet {
     private final ResultSet rs;
     private final Map<String, String> aliasToName; // alias to name map
-    protected List<String> names;
-    protected List<String> aliases;
+    protected List<DataColumn> columns;
 
-    @VisibleForPackage ResultSetWrapper(ResultSet rs) {
-        this(rs, Collections.emptyList(), Collections.emptyList());
+    protected ResultSetWrapper(ResultSet rs) {
+        this(rs, Collections.emptyList());
     }
 
-    public ResultSetWrapper(ResultSet rs, List<String> names, List<String> aliases) {
+    public ResultSetWrapper(ResultSet rs, List<DataColumn> columns) {
         this.rs = rs;
-        this.names = names;
-        this.aliases = aliases;
-        aliasToName = range(0, names.size()).boxed().filter(i -> names.get(i) != null && aliases.get(i) != null).collect(toMap(aliases::get, names::get));
+        this.columns = Collections.unmodifiableList(columns);
+        aliasToName = columns.stream().filter(c -> c.getName() != null && c.getLabel() != null).collect(Collectors.toMap(DataColumn::getLabel, DataColumn::getName));
     }
     
     protected String getName(String alias) {
@@ -247,45 +239,14 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        // TODO: this if is a patch to work around problem of select *. Better solution must be found here.
-        if (names.isEmpty()) {
-            ResultSetMetaData metadata = rs.getMetaData();
-            List<String> actualNames = list(metadata, (md, i) -> {
-                try {
-                    return md.getColumnName(i);
-                } catch (SQLException e) {
-                    throw new IllegalStateException(e);
-                }
-            });
-            List<String> actualAliases = list(metadata, (md, i) -> {
-                try {
-                    return md.getColumnLabel(i);
-                } catch (SQLException e) {
-                    throw new IllegalStateException(e);
-                }
-            });
-            List<Integer> actualTypes = list(metadata, (md, i) -> {
-                try {
-                    return md.getColumnType(i);
-                } catch (SQLException e) {
-                    throw new IllegalStateException(e);
-                }
-            });
-            String schemaName = metadata instanceof SimpleResultSetMetaData ? ((SimpleResultSetMetaData)metadata).getSchema() : null;
-            int[] actualTypesArray = new int[actualTypes.size()];
-            range(0, actualTypesArray.length).forEach(i -> actualTypesArray[i] = actualTypes.get(i));
-
-            return new SimpleResultSetMetaData(rs.getMetaData(), schemaName, actualNames.toArray(new String[0]), actualAliases.toArray(new String[0]), actualTypesArray);
+        if (columns.isEmpty()) {
+            return rs.getMetaData();
         }
-
-
-
-        return new SimpleResultSetMetaData(rs == null ? null : rs.getMetaData(), null, names.toArray(new String[0]), aliases.toArray(new String[0]));
-    }
-
-
-    private <T> List<T> list(ResultSetMetaData md, BiFunction<ResultSetMetaData, Integer, T> getter) throws SQLException {
-        return range(0, md.getColumnCount()).mapToObj(i -> getter.apply(md, i + 1)).collect(Collectors.toList());
+        DataColumnBasedResultSetMetaData md = new DataColumnBasedResultSetMetaData(columns);
+        if (rs != null) {
+            md.updateTypes(rs.getMetaData());
+        }
+        return md;
     }
 
     @Override

@@ -36,7 +36,7 @@ public class JoinedResultSet implements ResultSet {
     private final List<ResultSet> resultSets = new ArrayList<>();
     private boolean moveMainResultSet = true;
     private boolean hasMore = true;
-    private ResultSetMetaData metadata;
+    private DataColumnBasedResultSetMetaData metadata;
 
     private boolean wasNull = false;
 
@@ -279,13 +279,10 @@ public class JoinedResultSet implements ResultSet {
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
         if (metadata == null) {
-            Collection<ResultSetMetaData> allMetadata = new ArrayList<>();
-            allMetadata.add(resultSet.getMetaData());
-
+            metadata = (DataColumnBasedResultSetMetaData) resultSet.getMetaData();
             for (JoinHolder jh : joinHolders) {
-                allMetadata.add(jh.getMetaDataSupplier().get());
+                metadata.updateTypes(jh.getMetaDataSupplier().get());
             }
-            metadata = new CompositeResultSetMetaDataFactory().compose(allMetadata);
         }
         return metadata;
     }

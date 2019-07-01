@@ -354,7 +354,7 @@ class SelectTest {
         for (int i = 0; i < expectedLabels.length; i++) {
             assertEquals(expectedLabels[i], md.getColumnLabel(i + 1));
         }
-        String[] expectedNames = new String[] {null, null, null, null, "first_name", null, null};
+        String[] expectedNames = new String[] {"1", "2 + 3", "(1 + 2) * 3", "year() - year_of_birth", "first_name", "year_of_birth - 1900", "len(last_name)"};
         for (int i = 0; i < expectedNames.length; i++) {
             assertEquals(expectedNames[i], md.getColumnName(i + 1));
         }

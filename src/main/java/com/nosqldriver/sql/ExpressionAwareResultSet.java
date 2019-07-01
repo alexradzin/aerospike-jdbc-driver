@@ -19,26 +19,24 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.System.currentTimeMillis;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.IntStream.range;
 
 @VisibleForPackage
 class ExpressionAwareResultSet extends ResultSetWrapper {
     private final ScriptEngine engine;
     private final ResultSet rs;
-    private final List<String> evals;
     private final Map<String, String> aliasToEval;
 
     @VisibleForPackage
-    ExpressionAwareResultSet(ResultSet rs, List<String> names, List<String> evals, List<String> aliases) {
-        super(rs, names, aliases);
-        aliasToEval = range(0, aliases.size()).boxed().filter(i -> evals.size() > i && evals.get(i) != null).collect(toMap(aliases::get, evals::get));
+    ExpressionAwareResultSet(ResultSet rs, List<DataColumn> columns) {
+        super(rs, columns);
+        aliasToEval = columns.stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).collect(Collectors.toMap(DataColumn::getLabel, DataColumn::getExpression));
         engine = new JavascriptEngineFactory().getEngine();
         this.rs = rs;
-        this.evals = evals;
     }
 
 
@@ -252,83 +250,74 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        ResultSetMetaData md = rs.getMetaData();
-        int[] discoveredExpressionTypes = new int[evals.size()];
-        Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-        Collection<String> bound = bind(rs, names, evals, bindings);
-        int n = md.getColumnCount();
-        for (int i = 0; i < n; i++) {
-            String name = md.getColumnName(i + 1);
-            if (name != null && !bound.contains(name)) {
-                int type = md.getColumnType(i + 1);
-                Object value = null;
-                switch (type) {
-                    case Types.BIGINT: case Types.INTEGER: case Types.SMALLINT: value = currentTimeMillis(); break;
-                    case Types.DOUBLE: case Types.FLOAT: value = Math.PI * Math.E; break;
-                    case Types.VARCHAR: case Types.LONGNVARCHAR: value = ""; break;
-                    default: break; // do nothing
-                }
-                if (value != null) {
-                    bindings.put(name, value);
-                }
-            }
-        }
-
-        boolean typesFound = false;
-        for (int i = 0; i < evals.size(); i++) {
-            String e = evals.get(i);
-            if (e == null) {
-                continue;
-            }
-            Object result = eval(e);
-            if (result != null) {
-                Integer sqlType = TypeConversion.sqlTypes.get(result.getClass());
-                if (sqlType != null) {
-                    discoveredExpressionTypes[i] = sqlType;
-                    typesFound = true;
-                }
-            }
-        }
-
-        if (typesFound) {
-            int[] allTypes = new int[n];
-            String[] allNames = new String[n];
-            String[] allAliases = new String[n];
+        DataColumnBasedResultSetMetaData md = (DataColumnBasedResultSetMetaData)rs.getMetaData();
+        List<DataColumn> expressions = md.getColumns().stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getType() == 0).collect(Collectors.toList());
+        if (!expressions.isEmpty()) {
+            Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+            Collection<String> bound = bind(rs, columns, bindings);
+            int n = md.getColumnCount();
             for (int i = 0; i < n; i++) {
-                allTypes[i] = discoveredExpressionTypes[i] != 0 ? discoveredExpressionTypes[i] : md.getColumnType(i + 1);
-                allNames[i] = md.getColumnName(i + 1);
-                allAliases[i] = md.getColumnLabel(i + 1);
+                String name = md.getColumnName(i + 1);
+                if (name != null && !bound.contains(name)) {
+                    int type = md.getColumnType(i + 1);
+                    Object value = null;
+                    switch (type) {
+                        case Types.BIGINT:
+                        case Types.INTEGER:
+                        case Types.SMALLINT:
+                            value = currentTimeMillis();
+                            break;
+                        case Types.DOUBLE:
+                        case Types.FLOAT:
+                            value = Math.PI * Math.E;
+                            break;
+                        case Types.VARCHAR:
+                        case Types.LONGNVARCHAR:
+                            value = "";
+                            break;
+                        default:
+                            break; // do nothing
+                    }
+                    if (value != null) {
+                        bindings.put(name, value);
+                    }
+                }
             }
-            return new SimpleResultSetMetaData(null, md.getSchemaName(1), allNames, allAliases, allTypes);
+
+
+            for (DataColumn ec : expressions) {
+                String e = ec.getExpression();
+                Object result = eval(e);
+                if (result != null) {
+                    Integer sqlType = SqlLiterals.sqlTypes.get(result.getClass());
+                    if (sqlType != null) {
+                        ec.withType(sqlType);
+                    }
+                }
+            }
         }
         return md;
     }
 
-    private Collection<String> bind(ResultSet rs, Collection<String> names, List<String> evals, Bindings bindings) throws SQLException {
+
+    private Collection<String> bind(ResultSet rs, Collection<DataColumn> columns, Bindings bindings) {
         Collection<String> bound = new HashSet<>();
-        for (String name : names) {
+
+        columns.stream().filter(c -> !DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).map(DataColumn::getName).forEach(name -> {
             try {
                 bindings.put(name, rs.getObject(name));
                 bound.add(name);
             } catch (SQLException e) {
                 // ignore exception thrown by specific field
             }
-        }
-
-        ResultSetMetaData md = rs.getMetaData();
-        for (int i = 0, j = 1; i < md.getColumnCount(); i++, j++) {
-            String name = md.getColumnLabel(j);
-            if (evals.size() > i && evals.get(i) == null && !bindings.containsKey(name)) {
-                bindings.put(name, rs.getObject(j));
-                bound.add(name);
-            }
-        }
+        });
         return bound;
     }
 
+
     private Object eval(String eval) throws SQLException {
         Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-        Collection<String> bound = bind(rs, names, evals, bindings);
+        Collection<String> bound = bind(rs, columns, bindings);
         try {
             return engine.eval(eval);
         } catch (ScriptException e) {
@@ -339,6 +328,6 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     }
 
     private String getEval(int index) {
-        return index <= evals.size() ? evals.get(index - 1) : null;
+        return index <= columns.size() ? Optional.ofNullable(columns.get(index - 1)).map(DataColumn::getExpression).orElse(null) : null;
     }
 }

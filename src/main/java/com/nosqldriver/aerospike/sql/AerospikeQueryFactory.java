@@ -12,6 +12,7 @@ import com.nosqldriver.aerospike.sql.query.ColumnRefPredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
 import com.nosqldriver.aerospike.sql.query.QueryHolder;
 import com.nosqldriver.aerospike.sql.query.ValueRefPredExp;
+import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.JoinType;
 import com.nosqldriver.sql.RecordExpressionEvaluator;
 import net.sf.jsqlparser.JSQLParserException;
@@ -61,7 +62,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.TreeMap;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -73,6 +74,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
+import static com.nosqldriver.sql.SqlLiterals.operatorKey;
+import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
 import static java.util.Optional.ofNullable;
@@ -80,32 +83,9 @@ import static java.util.Optional.ofNullable;
 public class AerospikeQueryFactory {
     private CCJSqlParserManager parserManager = new CCJSqlParserManager();
     private final String schema;
+    private String set;
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
-    public static final Map<String, Supplier<PredExp>> predExpOperators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-    static {
-        predExpOperators.put(operatorKey(String.class, "="), PredExp::stringEqual);
-        predExpOperators.put(operatorKey(String.class, "<>"), PredExp::stringUnequal);
-        predExpOperators.put(operatorKey(String.class, "!="), PredExp::stringUnequal);
-        predExpOperators.put(operatorKey(String.class, "LIKE"), () -> PredExp.stringRegex(0));
-        predExpOperators.put(operatorKey(String.class, "AND"), () -> PredExp.and(2));
-        predExpOperators.put(operatorKey(String.class, "OR"), () -> PredExp.or(2));
-
-        for (Class type : new Class[] {Byte.class, Short.class, Integer.class, Long.class}) {
-            predExpOperators.put(operatorKey(type, "="), PredExp::integerEqual);
-            predExpOperators.put(operatorKey(type, "<>"), PredExp::integerUnequal);
-            predExpOperators.put(operatorKey(type, "!="), PredExp::integerUnequal);
-            predExpOperators.put(operatorKey(type, ">"), PredExp::integerGreater);
-            predExpOperators.put(operatorKey(type, ">="), PredExp::integerGreaterEq);
-            predExpOperators.put(operatorKey(type, "<"), PredExp::integerLess);
-            predExpOperators.put(operatorKey(type, "<="), PredExp::integerLessEq);
-            predExpOperators.put(operatorKey(type, "AND"), () -> PredExp.and(2));
-            predExpOperators.put(operatorKey(type, "OR"), () -> PredExp.or(2));
-        }
-
-    }
-
-
     @VisibleForPackage
     AerospikeQueryFactory(String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes) {
         this.schema = schema;
@@ -132,6 +112,7 @@ public class AerospikeQueryFactory {
                                             queries.setSchema(tableName.getSchemaName());
                                         }
                                         queries.setSetName(tableName.getName(), ofNullable(tableName.getAlias()).map(Alias::getName).orElse(null));
+                                        set = tableName.getName();
                                     }
                                 });
                             }
@@ -144,7 +125,7 @@ public class AerospikeQueryFactory {
                                     String alias = ofNullable(selectExpressionItem.getAlias()).map(Alias::getName).orElse(null);
                                     Expression expr = selectExpressionItem.getExpression();
                                     Object selector = plainSelect.getDistinct() != null ? "distinct" + expr : expr; //TODO: ugly patch.
-                                    queries.getColumnType(selector).addColumn(expr, alias);
+                                    queries.getColumnType(selector).addColumn(expr, alias, true, queries.getSchema(), queries.getSetName());
                                 }
                             }));
 
@@ -187,10 +168,10 @@ public class AerospikeQueryFactory {
                                             String table = column.getTable().getName();
                                             String columnName = column.getColumnName();
                                             if (Objects.equals(queries.getSetName(), table) || Objects.equals(queries.getSetAlias(), table)) {
-                                                queries.getColumnType(column).addColumn(column, null, false);
+                                                queries.getColumnType(column).addColumn(column, null, false, null, null);
                                                 currentJoin.addPredExp(new ValueRefPredExp(table, columnName));
                                             } else if (Objects.equals(currentJoin.getSetName(), table) || Objects.equals(currentJoin.getSetAlias(), table)) {
-                                                currentJoin.getColumnType(column).addColumn(column, null, false);
+                                                currentJoin.getColumnType(column).addColumn(column, null, false, null, null);
                                                 currentJoin.addPredExp(new ColumnRefPredExp(table, columnName));
                                             }
                                         }
@@ -251,11 +232,11 @@ public class AerospikeQueryFactory {
                                             String table = ofNullable(column.getTable()).map(Table::getName).orElse(null);
                                             String name = column.getColumnName();
                                             if (table == null) {
-                                                // assumen name is actually alias and try to retrieve real table and column name
-                                                String[] columnData = queries.getByAlias(name);
-                                                if (columnData != null) {
-                                                    table = columnData[0];
-                                                    name = columnData[1];
+                                                // assume name is actually alias and try to retrieve real table and column name
+                                                Optional<DataColumn> dc = queries.getColumnByAlias(name);
+                                                if (dc.isPresent()) {
+                                                    table = dc.get().getTable();
+                                                    name = dc.get().getName();
                                                 }
                                             }
                                             operation.setTable(table);
@@ -349,6 +330,7 @@ public class AerospikeQueryFactory {
                         queries.setSchema(table.getSchemaName());
                     }
                     queries.setSetName(table.getName(), ofNullable(table.getAlias()).map(Alias::getName).orElse(null));
+                    set = table.getName();
                     insert.getColumns().forEach(column -> queries.addName(column.getColumnName()));
 
                     // Trick to support both single and multi expression list.
@@ -635,9 +617,9 @@ public class AerospikeQueryFactory {
         return columnValueSuppliers.entrySet().stream().map(e -> new Bin(e.getKey(), e.getValue().apply(record))).toArray(Bin[]::new);
     }
 
-    public static String operatorKey(Class<?> type, String operand) {
-        return type.getName() + operand;
-    }
+//    public static String operatorKey(Class<?> type, String operand) {
+//        return type.getName() + operand;
+//    }
 
 
     private static class WhereVisitor extends ExpressionVisitorAdapter {
@@ -734,5 +716,9 @@ public class AerospikeQueryFactory {
 
     public static Map<String, Supplier<PredExp>> getPredExpOperators() {
         return predExpOperators;
+    }
+
+    public String getSet() {
+        return set;
     }
 }
