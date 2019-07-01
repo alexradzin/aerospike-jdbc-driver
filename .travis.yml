@@ -5,8 +5,8 @@ install:
   - wget -O aerospike-server.tgz https://www.aerospike.com/download/server/4.5.3.4/artifact/ubuntu14
   - tar xvzf aerospike-server.tgz
   - cd aerospike-server-community-4.5.3.4-ubuntu14.04
-  - ./asinstall
-  - service aerospike start
+  - sudo ./asinstall
+  - sudo service aerospike start
 before_script:
   - chmod +x gradlew
 script:
