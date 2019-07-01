@@ -882,8 +882,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
                 );
 
 
-        return new ListRecordSet(null, columns, systemColumns(columns, new int[columns.length]), data);
-        //return new ListRecordSet(null, columns, systemColumns(columns, discoverTypes(columns.length, data)), data);
+        return new ListRecordSet(null, columns, systemColumns(columns, discoverTypes(columns.length, data)), data);
     }
 
     @Override
@@ -1199,7 +1198,6 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
     }
 
     private List<DataColumn> columns(String catalog, String table, String[] names, int[] types) {
-        //return range(0, names.length).boxed().map(i -> DATA.create(catalog, table, names[i], names[i]).withType(types[i])).collect(toList());
-        return Collections.emptyList();
+        return range(0, names.length).boxed().map(i -> DATA.create(catalog, table, names[i], names[i]).withType(types[i])).collect(toList());
     }
 }
