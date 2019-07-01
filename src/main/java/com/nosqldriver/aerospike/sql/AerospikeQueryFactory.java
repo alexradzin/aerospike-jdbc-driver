@@ -144,7 +144,7 @@ public class AerospikeQueryFactory {
                                     String alias = ofNullable(selectExpressionItem.getAlias()).map(Alias::getName).orElse(null);
                                     Expression expr = selectExpressionItem.getExpression();
                                     Object selector = plainSelect.getDistinct() != null ? "distinct" + expr : expr; //TODO: ugly patch.
-                                    queries.getColumnType(selector).addColumn(expr, alias);
+                                    queries.getColumnType(selector).addColumn(expr, alias, true, queries.getSchema(), queries.getSetName());
                                 }
                             }));
 
@@ -187,10 +187,10 @@ public class AerospikeQueryFactory {
                                             String table = column.getTable().getName();
                                             String columnName = column.getColumnName();
                                             if (Objects.equals(queries.getSetName(), table) || Objects.equals(queries.getSetAlias(), table)) {
-                                                queries.getColumnType(column).addColumn(column, null, false);
+                                                queries.getColumnType(column).addColumn(column, null, false, null, null);
                                                 currentJoin.addPredExp(new ValueRefPredExp(table, columnName));
                                             } else if (Objects.equals(currentJoin.getSetName(), table) || Objects.equals(currentJoin.getSetAlias(), table)) {
-                                                currentJoin.getColumnType(column).addColumn(column, null, false);
+                                                currentJoin.getColumnType(column).addColumn(column, null, false, null, null);
                                                 currentJoin.addPredExp(new ColumnRefPredExp(table, columnName));
                                             }
                                         }

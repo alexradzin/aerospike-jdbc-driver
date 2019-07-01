@@ -10,6 +10,7 @@ import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
 import com.nosqldriver.aerospike.sql.AerospikeQueryFactory;
+import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.FilteredResultSet;
 import com.nosqldriver.sql.JoinedResultSet;
@@ -23,6 +24,7 @@ import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 
+import javax.xml.crypto.Data;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -42,6 +44,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Optional.ofNullable;
@@ -59,6 +64,7 @@ public class QueryHolder {
     private Collection<String> hiddenNames = new HashSet<>();
     private Collection<String> aggregatedFields = null;
     private Collection<String> groupByFields = null;
+    private List<DataColumn> columns = new ArrayList<>();
     private List<List<Object>> data = new ArrayList<>();
     private boolean skipDuplicates = false;
 
@@ -101,7 +107,7 @@ public class QueryHolder {
             return wrap(secondayIndexQuery);
         }
         if (!data.isEmpty()) {
-            return new AerospikeInsertQuery(schema, set, names.toArray(new String[0]), data, policyProvider.getWritePolicy(), skipDuplicates);
+            return new AerospikeInsertQuery(schema, set, names.toArray(new String[0]), columns, data, policyProvider.getWritePolicy(), skipDuplicates);
         }
 
         return wrap(createSecondaryIndexQuery());
@@ -156,7 +162,7 @@ public class QueryHolder {
                     names.stream().filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
-            return new AerospikeDistinctQuery(schema, getNames(false), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
+            return new AerospikeDistinctQuery(schema, getNames(false), columns, statement, policyProvider.getQueryPolicy());
         }
 
         if (aggregatedFields != null) {
@@ -178,26 +184,26 @@ public class QueryHolder {
                 String groupField = m.group(1);
                 statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new StringValue(groupField));
                 names = new ArrayList<>(aggregatedFields);
-                return new AerospikeDistinctQuery(schema, aggregatedFields.toArray(new String[0]), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
+                return new AerospikeDistinctQuery(schema, aggregatedFields.toArray(new String[0]), columns, statement, policyProvider.getQueryPolicy());
             }
 
 
             statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", fieldsForAggregation);
-            return new AerospikeAggregationQuery(schema, getNames(false), aliases.toArray(new String[0]), statement, policyProvider.getQueryPolicy());
+            return new AerospikeAggregationQuery(schema, getNames(false), columns, statement, policyProvider.getQueryPolicy());
         }
 
 
-        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, getNames(false), statement, policyProvider.getQueryPolicy());
+        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, getNames(false), columns, statement, policyProvider.getQueryPolicy());
     }
 
     @VisibleForPackage
     void createPkQuery(Key key) {
-        pkQuery = new AerospikeQueryByPk(schema, getNames(false), key, policyProvider.getPolicy());
+        pkQuery = new AerospikeQueryByPk(schema, getNames(false), columns, key, policyProvider.getPolicy());
     }
 
     @VisibleForPackage
     void createPkBatchQuery(Key ... keys) {
-        pkBatchQuery = new AerospikeBatchQueryByPk(schema, getNames(false), keys, policyProvider.getBatchPolicy());
+        pkBatchQuery = new AerospikeBatchQueryByPk(schema, getNames(false), columns, keys, policyProvider.getBatchPolicy());
     }
 
     public String getSetName() {
@@ -252,18 +258,24 @@ public class QueryHolder {
         protected ColumnType(Predicate<Object> locator) {
             this.locator = locator;
         }
+        protected abstract String getCatalog(Expression expr);
         protected abstract String getTable(Expression expr);
         protected abstract String getText(Expression expr);
-        public abstract void addColumn(Expression expr, String alias, boolean visible);
-        public void addColumn(Expression expr, String alias) {
-            addColumn(expr, alias, true);
-        }
+        public abstract void addColumn(Expression expr, String alias, boolean visible, String schema, String table);
+//        public void addColumn(Expression expr, String alias) {
+//            addColumn(expr, alias, true);
+//        }
     }
 
 
 
     private ColumnType[] types = new ColumnType[] {
             new ColumnType((e) -> e instanceof Column) {
+
+                @Override
+                protected String getCatalog(Expression expr) {
+                    return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(null);
+                }
 
                 @Override
                 protected String getTable(Expression expr) {
@@ -276,17 +288,23 @@ public class QueryHolder {
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias, boolean visible) {
+                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     tables.add(getTable(expr));
                     (visible ? names : hiddenNames).add(getText(expr));
                     //names.add(getText(expr));
                     expressions.add(null);
                     aliases.add(alias);
+                    columns.add((visible ? DATA : HIDDEN).create(getCatalog(expr), getTable(expr), getText(expr), alias));
                     statement.setBinNames(getNames(true));
                 }
             },
 
             new ColumnType(e -> e instanceof BinaryExpression || e instanceof LongValue ||  e instanceof DoubleValue || (e instanceof net.sf.jsqlparser.expression.Function && expressionResultSetWrappingFactory.getClientSideFunctionNames().contains(((net.sf.jsqlparser.expression.Function)e).getName()))) {
+                @Override
+                protected String getCatalog(Expression expr) {
+                    return null;
+                }
+
                 @Override
                 protected String getTable(Expression expr) {
                     return null;
@@ -298,12 +316,14 @@ public class QueryHolder {
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias, boolean visible) {
+                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     String column = getText(expr);
                     names.add(null);
                     expressions.add(column);
                     aliases.add(alias);
                     hiddenNames.addAll(expressionResultSetWrappingFactory.getVariableNames(column));
+                    columns.add(EXPRESSION.create(getCatalog(expr), getTable(expr), getText(expr), alias));
+                    expressionResultSetWrappingFactory.getVariableNames(column).forEach(v -> columns.add(HIDDEN.create(getCatalog(expr), getTable(expr), v, alias)));
                     statement.setBinNames(getNames(true));
                 }
             },
@@ -311,6 +331,11 @@ public class QueryHolder {
 
             new ColumnType(e -> e instanceof net.sf.jsqlparser.expression.Function) {
                 @Override
+                protected String getCatalog(Expression expr) {
+                    return null;
+                }
+
+                @Override
                 protected String getTable(Expression expr) {
                     return null;
                 }
@@ -321,7 +346,7 @@ public class QueryHolder {
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias, boolean visible) {
+                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     if (aggregatedFields == null) { // && !addition.isEmpty()) {
                         aggregatedFields = new HashSet<>();
                     }
@@ -329,10 +354,17 @@ public class QueryHolder {
                     aggregatedFields.addAll(addition);
                     names.add(expr.toString());
                     aliases.add(alias);
+                    columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
+
                 }
             },
 
             new ColumnType(e -> e instanceof String && ((String)e).startsWith("distinct")) {
+                @Override
+                protected String getCatalog(Expression expr) {
+                    return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(null);
+                }
+
                 @Override
                 protected String getTable(Expression expr) {
                     return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(null);
@@ -344,13 +376,14 @@ public class QueryHolder {
                 }
 
                 @Override
-                public void addColumn(Expression expr, String alias, boolean visible) {
+                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     if (aggregatedFields == null) {
                         aggregatedFields = new HashSet<>();
                     }
                     aggregatedFields.add("distinct" + expr.toString());
                     names.add(expr.toString());
                     aliases.add(alias);
+                    columns.add(DATA.create(catalog, table, getText(expr), alias));
                 }
             },
     };
@@ -486,6 +519,7 @@ public class QueryHolder {
             if (tableAlias.equals(tables.get(i))) {
                 other.names.add(names.get(i));
                 other.aliases.add(aliases.get(i));
+                other.columns.add(columns.get(i));
             }
         }
     }

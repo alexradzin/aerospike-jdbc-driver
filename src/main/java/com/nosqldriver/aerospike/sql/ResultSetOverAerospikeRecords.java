@@ -1,17 +1,19 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.Record;
+import com.nosqldriver.sql.DataColumn;
 
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
     private final Record[] records;
     private int currentIndex = -1;
 
-    public ResultSetOverAerospikeRecords(String schema, String[] names, Record[] records) {
-        super(schema, names);
+    public ResultSetOverAerospikeRecords(String schema, String[] names, List<DataColumn> columns, Record[] records) {
+        super(schema, names, columns);
         this.records = Arrays.stream(records).filter(Objects::nonNull).toArray(Record[]::new);
     }
 

@@ -14,12 +14,12 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
     private final Map<String, Integer> nameToIndex;
     private List<?> currentRecord = null;
 
-    public ListRecordSet(String schema, String[] names, Iterable<List<?>> data) {
-        this(schema, names, discoverTypes(names.length, data), data);
+    public ListRecordSet(String schema, String[] names, List<DataColumn> columns, Iterable<List<?>> data) {
+        this(schema, names, discoverTypes(names.length, data), columns, data);
     }
 
-    public ListRecordSet(String schema, String[] names, int[] types, Iterable<List<?>> data) {
-        super(schema, names);
+    public ListRecordSet(String schema, String[] names, int[] types, List<DataColumn> columns, Iterable<List<?>> data) {
+        super(schema, names, columns);
         this.names = names;
         this.types = types;
         this.it = data.iterator();
@@ -56,7 +56,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
         return new SimpleResultSetMetaData(null, schema, names, names, types);
     }
 
-    private static int[] discoverTypes(int nColumns, Iterable<List<?>> data) {
+    public static int[] discoverTypes(int nColumns, Iterable<List<?>> data) {
         int[] types = new int[nColumns];
         int rowIndex = 0;
         for (List<?> row : data) {

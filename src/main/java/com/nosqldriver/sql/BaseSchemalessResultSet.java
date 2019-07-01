@@ -24,6 +24,8 @@ import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -35,6 +37,7 @@ import static java.util.Optional.ofNullable;
 public abstract class BaseSchemalessResultSet<R> implements ResultSet {
     protected final String schema;
     private final String[] names;
+    private final List<DataColumn> columns;
     private boolean wasNull = false;
     private volatile SQLWarning sqlWarning;
     private volatile int index = 0;
@@ -42,9 +45,10 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
     private volatile boolean closed = false;
 
 
-    protected BaseSchemalessResultSet(String schema, String[] names) {
+    protected BaseSchemalessResultSet(String schema, String[] names, List<DataColumn> columns) {
         this.schema = schema;
         this.names = names;
+        this.columns = Collections.unmodifiableList(columns);
     }
 
 

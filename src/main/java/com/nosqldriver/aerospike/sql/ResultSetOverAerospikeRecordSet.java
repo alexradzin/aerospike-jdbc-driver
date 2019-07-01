@@ -2,15 +2,17 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.Record;
 import com.aerospike.client.query.RecordSet;
+import com.nosqldriver.sql.DataColumn;
 
 import java.sql.SQLException;
+import java.util.List;
 
 
 public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
     private final RecordSet rs;
 
-    public ResultSetOverAerospikeRecordSet(String schema, String[] names, RecordSet rs) {
-        super(schema, names);
+    public ResultSetOverAerospikeRecordSet(String schema, String[] names, List<DataColumn> columns, RecordSet rs) {
+        super(schema, names, columns);
         this.rs = rs;
     }
 

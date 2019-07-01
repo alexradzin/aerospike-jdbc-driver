@@ -4,19 +4,18 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeResultSet;
+import com.nosqldriver.sql.DataColumn;
 
 import java.sql.ResultSet;
+import java.util.List;
 
 public class AerospikeAggregationQuery extends AerospikeQuery<Statement, QueryPolicy> {
-    private final String[] aliases;
-
-    public AerospikeAggregationQuery(String schema, String[] names, String[] aliases, Statement statement, QueryPolicy policy) {
-        super(schema, names, statement, policy);
-        this.aliases = aliases;
+    public AerospikeAggregationQuery(String schema, String[] names, List<DataColumn> columns, Statement statement, QueryPolicy policy) {
+        super(schema, names, columns, statement, policy);
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeResultSet(schema, names, client.queryAggregate(policy, criteria));
+        return new ResultSetOverAerospikeResultSet(schema, names, columns, client.queryAggregate(policy, criteria));
     }
 }

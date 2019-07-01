@@ -5,6 +5,7 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.policy.WritePolicy;
+import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ListRecordSet;
 
 import java.sql.ResultSet;
@@ -16,6 +17,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
+import static java.util.Collections.emptyList;
+
 public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>, WritePolicy> {
     private final String set;
     private final int indexOfPK;
@@ -23,8 +26,8 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
     public final static ThreadLocal<Integer> updatedRecordsCount = new ThreadLocal<>();
 
 
-    public AerospikeInsertQuery(String schema, String set, String[] names, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
-        super(schema, names, data, policy);
+    public AerospikeInsertQuery(String schema, String set, String[] names, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
+        super(schema, names, columns, data, policy);
         this.set = set;
         this.skipDuplicates = skipDuplicates;
         Arrays.stream(names).filter("PK"::equals).findFirst().orElseThrow(() -> new IllegalArgumentException("PK is not specified"));
@@ -58,7 +61,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
         updatedRecordsCount.set(n);
 
-        return new ListRecordSet(schema, new String[0], new int[0], Collections.emptyList());
+        return new ListRecordSet(schema, new String[0], new int[0], emptyList(), emptyList());
     }
 
     private Key key(List<Object> row) {

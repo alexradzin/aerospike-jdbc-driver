@@ -18,6 +18,7 @@ import static java.sql.ResultSet.CLOSE_CURSORS_AT_COMMIT;
 import static java.sql.ResultSet.CONCUR_READ_ONLY;
 import static java.sql.ResultSet.FETCH_FORWARD;
 import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
+import static java.util.Collections.emptyList;
 
 public class AerospikeStatement implements java.sql.Statement {
     private final IAerospikeClient client;
@@ -59,7 +60,7 @@ public class AerospikeStatement implements java.sql.Statement {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-                return new ListRecordSet(statement.schema, new String[0], new int[0], Collections.emptyList());
+                return new ListRecordSet(statement.schema, new String[0], new int[0], emptyList(), emptyList());
             }
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {

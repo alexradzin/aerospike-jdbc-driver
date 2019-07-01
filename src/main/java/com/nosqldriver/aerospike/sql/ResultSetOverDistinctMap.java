@@ -1,6 +1,7 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.query.ResultSet;
+import com.nosqldriver.sql.DataColumn;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,8 +45,8 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     private boolean nextResult = false;
     private Map<String, Object> sampleRecord;
 
-    public ResultSetOverDistinctMap(String schema, String[] names, ResultSet rs) {
-        super(schema, names, rs);
+    public ResultSetOverDistinctMap(String schema, String[] names, List<DataColumn> columns, ResultSet rs) {
+        super(schema, names, columns, rs);
         this.names = names;
     }
 
