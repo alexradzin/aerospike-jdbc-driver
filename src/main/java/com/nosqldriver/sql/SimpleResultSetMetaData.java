@@ -5,21 +5,14 @@ import java.sql.SQLException;
 
 import static com.nosqldriver.sql.TypeConversion.sqlTypeNames;
 
-//TODO: separate SimpleResultSetMetaData and SimpleResultSetMetaDataWrapper
 public class SimpleResultSetMetaData implements ResultSetMetaData {
-    private final ResultSetMetaData md;
     private final String schema;
     private final String[] names;
     private final String[] aliases;
     private final int[] types;
 
 
-    public SimpleResultSetMetaData(ResultSetMetaData md, String schema, String[] names, String[] aliases) {
-        this(md, schema, names, aliases, new int[names.length]);
-    }
-
-    public SimpleResultSetMetaData(ResultSetMetaData md, String schema, String[] names, String[] aliases, int[] types) {
-        this.md = md;
+    public SimpleResultSetMetaData(String schema, String[] names, String[] aliases, int[] types) {
         this.schema = schema;
         this.names = names;
         this.aliases = aliases;
@@ -34,7 +27,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int getColumnCount() throws SQLException {
-        return names.length == 0 && md != null ? md.getColumnCount() : names.length;
+        return names.length;
     }
 
     @Override
@@ -84,7 +77,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getSchemaName(int column) throws SQLException {
-        return schema != null ? schema : md != null ? md.getSchemaName(column) : null;
+        return schema;
     }
 
     @Override
@@ -109,7 +102,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int getColumnType(int column) throws SQLException {
-        return md != null ? md.getColumnType(column) : types != null && types.length >= column ? types[column - 1] : 0;
+        return types != null && types.length >= column ? types[column - 1] : 0;
     }
 
     @Override

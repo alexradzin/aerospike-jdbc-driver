@@ -43,7 +43,7 @@ class CompositeResultSetMetaDataFactory {
             mainMetaData = false;
         }
 
-        return new SimpleResultSetMetaData(null, schema, names, aliases, types);
+        return new SimpleResultSetMetaData(schema, names, aliases, types);
     }
 
     private int update(String[] names, String[] aliases, int[] types, int start, String name, String alias, int type) {

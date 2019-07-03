@@ -258,13 +258,13 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
         String[] aliases = columns.stream().map(c -> Optional.ofNullable(c.getLabel()).orElseGet(c::getName)).toArray(String[]::new);
 
         if (!shouldDiscover) {
-            return new SimpleResultSetMetaData(null, schema, names, aliases, types);
+            return new SimpleResultSetMetaData(schema, names, aliases, types);
         }
 
 
         R sampleRecord = getSampleRecord();
         if (sampleRecord == null) {
-            return new SimpleResultSetMetaData(null, schema, names, aliases, types);
+            return new SimpleResultSetMetaData(schema, names, aliases, types);
         }
 
         Map<String, Object> data = getData(sampleRecord);
@@ -283,7 +283,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
             }
         }
 
-        return new SimpleResultSetMetaData(null, schema, resultNames, resultNames, types);
+        return new SimpleResultSetMetaData(schema, resultNames, resultNames, types);
     }
 
 

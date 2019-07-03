@@ -277,12 +277,23 @@ public class ResultSetWrapper implements ResultSet {
             int[] actualTypesArray = new int[actualTypes.size()];
             range(0, actualTypesArray.length).forEach(i -> actualTypesArray[i] = actualTypes.get(i));
 
-            return new SimpleResultSetMetaData(rs.getMetaData(), schemaName, actualNames.toArray(new String[0]), actualAliases.toArray(new String[0]), actualTypesArray);
+            return new SimpleResultSetMetaData(schemaName, actualNames.toArray(new String[0]), actualAliases.toArray(new String[0]), actualTypesArray);
         }
 
 
+        int[] types = new int[names.size()];
+        String schema = null;
+        if (rs != null) {
+            ResultSetMetaData md = rs.getMetaData();
+            for (int i = 0; i < types.length; i++) {
+                types[i] = md.getColumnType(i + 1);
+            }
+            if (md.getColumnCount() > 0) {
+                schema = md.getSchemaName(1);
+            }
+        }
 
-        return new SimpleResultSetMetaData(rs == null ? null : rs.getMetaData(), null, names.toArray(new String[0]), aliases.toArray(new String[0]));
+        return new SimpleResultSetMetaData(schema, names.toArray(new String[0]), aliases.toArray(new String[0]), types);
     }
 
 

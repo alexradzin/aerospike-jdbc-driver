@@ -50,7 +50,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
         for (int i = 0; i < types.length; i++) {
             types[i] = types2[i];
         }
-        return new SimpleResultSetMetaData(null, schema, columns.stream().map(DataColumn::getName).toArray(String[]::new), columns.stream().map(DataColumn::getLabel).toArray(String[]::new), types);
+        return new SimpleResultSetMetaData(schema, columns.stream().map(DataColumn::getName).toArray(String[]::new), columns.stream().map(DataColumn::getLabel).toArray(String[]::new), types);
     }
 
     public static int[] discoverTypes(int nColumns, Iterable<List<?>> data) {

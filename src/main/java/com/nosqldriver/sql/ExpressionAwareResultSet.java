@@ -299,7 +299,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
                 allNames[i] = md.getColumnName(i + 1);
                 allAliases[i] = md.getColumnLabel(i + 1);
             }
-            return new SimpleResultSetMetaData(null, md.getSchemaName(1), allNames, allAliases, allTypes);
+            return new SimpleResultSetMetaData(md.getSchemaName(1), allNames, allAliases, allTypes);
         }
         return md;
     }
