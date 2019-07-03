@@ -60,7 +60,7 @@ public class AerospikeStatement implements java.sql.Statement {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-                return new ListRecordSet(statement.schema, new String[0], new int[0], emptyList(), emptyList());
+                return new ListRecordSet(statement.schema, emptyList(), emptyList());
             }
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {

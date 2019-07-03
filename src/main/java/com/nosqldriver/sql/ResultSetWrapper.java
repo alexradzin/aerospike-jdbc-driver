@@ -36,15 +36,17 @@ public class ResultSetWrapper implements ResultSet {
     private final Map<String, String> aliasToName; // alias to name map
     protected List<String> names;
     protected List<String> aliases;
+    protected List<DataColumn> columns;
 
     @VisibleForPackage ResultSetWrapper(ResultSet rs) {
-        this(rs, Collections.emptyList(), Collections.emptyList());
+        this(rs, Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
     }
 
-    public ResultSetWrapper(ResultSet rs, List<String> names, List<String> aliases) {
+    public ResultSetWrapper(ResultSet rs, List<String> names, List<String> aliases, List<DataColumn> columns) {
         this.rs = rs;
         this.names = names;
         this.aliases = aliases;
+        this.columns = Collections.unmodifiableList(columns);
         aliasToName = range(0, names.size()).boxed().filter(i -> names.get(i) != null && aliases.get(i) != null).collect(toMap(aliases::get, names::get));
     }
     

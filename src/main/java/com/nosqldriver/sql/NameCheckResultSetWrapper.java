@@ -7,8 +7,8 @@ import java.util.List;
 import static java.lang.String.format;
 
 public class NameCheckResultSetWrapper extends ResultSetWrapper {
-    public NameCheckResultSetWrapper(ResultSet rs, List<String> names, List<String> aliases) {
-        super(rs, names, aliases);
+    public NameCheckResultSetWrapper(ResultSet rs, List<String> names, List<String> aliases, List<DataColumn> columns) {
+        super(rs, names, aliases, columns);
     }
 
     @Override

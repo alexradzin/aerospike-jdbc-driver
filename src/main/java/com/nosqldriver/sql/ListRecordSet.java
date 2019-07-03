@@ -8,22 +8,14 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class ListRecordSet extends ValueTypedResultSet<List<?>> {
-    private String[] names;
-    private int[] types;
     private final Iterator<List<?>> it;
     private final Map<String, Integer> nameToIndex;
     private List<?> currentRecord = null;
 
-    public ListRecordSet(String schema, String[] names, List<DataColumn> columns, Iterable<List<?>> data) {
-        this(schema, names, discoverTypes(names.length, data), columns, data);
-    }
-
-    public ListRecordSet(String schema, String[] names, int[] types, List<DataColumn> columns, Iterable<List<?>> data) {
-        super(schema, names, columns);
-        this.names = names;
-        this.types = types;
+    public ListRecordSet(String schema, List<DataColumn> columns, Iterable<List<?>> data) {
+        super(schema, columns);
         this.it = data.iterator();
-        nameToIndex = IntStream.range(0, names.length).boxed().collect(Collectors.toMap(i -> names[i], i -> i));
+        nameToIndex = IntStream.range(0, columns.size()).boxed().collect(Collectors.toMap(i -> columns.get(i).getName(), i -> i));
     }
 
     @Override
@@ -34,7 +26,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
 
     @Override
     protected Map<String, Object> getData(List<?> record) {
-        return IntStream.range(0, names.length).boxed().collect(Collectors.toMap(i -> names[i], record::get));
+        return IntStream.range(0, columns.size()).boxed().collect(Collectors.toMap(i -> columns.get(i).getName(), record::get));
     }
 
     @Override
@@ -53,7 +45,12 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
 
     @Override
     public ResultSetMetaData getMetaData() {
-        return new SimpleResultSetMetaData(null, schema, names, names, types);
+        int[] types = new int[columns.size()];
+        Integer[] types2 = columns.stream().map(DataColumn::getType).toArray(Integer[]::new);
+        for (int i = 0; i < types.length; i++) {
+            types[i] = types2[i];
+        }
+        return new SimpleResultSetMetaData(null, schema, columns.stream().map(DataColumn::getName).toArray(String[]::new), columns.stream().map(DataColumn::getLabel).toArray(String[]::new), types);
     }
 
     public static int[] discoverTypes(int nColumns, Iterable<List<?>> data) {

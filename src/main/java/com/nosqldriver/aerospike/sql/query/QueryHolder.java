@@ -240,11 +240,11 @@ public class QueryHolder {
 
 
     private Function<IAerospikeClient, ResultSet> wrap(Function<IAerospikeClient, ResultSet> nakedQuery) {
-        Function<IAerospikeClient, ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), names, aliases), hiddenNames, expressions, aliases);
+        Function<IAerospikeClient, ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), names, aliases, columns), hiddenNames, expressions, aliases, columns);
         Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(expressioned.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) : expressioned;
         Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? limited : client -> new JoinedResultSet(limited.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), new ResultSetMetadataSupplier(client, join), join.skipIfMissing)).collect(Collectors.toList()));
 
-        return client -> new NameCheckResultSetWrapper(joined.apply(client), names, aliases);
+        return client -> new NameCheckResultSetWrapper(joined.apply(client), names, aliases, columns);
     }
 
     @SuppressWarnings("unchecked")
@@ -372,7 +372,7 @@ public class QueryHolder {
 
                 @Override
                 protected String getText(Expression expr) {
-                    return expr.toString();
+                    return "distinct" + expr.toString();
                 }
 
                 @Override

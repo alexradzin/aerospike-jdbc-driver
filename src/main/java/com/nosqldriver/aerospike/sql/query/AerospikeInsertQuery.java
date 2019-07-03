@@ -61,7 +61,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
         updatedRecordsCount.set(n);
 
-        return new ListRecordSet(schema, new String[0], new int[0], emptyList(), emptyList());
+        return new ListRecordSet(schema, emptyList(), emptyList());
     }
 
     private Key key(List<Object> row) {

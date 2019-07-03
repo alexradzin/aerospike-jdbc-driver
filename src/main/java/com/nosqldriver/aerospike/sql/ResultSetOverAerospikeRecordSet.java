@@ -11,8 +11,8 @@ import java.util.List;
 public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
     private final RecordSet rs;
 
-    public ResultSetOverAerospikeRecordSet(String schema, String[] names, List<DataColumn> columns, RecordSet rs) {
-        super(schema, names, columns);
+    public ResultSetOverAerospikeRecordSet(String schema, List<DataColumn> columns, RecordSet rs) {
+        super(schema, columns);
         this.rs = rs;
     }
 

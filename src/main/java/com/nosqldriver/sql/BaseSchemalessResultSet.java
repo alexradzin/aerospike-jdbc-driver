@@ -27,6 +27,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -36,8 +37,7 @@ import static java.util.Optional.ofNullable;
 
 public abstract class BaseSchemalessResultSet<R> implements ResultSet {
     protected final String schema;
-    private final String[] names;
-    private final List<DataColumn> columns;
+    protected final List<DataColumn> columns;
     private boolean wasNull = false;
     private volatile SQLWarning sqlWarning;
     private volatile int index = 0;
@@ -45,9 +45,8 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
     private volatile boolean closed = false;
 
 
-    protected BaseSchemalessResultSet(String schema, String[] names, List<DataColumn> columns) {
+    protected BaseSchemalessResultSet(String schema, List<DataColumn> columns) {
         this.schema = schema;
-        this.names = names;
         this.columns = Collections.unmodifiableList(columns);
     }
 
@@ -244,15 +243,35 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
+        String[] names = columns.stream().map(DataColumn::getName).toArray(String[]::new);
+        //Map<String, Integer> name2index = IntStream.range(0, names.length).boxed().filter(i -> names[i] != null).collect(Collectors.toMap(i -> names[i], i -> i));
+        int[] types = new int[names.length];
+        boolean shouldDiscover = names.length == 0;
+        for (int i = 0; i < types.length; i++) {
+            int type = columns.get(i).getType();
+            types[i] = type;
+            if (type == 0) {
+                shouldDiscover = true;
+            }
+        }
+
+        String[] aliases = columns.stream().map(c -> Optional.ofNullable(c.getLabel()).orElseGet(c::getName)).toArray(String[]::new);
+
+        if (!shouldDiscover) {
+            return new SimpleResultSetMetaData(null, schema, names, aliases, types);
+        }
+
+
         R sampleRecord = getSampleRecord();
         if (sampleRecord == null) {
-            return new SimpleResultSetMetaData(null, schema, names, names);
+            return new SimpleResultSetMetaData(null, schema, names, aliases, types);
         }
 
         Map<String, Object> data = getData(sampleRecord);
         String[] resultNames = names.length != 0 ? names : data.keySet().toArray(new String[0]);
+        types = new int[resultNames.length];
 
-        int[] types = new int[resultNames.length];
+        //int[] types = new int[resultNames.length];
 
         for(int i = 0; i < resultNames.length; i++) {
             Object value = data.get(resultNames[i]);
@@ -282,8 +301,8 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
 
     @Override
     public int findColumn(String columnLabel) throws SQLException {
-        return IntStream.range(0, names.length)
-                .filter(i -> columnLabel.equals(names[i]))
+        return IntStream.range(0, columns.size())
+                .filter(i -> columnLabel.equals(columns.get(i).getName()))
                 .findFirst().orElseThrow(() -> new SQLException(format("Column %s does not exist", columnLabel)));
     }
 

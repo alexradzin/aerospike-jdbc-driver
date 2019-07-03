@@ -17,6 +17,6 @@ public class AerospikeQueryByPk extends AerospikeQuery<Key, Policy> {
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeRecords(schema, names, columns, new Record[] {client.get(policy, criteria)});
+        return new ResultSetOverAerospikeRecords(schema, columns, new Record[] {client.get(policy, criteria)});
     }
 }

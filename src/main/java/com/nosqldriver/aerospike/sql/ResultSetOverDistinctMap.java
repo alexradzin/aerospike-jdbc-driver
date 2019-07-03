@@ -46,7 +46,7 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     private Map<String, Object> sampleRecord;
 
     public ResultSetOverDistinctMap(String schema, String[] names, List<DataColumn> columns, ResultSet rs) {
-        super(schema, names, columns, rs);
+        super(schema, columns, rs);
         this.names = names;
     }
 

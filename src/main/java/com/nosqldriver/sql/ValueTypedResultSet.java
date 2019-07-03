@@ -5,8 +5,8 @@ import java.util.List;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 
 abstract class ValueTypedResultSet<R> extends BaseSchemalessResultSet<R> {
-    protected ValueTypedResultSet(String schema, String[] names, List<DataColumn> columns) {
-        super(schema, names, columns);
+    protected ValueTypedResultSet(String schema, List<DataColumn> columns) {
+        super(schema, columns);
     }
 
     @Override

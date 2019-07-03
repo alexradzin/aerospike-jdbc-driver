@@ -13,8 +13,8 @@ import static com.nosqldriver.sql.TypeTransformer.cast;
 
 public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map<String, Object>> {
     protected final ResultSet rs;
-    public ResultSetOverAerospikeResultSet(String schema, String[] names, List<DataColumn> columns, ResultSet rs) {
-        super(schema, names, columns);
+    public ResultSetOverAerospikeResultSet(String schema, List<DataColumn> columns, ResultSet rs) {
+        super(schema, columns);
         this.rs = rs;
     }
 
