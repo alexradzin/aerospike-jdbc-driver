@@ -22,7 +22,7 @@ public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statemen
     public ResultSet apply(IAerospikeClient client) {
         if (criteria.getSetName() == null) {
             // pure calculations statement like "select 1+2"
-            return new ResultSetWrapper(null, asList(names), asList(names), columns) {
+            return new ResultSetWrapper(null, columns) {
                 private boolean next = true;
                 @Override
                 public boolean next() throws SQLException {

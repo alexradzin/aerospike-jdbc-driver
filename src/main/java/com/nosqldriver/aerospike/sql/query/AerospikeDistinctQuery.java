@@ -16,6 +16,6 @@ public class AerospikeDistinctQuery extends AerospikeQuery<Statement, QueryPolic
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverDistinctMap(schema, set, names, columns, client.queryAggregate(policy, criteria));
+        return new ResultSetOverDistinctMap(schema, set, columns, client.queryAggregate(policy, criteria));
     }
 }

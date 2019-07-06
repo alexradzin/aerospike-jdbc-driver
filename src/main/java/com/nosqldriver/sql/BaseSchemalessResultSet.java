@@ -273,7 +273,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
 
         Map<String, Object> data = getData(sampleRecord);
         if (columns.isEmpty()) {
-            return new DataColumnBasedResultSetMetaData(data.entrySet().stream().map(e -> DATA.create(schema, "", e.getKey(), e.getKey()).withType(e.getValue() != null ? sqlTypes.get(e.getValue().getClass()) : 0)).collect(Collectors.toList()));
+            return new DataColumnBasedResultSetMetaData(data.entrySet().stream().map(e -> DATA.create(schema, table, e.getKey(), e.getKey()).withType(e.getValue() != null ? sqlTypes.get(e.getValue().getClass()) : 0)).collect(Collectors.toList()));
         }
 
         columns.stream().filter(c -> c.getType() == 0).filter(c -> data.containsKey(c.getName())).forEach(c ->  c.withType(sqlTypes.get(data.get(c.getName()).getClass())));

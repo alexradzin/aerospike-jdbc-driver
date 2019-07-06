@@ -1,7 +1,5 @@
 package com.nosqldriver.sql;
 
-import com.nosqldriver.VisibleForPackage;
-
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -25,29 +23,21 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.IntStream.range;
 
 public class ResultSetWrapper implements ResultSet {
     private final ResultSet rs;
     private final Map<String, String> aliasToName; // alias to name map
-    protected List<String> names;
-    protected List<String> aliases;
     protected List<DataColumn> columns;
 
-    @VisibleForPackage ResultSetWrapper(ResultSet rs) {
-        this(rs, Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+    protected ResultSetWrapper(ResultSet rs) {
+        this(rs, Collections.emptyList());
     }
 
-    public ResultSetWrapper(ResultSet rs, List<String> names, List<String> aliases, List<DataColumn> columns) {
+    public ResultSetWrapper(ResultSet rs, List<DataColumn> columns) {
         this.rs = rs;
-        this.names = names;
-        this.aliases = aliases;
         this.columns = Collections.unmodifiableList(columns);
-        aliasToName = range(0, names.size()).boxed().filter(i -> names.get(i) != null && aliases.get(i) != null).collect(toMap(aliases::get, names::get));
+        aliasToName = columns.stream().filter(c -> c.getName() != null && c.getLabel() != null).collect(Collectors.toMap(DataColumn::getLabel, DataColumn::getName));
     }
     
     protected String getName(String alias) {
@@ -249,7 +239,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        if (names.isEmpty()) {
+        if (columns.isEmpty()) {
             return rs.getMetaData();
         }
         DataColumnBasedResultSetMetaData md = new DataColumnBasedResultSetMetaData(columns);
@@ -257,10 +247,6 @@ public class ResultSetWrapper implements ResultSet {
             md.updateTypes(rs.getMetaData());
         }
         return md;
-    }
-
-    private <T> List<T> list(ResultSetMetaData md, BiFunction<ResultSetMetaData, Integer, T> getter) throws SQLException {
-        return range(0, md.getColumnCount()).mapToObj(i -> getter.apply(md, i + 1)).collect(Collectors.toList());
     }
 
     @Override

@@ -3,12 +3,13 @@ package com.nosqldriver.sql;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Objects;
 
 import static java.lang.String.format;
 
 public class NameCheckResultSetWrapper extends ResultSetWrapper {
-    public NameCheckResultSetWrapper(ResultSet rs, List<String> names, List<String> aliases, List<DataColumn> columns) {
-        super(rs, names, aliases, columns);
+    public NameCheckResultSetWrapper(ResultSet rs, List<DataColumn> columns) {
+        super(rs, columns);
     }
 
     @Override
@@ -18,7 +19,7 @@ public class NameCheckResultSetWrapper extends ResultSetWrapper {
 
 
     private String validate(String alias) {
-        if (!aliases.contains(alias) && !names.contains(alias) && !names.isEmpty()) {
+        if (!columns.isEmpty() && columns.stream().noneMatch(c -> Objects.equals(alias, c.getLabel()) || (c.getLabel() == null && Objects.equals(alias, c.getName())))) {
             throwAny(new SQLException(format("Column '%s' not found", alias)));
         }
         return alias;
