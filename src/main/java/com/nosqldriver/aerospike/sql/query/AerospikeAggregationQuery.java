@@ -10,8 +10,8 @@ import java.sql.ResultSet;
 import java.util.List;
 
 public class AerospikeAggregationQuery extends AerospikeQuery<Statement, QueryPolicy> {
-    public AerospikeAggregationQuery(String schema, String set, String[] names, List<DataColumn> columns, Statement statement, QueryPolicy policy) {
-        super(schema, set, names, columns, statement, policy);
+    public AerospikeAggregationQuery(String schema, String set, List<DataColumn> columns, Statement statement, QueryPolicy policy) {
+        super(schema, set, columns, statement, policy);
     }
 
     @Override

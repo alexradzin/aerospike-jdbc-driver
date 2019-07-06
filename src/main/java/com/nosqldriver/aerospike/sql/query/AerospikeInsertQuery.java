@@ -24,14 +24,14 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
     public final static ThreadLocal<Integer> updatedRecordsCount = new ThreadLocal<>();
 
 
-    public AerospikeInsertQuery(String schema, String set, String[] names, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
-        super(schema, set, names, columns, data, policy);
+    public AerospikeInsertQuery(String schema, String set, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
+        super(schema, set, columns, data, policy);
         this.skipDuplicates = skipDuplicates;
-        Arrays.stream(names).filter("PK"::equals).findFirst().orElseThrow(() -> new IllegalArgumentException("PK is not specified"));
+        columns.stream().map(DataColumn::getName).filter("PK"::equals).findFirst().orElseThrow(() -> new IllegalArgumentException("PK is not specified"));
 
         indexOfPK =
-                IntStream.range(0, names.length)
-                        .filter(i -> "PK".equals(names[i]))
+                IntStream.range(0, columns.size())
+                        .filter(i -> "PK".equals(columns.get(i).getName()))
                         .findFirst()
                         .orElseThrow(() -> new IllegalStateException("No PK in insert statement"));
     }
@@ -81,10 +81,10 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
 
     private Bin[] bins(List<Object> row) {
-        Bin[] bins = new Bin[names.length - 1];
-        for (int i = 0, j = 0; i < names.length; i++) {
+        Bin[] bins = new Bin[columns.size() - 1];
+        for (int i = 0, j = 0; i < columns.size(); i++) {
             if (i != indexOfPK) {
-                bins[j] = new Bin(names[i], row.get(i));
+                bins[j] = new Bin(columns.get(i).getName(), row.get(i));
                 j++;
             }
         }

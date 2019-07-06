@@ -59,7 +59,6 @@ public class QueryHolder {
     private List<String> tables = new ArrayList<>();
     private List<String> names = new ArrayList<>();
     private List<String> aliases = new ArrayList<>();
-    private List<String> expressions = new ArrayList<>();
     private Collection<String> hiddenNames = new HashSet<>();
     private Collection<String> aggregatedFields = null;
     private Collection<String> groupByFields = null;
@@ -106,12 +105,10 @@ public class QueryHolder {
             return wrap(secondayIndexQuery);
         }
         if (!data.isEmpty()) {
-            return new AerospikeInsertQuery(schema, set, names.toArray(new String[0]), columns, data, policyProvider.getWritePolicy(), skipDuplicates);
+            return new AerospikeInsertQuery(schema, set, columns, data, policyProvider.getWritePolicy(), skipDuplicates);
         }
 
         return wrap(createSecondaryIndexQuery());
-        //return new AerospikeBatchQueryBySecondaryIndex(schema, getNames(), statement, policyProvider.getQueryPolicy());
-        //throw new IllegalStateException("Query was not created"); //TODO: pass SQL here to attach it to the exception
     }
 
     @SafeVarargs
@@ -161,7 +158,7 @@ public class QueryHolder {
                     names.stream().filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
-            return new AerospikeDistinctQuery(schema, getNames(false), columns, statement, policyProvider.getQueryPolicy());
+            return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy());
         }
 
         if (aggregatedFields != null) {
@@ -183,26 +180,26 @@ public class QueryHolder {
                 String groupField = m.group(1);
                 statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new StringValue(groupField));
                 names = new ArrayList<>(aggregatedFields);
-                return new AerospikeDistinctQuery(schema, aggregatedFields.toArray(new String[0]), columns, statement, policyProvider.getQueryPolicy());
+                return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy());
             }
 
 
             statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", fieldsForAggregation);
-            return new AerospikeAggregationQuery(schema, set, getNames(false), columns, statement, policyProvider.getQueryPolicy());
+            return new AerospikeAggregationQuery(schema, set, columns, statement, policyProvider.getQueryPolicy());
         }
 
 
-        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, getNames(false), columns, statement, policyProvider.getQueryPolicy());
+        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, columns, statement, policyProvider.getQueryPolicy());
     }
 
     @VisibleForPackage
     void createPkQuery(Key key) {
-        pkQuery = new AerospikeQueryByPk(schema, getNames(false), columns, key, policyProvider.getPolicy());
+        pkQuery = new AerospikeQueryByPk(schema, columns, key, policyProvider.getPolicy());
     }
 
     @VisibleForPackage
     void createPkBatchQuery(Key ... keys) {
-        pkBatchQuery = new AerospikeBatchQueryByPk(schema, set, getNames(false), columns, keys, policyProvider.getBatchPolicy());
+        pkBatchQuery = new AerospikeBatchQueryByPk(schema, set, columns, keys, policyProvider.getBatchPolicy());
     }
 
     public String getSetName() {
@@ -287,8 +284,6 @@ public class QueryHolder {
                 public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     tables.add(getTable(expr));
                     (visible ? names : hiddenNames).add(getText(expr));
-                    //names.add(getText(expr));
-                    expressions.add(null);
                     aliases.add(alias);
                     columns.add((visible ? DATA : HIDDEN).create(getCatalog(expr), getTable(expr), getText(expr), alias));
                     statement.setBinNames(getNames(true));
@@ -315,7 +310,6 @@ public class QueryHolder {
                 public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     String column = getText(expr);
                     names.add(null);
-                    expressions.add(column);
                     aliases.add(alias);
                     hiddenNames.addAll(expressionResultSetWrappingFactory.getVariableNames(column));
                     columns.add(EXPRESSION.create(getCatalog(expr), getTable(expr), getText(expr), alias));
@@ -401,11 +395,6 @@ public class QueryHolder {
         joins.add(join);
         return join;
     }
-
-//    public QueryHolder getCurrentJoin() {
-//        return joins.get(joins.size() - 1);
-//    }
-
 
     private static class JoinRetriever implements Function<ResultSet, ResultSet> {
         private final IAerospikeClient client;
@@ -534,6 +523,7 @@ public class QueryHolder {
 
     public void addName(String name)  {
         names.add(name);
+        columns.add(DATA.create(schema, set, name, null));
     }
 
     public void addData(List<Object> dataRow)  {

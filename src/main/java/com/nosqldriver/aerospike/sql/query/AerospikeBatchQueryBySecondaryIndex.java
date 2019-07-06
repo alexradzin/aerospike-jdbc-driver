@@ -11,11 +11,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
-import static java.util.Arrays.asList;
-
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy> {
-    public AerospikeBatchQueryBySecondaryIndex(String schema, String[] names, List<DataColumn> columns, Statement statement, QueryPolicy policy) {
-        super(schema, statement.getSetName(), names, columns, statement, policy);
+    public AerospikeBatchQueryBySecondaryIndex(String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy) {
+        super(schema, statement.getSetName(), columns, statement, policy);
     }
 
     @Override

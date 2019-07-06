@@ -259,8 +259,6 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
             }
         }
 
-        String[] aliases = columns.stream().map(c -> Optional.ofNullable(c.getLabel()).orElseGet(c::getName)).toArray(String[]::new);
-
         if (!shouldDiscover) {
             return new DataColumnBasedResultSetMetaData(columns);
         }
