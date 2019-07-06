@@ -12,8 +12,8 @@ public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
     private final Record[] records;
     private int currentIndex = -1;
 
-    public ResultSetOverAerospikeRecords(String schema, List<DataColumn> columns, Record[] records) {
-        super(schema, columns);
+    public ResultSetOverAerospikeRecords(String schema, String table, List<DataColumn> columns, Record[] records) {
+        super(schema, table, columns);
         this.records = Arrays.stream(records).filter(Objects::nonNull).toArray(Record[]::new);
     }
 

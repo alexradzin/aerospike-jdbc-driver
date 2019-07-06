@@ -249,53 +249,15 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        // TODO: this if is a patch to work around problem of select *. Better solution must be found here.
         if (names.isEmpty()) {
-            ResultSetMetaData metadata = rs.getMetaData();
-            List<String> actualNames = list(metadata, (md, i) -> {
-                try {
-                    return md.getColumnName(i);
-                } catch (SQLException e) {
-                    throw new IllegalStateException(e);
-                }
-            });
-            List<String> actualAliases = list(metadata, (md, i) -> {
-                try {
-                    return md.getColumnLabel(i);
-                } catch (SQLException e) {
-                    throw new IllegalStateException(e);
-                }
-            });
-            List<Integer> actualTypes = list(metadata, (md, i) -> {
-                try {
-                    return md.getColumnType(i);
-                } catch (SQLException e) {
-                    throw new IllegalStateException(e);
-                }
-            });
-            String schemaName = metadata instanceof SimpleResultSetMetaData ? ((SimpleResultSetMetaData)metadata).getSchema() : null;
-            int[] actualTypesArray = new int[actualTypes.size()];
-            range(0, actualTypesArray.length).forEach(i -> actualTypesArray[i] = actualTypes.get(i));
-
-            return new SimpleResultSetMetaData(schemaName, actualNames.toArray(new String[0]), actualAliases.toArray(new String[0]), actualTypesArray);
+            return rs.getMetaData();
         }
-
-
-        int[] types = new int[names.size()];
-        String schema = null;
+        DataColumnBasedResultSetMetaData md = new DataColumnBasedResultSetMetaData(columns);
         if (rs != null) {
-            ResultSetMetaData md = rs.getMetaData();
-            for (int i = 0; i < types.length; i++) {
-                types[i] = md.getColumnType(i + 1);
-            }
-            if (md.getColumnCount() > 0) {
-                schema = md.getSchemaName(1);
-            }
+            md.updateTypes(rs.getMetaData());
         }
-
-        return new SimpleResultSetMetaData(schema, names.toArray(new String[0]), aliases.toArray(new String[0]), types);
+        return md;
     }
-
 
     private <T> List<T> list(ResultSetMetaData md, BiFunction<ResultSetMetaData, Integer, T> getter) throws SQLException {
         return range(0, md.getColumnCount()).mapToObj(i -> getter.apply(md, i + 1)).collect(Collectors.toList());

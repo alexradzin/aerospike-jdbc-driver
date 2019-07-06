@@ -11,12 +11,14 @@ import java.sql.ResultSet;
 import java.util.List;
 
 public class AerospikeQueryByPk extends AerospikeQuery<Key, Policy> {
+    private String set;
     public AerospikeQueryByPk(String schema, String[] names, List<DataColumn> columns, Key key, Policy policy) {
         super(schema, names, columns, key, policy);
+        set = key.setName;
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeRecords(schema, columns, new Record[] {client.get(policy, criteria)});
+        return new ResultSetOverAerospikeRecords(schema, set, columns, new Record[] {client.get(policy, criteria)});
     }
 }

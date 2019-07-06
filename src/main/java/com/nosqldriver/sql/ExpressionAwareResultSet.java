@@ -19,6 +19,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.System.currentTimeMillis;
@@ -252,57 +254,55 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        ResultSetMetaData md = rs.getMetaData();
-        int[] discoveredExpressionTypes = new int[evals.size()];
-        Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-        Collection<String> bound = bind(rs, names, evals, bindings);
-        int n = md.getColumnCount();
-        for (int i = 0; i < n; i++) {
-            String name = md.getColumnName(i + 1);
-            if (name != null && !bound.contains(name)) {
-                int type = md.getColumnType(i + 1);
-                Object value = null;
-                switch (type) {
-                    case Types.BIGINT: case Types.INTEGER: case Types.SMALLINT: value = currentTimeMillis(); break;
-                    case Types.DOUBLE: case Types.FLOAT: value = Math.PI * Math.E; break;
-                    case Types.VARCHAR: case Types.LONGNVARCHAR: value = ""; break;
-                    default: break; // do nothing
-                }
-                if (value != null) {
-                    bindings.put(name, value);
-                }
-            }
-        }
-
-        boolean typesFound = false;
-        for (int i = 0; i < evals.size(); i++) {
-            String e = evals.get(i);
-            if (e == null) {
-                continue;
-            }
-            Object result = eval(e);
-            if (result != null) {
-                Integer sqlType = TypeConversion.sqlTypes.get(result.getClass());
-                if (sqlType != null) {
-                    discoveredExpressionTypes[i] = sqlType;
-                    typesFound = true;
-                }
-            }
-        }
-
-        if (typesFound) {
-            int[] allTypes = new int[n];
-            String[] allNames = new String[n];
-            String[] allAliases = new String[n];
+        DataColumnBasedResultSetMetaData md = (DataColumnBasedResultSetMetaData)rs.getMetaData();
+        List<DataColumn> expressions = md.getColumns().stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getType() == 0).collect(Collectors.toList());
+        if (!expressions.isEmpty()) {
+            Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+            Collection<String> bound = bind(rs, names, evals, bindings);
+            int n = md.getColumnCount();
             for (int i = 0; i < n; i++) {
-                allTypes[i] = discoveredExpressionTypes[i] != 0 ? discoveredExpressionTypes[i] : md.getColumnType(i + 1);
-                allNames[i] = md.getColumnName(i + 1);
-                allAliases[i] = md.getColumnLabel(i + 1);
+                String name = md.getColumnName(i + 1);
+                if (name != null && !bound.contains(name)) {
+                    int type = md.getColumnType(i + 1);
+                    Object value = null;
+                    switch (type) {
+                        case Types.BIGINT:
+                        case Types.INTEGER:
+                        case Types.SMALLINT:
+                            value = currentTimeMillis();
+                            break;
+                        case Types.DOUBLE:
+                        case Types.FLOAT:
+                            value = Math.PI * Math.E;
+                            break;
+                        case Types.VARCHAR:
+                        case Types.LONGNVARCHAR:
+                            value = "";
+                            break;
+                        default:
+                            break; // do nothing
+                    }
+                    if (value != null) {
+                        bindings.put(name, value);
+                    }
+                }
             }
-            return new SimpleResultSetMetaData(md.getSchemaName(1), allNames, allAliases, allTypes);
+
+
+            for (DataColumn ec : expressions) {
+                String e = ec.getExpression();
+                Object result = eval(e);
+                if (result != null) {
+                    Integer sqlType = TypeConversion.sqlTypes.get(result.getClass());
+                    if (sqlType != null) {
+                        ec.withType(sqlType);
+                    }
+                }
+            }
         }
         return md;
     }
+
 
     private Collection<String> bind(ResultSet rs, Collection<String> names, List<String> evals, Bindings bindings) throws SQLException {
         Collection<String> bound = new HashSet<>();

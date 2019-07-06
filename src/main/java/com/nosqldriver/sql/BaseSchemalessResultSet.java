@@ -29,14 +29,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
+import static com.nosqldriver.sql.TypeConversion.sqlTypes;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 
 public abstract class BaseSchemalessResultSet<R> implements ResultSet {
     protected final String schema;
+    protected final String table;
     protected final List<DataColumn> columns;
     private boolean wasNull = false;
     private volatile SQLWarning sqlWarning;
@@ -45,8 +49,9 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
     private volatile boolean closed = false;
 
 
-    protected BaseSchemalessResultSet(String schema, List<DataColumn> columns) {
+    protected BaseSchemalessResultSet(String schema, String table, List<DataColumn> columns) {
         this.schema = schema;
+        this.table = table;
         this.columns = Collections.unmodifiableList(columns);
     }
 
@@ -244,7 +249,6 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
         String[] names = columns.stream().map(DataColumn::getName).toArray(String[]::new);
-        //Map<String, Integer> name2index = IntStream.range(0, names.length).boxed().filter(i -> names[i] != null).collect(Collectors.toMap(i -> names[i], i -> i));
         int[] types = new int[names.length];
         boolean shouldDiscover = names.length == 0;
         for (int i = 0; i < types.length; i++) {
@@ -258,32 +262,22 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
         String[] aliases = columns.stream().map(c -> Optional.ofNullable(c.getLabel()).orElseGet(c::getName)).toArray(String[]::new);
 
         if (!shouldDiscover) {
-            return new SimpleResultSetMetaData(schema, names, aliases, types);
+            return new DataColumnBasedResultSetMetaData(columns);
         }
 
 
         R sampleRecord = getSampleRecord();
         if (sampleRecord == null) {
-            return new SimpleResultSetMetaData(schema, names, aliases, types);
+            return new DataColumnBasedResultSetMetaData(schema, table);
         }
 
         Map<String, Object> data = getData(sampleRecord);
-        String[] resultNames = names.length != 0 ? names : data.keySet().toArray(new String[0]);
-        types = new int[resultNames.length];
-
-        //int[] types = new int[resultNames.length];
-
-        for(int i = 0; i < resultNames.length; i++) {
-            Object value = data.get(resultNames[i]);
-            if(value != null) {
-                Integer type = TypeConversion.sqlTypes.get(value.getClass());
-                if (type != null) {
-                    types[i] = type;
-                }
-            }
+        if (columns.isEmpty()) {
+            return new DataColumnBasedResultSetMetaData(data.entrySet().stream().map(e -> DATA.create(schema, "", e.getKey(), e.getKey()).withType(e.getValue() != null ? sqlTypes.get(e.getValue().getClass()) : 0)).collect(Collectors.toList()));
         }
 
-        return new SimpleResultSetMetaData(schema, resultNames, resultNames, types);
+        columns.stream().filter(c -> c.getType() == 0).filter(c -> data.containsKey(c.getName())).forEach(c ->  c.withType(sqlTypes.get(data.get(c.getName()).getClass())));
+        return new DataColumnBasedResultSetMetaData(columns);
     }
 
 

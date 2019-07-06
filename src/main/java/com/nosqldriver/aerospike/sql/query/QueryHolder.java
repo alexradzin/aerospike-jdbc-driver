@@ -24,7 +24,6 @@ import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 
-import javax.xml.crypto.Data;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -189,7 +188,7 @@ public class QueryHolder {
 
 
             statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", fieldsForAggregation);
-            return new AerospikeAggregationQuery(schema, getNames(false), columns, statement, policyProvider.getQueryPolicy());
+            return new AerospikeAggregationQuery(schema, set, getNames(false), columns, statement, policyProvider.getQueryPolicy());
         }
 
 
@@ -203,7 +202,7 @@ public class QueryHolder {
 
     @VisibleForPackage
     void createPkBatchQuery(Key ... keys) {
-        pkBatchQuery = new AerospikeBatchQueryByPk(schema, getNames(false), columns, keys, policyProvider.getBatchPolicy());
+        pkBatchQuery = new AerospikeBatchQueryByPk(schema, set, getNames(false), columns, keys, policyProvider.getBatchPolicy());
     }
 
     public String getSetName() {
@@ -274,12 +273,12 @@ public class QueryHolder {
 
                 @Override
                 protected String getCatalog(Expression expr) {
-                    return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(null);
+                    return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(schema);
                 }
 
                 @Override
                 protected String getTable(Expression expr) {
-                    return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(null);
+                    return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(set);
                 }
 
                 @Override
@@ -302,12 +301,12 @@ public class QueryHolder {
             new ColumnType(e -> e instanceof BinaryExpression || e instanceof LongValue ||  e instanceof DoubleValue || (e instanceof net.sf.jsqlparser.expression.Function && expressionResultSetWrappingFactory.getClientSideFunctionNames().contains(((net.sf.jsqlparser.expression.Function)e).getName()))) {
                 @Override
                 protected String getCatalog(Expression expr) {
-                    return null;
+                    return schema;
                 }
 
                 @Override
                 protected String getTable(Expression expr) {
-                    return null;
+                    return set;
                 }
 
                 @Override
@@ -332,12 +331,12 @@ public class QueryHolder {
             new ColumnType(e -> e instanceof net.sf.jsqlparser.expression.Function) {
                 @Override
                 protected String getCatalog(Expression expr) {
-                    return null;
+                    return schema;
                 }
 
                 @Override
                 protected String getTable(Expression expr) {
-                    return null;
+                    return set;
                 }
 
                 @Override

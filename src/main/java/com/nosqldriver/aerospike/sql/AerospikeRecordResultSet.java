@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.Map;
 
 abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> {
-    protected AerospikeRecordResultSet(String schema, List<DataColumn> columns) {
-        super(schema, columns);
+    protected AerospikeRecordResultSet(String schema, String table, List<DataColumn> columns) {
+        super(schema, table, columns);
     }
 
     @Override

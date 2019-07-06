@@ -32,4 +32,24 @@ public class TypeConversion {
         sqlTypeNames.put(Types.DATE, "date");
     }
 
+    public static final Map<Integer, Class> sqlToJavaTypes = new HashMap<>();
+    static {
+        sqlToJavaTypes.put(Types.SMALLINT, Short.class);
+        sqlToJavaTypes.put(Types.INTEGER, Integer.class);
+        sqlToJavaTypes.put(Types.BIGINT, Long.class);
+        sqlToJavaTypes.put(Types.BOOLEAN, Boolean.class);
+        sqlToJavaTypes.put(Types.FLOAT, Float.class);
+        sqlToJavaTypes.put(Types.DOUBLE, Double.class);
+        sqlToJavaTypes.put(Types.VARCHAR, String.class);
+        sqlToJavaTypes.put(Types.LONGVARCHAR, String.class);
+        sqlToJavaTypes.put(Types.BLOB, byte[].class);
+        sqlToJavaTypes.put(Types.BINARY, byte[].class);
+        sqlToJavaTypes.put(Types.VARBINARY, byte[].class);
+        sqlToJavaTypes.put(Types.LONGVARBINARY, byte[].class);
+        sqlToJavaTypes.put(Types.DATE, java.sql.Date.class);
+        sqlToJavaTypes.put(Types.TIME, java.sql.Time.class);
+        sqlToJavaTypes.put(Types.TIMESTAMP, java.sql.Timestamp.class);
+    }
+
+
 }

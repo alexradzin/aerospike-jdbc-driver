@@ -12,8 +12,8 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
     private final Map<String, Integer> nameToIndex;
     private List<?> currentRecord = null;
 
-    public ListRecordSet(String schema, List<DataColumn> columns, Iterable<List<?>> data) {
-        super(schema, columns);
+    public ListRecordSet(String schema, String table, List<DataColumn> columns, Iterable<List<?>> data) {
+        super(schema, table, columns);
         this.it = data.iterator();
         nameToIndex = IntStream.range(0, columns.size()).boxed().collect(Collectors.toMap(i -> columns.get(i).getName(), i -> i));
     }
@@ -45,12 +45,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
 
     @Override
     public ResultSetMetaData getMetaData() {
-        int[] types = new int[columns.size()];
-        Integer[] types2 = columns.stream().map(DataColumn::getType).toArray(Integer[]::new);
-        for (int i = 0; i < types.length; i++) {
-            types[i] = types2[i];
-        }
-        return new SimpleResultSetMetaData(schema, columns.stream().map(DataColumn::getName).toArray(String[]::new), columns.stream().map(DataColumn::getLabel).toArray(String[]::new), types);
+        return new DataColumnBasedResultSetMetaData(columns);
     }
 
     public static int[] discoverTypes(int nColumns, Iterable<List<?>> data) {

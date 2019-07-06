@@ -9,18 +9,15 @@ import com.nosqldriver.sql.ResultSetWrapper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.util.Arrays.asList;
-import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.toList;
 
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy> {
+    private  final String set;
     public AerospikeBatchQueryBySecondaryIndex(String schema, String[] names, List<DataColumn> columns, Statement statement, QueryPolicy policy) {
         super(schema, names, columns, statement, policy);
+        set = statement.getSetName();
     }
 
     @Override
@@ -39,6 +36,6 @@ public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statemen
                 }
             };
         }
-        return new ResultSetOverAerospikeRecordSet(schema, columns, client.query(policy, criteria));
+        return new ResultSetOverAerospikeRecordSet(schema, set, columns, client.query(policy, criteria));
     }
 }

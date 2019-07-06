@@ -80,6 +80,7 @@ import static java.util.Optional.ofNullable;
 public class AerospikeQueryFactory {
     private CCJSqlParserManager parserManager = new CCJSqlParserManager();
     private final String schema;
+    private String set;
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
     public static final Map<String, Supplier<PredExp>> predExpOperators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -132,6 +133,7 @@ public class AerospikeQueryFactory {
                                             queries.setSchema(tableName.getSchemaName());
                                         }
                                         queries.setSetName(tableName.getName(), ofNullable(tableName.getAlias()).map(Alias::getName).orElse(null));
+                                        set = tableName.getName();
                                     }
                                 });
                             }
@@ -349,6 +351,7 @@ public class AerospikeQueryFactory {
                         queries.setSchema(table.getSchemaName());
                     }
                     queries.setSetName(table.getName(), ofNullable(table.getAlias()).map(Alias::getName).orElse(null));
+                    set = table.getName();
                     insert.getColumns().forEach(column -> queries.addName(column.getColumnName()));
 
                     // Trick to support both single and multi expression list.
@@ -734,5 +737,9 @@ public class AerospikeQueryFactory {
 
     public static Map<String, Supplier<PredExp>> getPredExpOperators() {
         return predExpOperators;
+    }
+
+    public String getSet() {
+        return set;
     }
 }

@@ -10,12 +10,14 @@ import java.sql.ResultSet;
 import java.util.List;
 
 public class AerospikeAggregationQuery extends AerospikeQuery<Statement, QueryPolicy> {
-    public AerospikeAggregationQuery(String schema, String[] names, List<DataColumn> columns, Statement statement, QueryPolicy policy) {
+    private final String set;
+    public AerospikeAggregationQuery(String schema, String set, String[] names, List<DataColumn> columns, Statement statement, QueryPolicy policy) {
         super(schema, names, columns, statement, policy);
+        this.set = set;
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeResultSet(schema, columns, client.queryAggregate(policy, criteria));
+        return new ResultSetOverAerospikeResultSet(schema, set, columns, client.queryAggregate(policy, criteria));
     }
 }
