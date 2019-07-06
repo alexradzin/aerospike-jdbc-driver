@@ -14,10 +14,8 @@ import java.util.List;
 import static java.util.Arrays.asList;
 
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy> {
-    private  final String set;
     public AerospikeBatchQueryBySecondaryIndex(String schema, String[] names, List<DataColumn> columns, Statement statement, QueryPolicy policy) {
-        super(schema, names, columns, statement, policy);
-        set = statement.getSetName();
+        super(schema, statement.getSetName(), names, columns, statement, policy);
     }
 
     @Override

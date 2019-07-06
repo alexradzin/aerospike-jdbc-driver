@@ -11,13 +11,15 @@ import java.util.function.Function;
 
 abstract class AerospikeQuery<C, P extends Policy> implements Function<IAerospikeClient, ResultSet> {
     protected final String schema;
+    protected final String set;
     protected final String[] names;
     protected final List<DataColumn> columns;
     protected final C criteria;
     protected final P policy;
 
-    protected AerospikeQuery(String schema, String[] names, List<DataColumn> columns, C criteria, P policy) {
+    protected AerospikeQuery(String schema, String set, String[] names, List<DataColumn> columns, C criteria, P policy) {
         this.schema = schema;
+        this.set = set;
         this.names = names;
         this.columns = Collections.unmodifiableList(columns);
         this.criteria = criteria;

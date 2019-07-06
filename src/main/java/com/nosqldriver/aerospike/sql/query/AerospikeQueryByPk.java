@@ -11,10 +11,8 @@ import java.sql.ResultSet;
 import java.util.List;
 
 public class AerospikeQueryByPk extends AerospikeQuery<Key, Policy> {
-    private String set;
     public AerospikeQueryByPk(String schema, String[] names, List<DataColumn> columns, Key key, Policy policy) {
-        super(schema, names, columns, key, policy);
-        set = key.setName;
+        super(schema, key.setName, names, columns, key, policy);
     }
 
     @Override

@@ -10,10 +10,8 @@ import java.sql.ResultSet;
 import java.util.List;
 
 public class AerospikeBatchQueryByPk extends AerospikeQuery<Key[], BatchPolicy> {
-    private final String set;
     public AerospikeBatchQueryByPk(String schema, String set, String[] names, List<DataColumn> columns, Key[] keys, BatchPolicy policy) {
-        super(schema, names, columns, keys, policy);
-        this.set = set;
+        super(schema, set, names, columns, keys, policy);
     }
 
     @Override

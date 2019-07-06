@@ -11,7 +11,6 @@ import com.nosqldriver.sql.ListRecordSet;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -20,15 +19,13 @@ import java.util.stream.IntStream;
 import static java.util.Collections.emptyList;
 
 public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>, WritePolicy> {
-    private final String set;
     private final int indexOfPK;
     private final boolean skipDuplicates;
     public final static ThreadLocal<Integer> updatedRecordsCount = new ThreadLocal<>();
 
 
     public AerospikeInsertQuery(String schema, String set, String[] names, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
-        super(schema, names, columns, data, policy);
-        this.set = set;
+        super(schema, set, names, columns, data, policy);
         this.skipDuplicates = skipDuplicates;
         Arrays.stream(names).filter("PK"::equals).findFirst().orElseThrow(() -> new IllegalArgumentException("PK is not specified"));
 

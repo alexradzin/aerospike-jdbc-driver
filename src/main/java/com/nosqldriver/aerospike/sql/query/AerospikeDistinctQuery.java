@@ -10,10 +10,8 @@ import java.sql.ResultSet;
 import java.util.List;
 
 public class AerospikeDistinctQuery extends AerospikeQuery<Statement, QueryPolicy> {
-    private final String set;
     public AerospikeDistinctQuery(String schema, String[] names, List<DataColumn> columns, Statement statement, QueryPolicy policy) {
-        super(schema, names, columns, statement, policy);
-        this.set = statement.getSetName();
+        super(schema, statement.getSetName(), names, columns, statement, policy);
     }
 
     @Override
