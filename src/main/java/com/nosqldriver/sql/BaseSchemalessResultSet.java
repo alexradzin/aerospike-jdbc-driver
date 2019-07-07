@@ -27,13 +27,12 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
-import static com.nosqldriver.sql.TypeConversion.sqlTypes;
+import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
 import static java.util.Optional.ofNullable;

@@ -289,7 +289,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
                 String e = ec.getExpression();
                 Object result = eval(e);
                 if (result != null) {
-                    Integer sqlType = TypeConversion.sqlTypes.get(result.getClass());
+                    Integer sqlType = SqlLiterals.sqlTypes.get(result.getClass());
                     if (sqlType != null) {
                         ec.withType(sqlType);
                     }

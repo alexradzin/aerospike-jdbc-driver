@@ -9,7 +9,6 @@ import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
-import com.nosqldriver.aerospike.sql.AerospikeQueryFactory;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.FilteredResultSet;
@@ -46,6 +45,8 @@ import java.util.stream.Stream;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
+import static com.nosqldriver.sql.SqlLiterals.operatorKey;
+import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Optional.ofNullable;
@@ -417,12 +418,12 @@ public class QueryHolder {
                         if (i > 0 && result.get(i - 1) instanceof ColumnRefPredExp) {
                             result.set(i - 1, PredExp.stringBin(((ColumnRefPredExp)result.get(i - 1)).getName()));
                             if (i < n - 1 && result.get(i + 1) instanceof OperatorRefPredExp) {
-                                result.set(i + 1, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(String.class, ((OperatorRefPredExp)result.get(i + 1)).getOp())).get());
+                                result.set(i + 1, predExpOperators.get(operatorKey(String.class, ((OperatorRefPredExp)result.get(i + 1)).getOp())).get());
                             }
                         } else if (i < n - 1 && result.get(i + 1) instanceof ColumnRefPredExp) {
                             result.set(i + 1, PredExp.stringBin(((ColumnRefPredExp)result.get(i + 1)).getName()));
                             if (i < n - 2 && result.get(i + 2) instanceof OperatorRefPredExp) {
-                                result.set(i + 2, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(String.class, ((OperatorRefPredExp)result.get(i + 2)).getOp())).get());
+                                result.set(i + 2, predExpOperators.get(operatorKey(String.class, ((OperatorRefPredExp)result.get(i + 2)).getOp())).get());
                             }
                         }
                     } else if (value instanceof Number) {
@@ -430,12 +431,12 @@ public class QueryHolder {
                         if (i > 0 && result.get(i - 1) instanceof ColumnRefPredExp) {
                             result.set(i - 1, PredExp.integerBin(((ColumnRefPredExp)result.get(i - 1)).getName()));
                             if (i < n - 1 && result.get(i + 1) instanceof OperatorRefPredExp) {
-                                result.set(i + 1, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(Long.class, ((OperatorRefPredExp)result.get(i + 1)).getOp())).get());
+                                result.set(i + 1, predExpOperators.get(operatorKey(Long.class, ((OperatorRefPredExp)result.get(i + 1)).getOp())).get());
                             }
                         } else if (i < n - 1 && result.get(i + 1) instanceof ColumnRefPredExp) {
                             result.set(i + 1, PredExp.integerBin(((ColumnRefPredExp)result.get(i + 1)).getName()));
                             if (i < n - 2 && result.get(i + 2) instanceof OperatorRefPredExp) {
-                                result.set(i + 2, AerospikeQueryFactory.predExpOperators.get(AerospikeQueryFactory.operatorKey(Long.class, ((OperatorRefPredExp)result.get(i + 2)).getOp())).get());
+                                result.set(i + 2, predExpOperators.get(operatorKey(Long.class, ((OperatorRefPredExp)result.get(i + 2)).getOp())).get());
                             }
                         }
                     } else {

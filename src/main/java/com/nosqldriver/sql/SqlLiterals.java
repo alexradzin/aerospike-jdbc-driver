@@ -1,11 +1,15 @@
 package com.nosqldriver.sql;
 
+import com.aerospike.client.query.PredExp;
+
 import java.sql.Date;
 import java.sql.Types;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.function.Supplier;
 
-public class TypeConversion {
+public class SqlLiterals {
     public static final Map<Class, Integer> sqlTypes = new HashMap<>();
     static {
         sqlTypes.put(Short.class, Types.SMALLINT);
@@ -51,5 +55,30 @@ public class TypeConversion {
         sqlToJavaTypes.put(Types.TIMESTAMP, java.sql.Timestamp.class);
     }
 
+    public static final Map<String, Supplier<PredExp>> predExpOperators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    static {
+        predExpOperators.put(operatorKey(String.class, "="), PredExp::stringEqual);
+        predExpOperators.put(operatorKey(String.class, "<>"), PredExp::stringUnequal);
+        predExpOperators.put(operatorKey(String.class, "!="), PredExp::stringUnequal);
+        predExpOperators.put(operatorKey(String.class, "LIKE"), () -> PredExp.stringRegex(0));
+        predExpOperators.put(operatorKey(String.class, "AND"), () -> PredExp.and(2));
+        predExpOperators.put(operatorKey(String.class, "OR"), () -> PredExp.or(2));
 
+        for (Class type : new Class[] {Byte.class, Short.class, Integer.class, Long.class}) {
+            predExpOperators.put(operatorKey(type, "="), PredExp::integerEqual);
+            predExpOperators.put(operatorKey(type, "<>"), PredExp::integerUnequal);
+            predExpOperators.put(operatorKey(type, "!="), PredExp::integerUnequal);
+            predExpOperators.put(operatorKey(type, ">"), PredExp::integerGreater);
+            predExpOperators.put(operatorKey(type, ">="), PredExp::integerGreaterEq);
+            predExpOperators.put(operatorKey(type, "<"), PredExp::integerLess);
+            predExpOperators.put(operatorKey(type, "<="), PredExp::integerLessEq);
+            predExpOperators.put(operatorKey(type, "AND"), () -> PredExp.and(2));
+            predExpOperators.put(operatorKey(type, "OR"), () -> PredExp.or(2));
+        }
+
+    }
+
+    public static String operatorKey(Class<?> type, String operand) {
+        return type.getName() + operand;
+    }
 }

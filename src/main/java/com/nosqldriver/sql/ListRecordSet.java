@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
+
 public class ListRecordSet extends ValueTypedResultSet<List<?>> {
     private final Iterator<List<?>> it;
     private final Map<String, Integer> nameToIndex;
@@ -52,7 +54,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
         int[] types = new int[nColumns];
         int rowIndex = 0;
         for (List<?> row : data) {
-            Integer[] rowTypes = row.stream().map(v -> v == null ? null : v.getClass()).map(c -> TypeConversion.sqlTypes.getOrDefault(c, 0)).toArray(Integer[]::new);
+            Integer[] rowTypes = row.stream().map(v -> v == null ? null : v.getClass()).map(c -> sqlTypes.getOrDefault(c, 0)).toArray(Integer[]::new);
             for (int i = 0; i < nColumns; i++) {
                 int type = types[i];
                 int rowType = rowTypes[i];

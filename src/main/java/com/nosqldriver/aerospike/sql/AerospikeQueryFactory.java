@@ -63,7 +63,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -75,6 +74,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
+import static com.nosqldriver.sql.SqlLiterals.operatorKey;
+import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
 import static java.util.Optional.ofNullable;
@@ -85,30 +86,6 @@ public class AerospikeQueryFactory {
     private String set;
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
-    public static final Map<String, Supplier<PredExp>> predExpOperators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-    static {
-        predExpOperators.put(operatorKey(String.class, "="), PredExp::stringEqual);
-        predExpOperators.put(operatorKey(String.class, "<>"), PredExp::stringUnequal);
-        predExpOperators.put(operatorKey(String.class, "!="), PredExp::stringUnequal);
-        predExpOperators.put(operatorKey(String.class, "LIKE"), () -> PredExp.stringRegex(0));
-        predExpOperators.put(operatorKey(String.class, "AND"), () -> PredExp.and(2));
-        predExpOperators.put(operatorKey(String.class, "OR"), () -> PredExp.or(2));
-
-        for (Class type : new Class[] {Byte.class, Short.class, Integer.class, Long.class}) {
-            predExpOperators.put(operatorKey(type, "="), PredExp::integerEqual);
-            predExpOperators.put(operatorKey(type, "<>"), PredExp::integerUnequal);
-            predExpOperators.put(operatorKey(type, "!="), PredExp::integerUnequal);
-            predExpOperators.put(operatorKey(type, ">"), PredExp::integerGreater);
-            predExpOperators.put(operatorKey(type, ">="), PredExp::integerGreaterEq);
-            predExpOperators.put(operatorKey(type, "<"), PredExp::integerLess);
-            predExpOperators.put(operatorKey(type, "<="), PredExp::integerLessEq);
-            predExpOperators.put(operatorKey(type, "AND"), () -> PredExp.and(2));
-            predExpOperators.put(operatorKey(type, "OR"), () -> PredExp.or(2));
-        }
-
-    }
-
-
     @VisibleForPackage
     AerospikeQueryFactory(String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes) {
         this.schema = schema;
@@ -640,9 +617,9 @@ public class AerospikeQueryFactory {
         return columnValueSuppliers.entrySet().stream().map(e -> new Bin(e.getKey(), e.getValue().apply(record))).toArray(Bin[]::new);
     }
 
-    public static String operatorKey(Class<?> type, String operand) {
-        return type.getName() + operand;
-    }
+//    public static String operatorKey(Class<?> type, String operand) {
+//        return type.getName() + operand;
+//    }
 
 
     private static class WhereVisitor extends ExpressionVisitorAdapter {

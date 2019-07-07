@@ -10,7 +10,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
-import static com.nosqldriver.sql.TypeConversion.sqlTypeNames;
+import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
 
 public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
     private final String schema;
@@ -35,11 +35,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
         return columns;
     }
 
-    public void updateType(String name, int type) {
-
-    }
     public DataColumnBasedResultSetMetaData updateTypes(ResultSetMetaData md) throws SQLException {
-//        Map<String, DataColumn> columnsByName = columns.stream().collect(Collectors.toMap(DataColumn::getName, c -> c));
         int n = md.getColumnCount();
         for (int i = 0; i < n; i++) {
             // TODO: use table and catalog names as well
@@ -169,7 +165,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnClassName(int column) {
-        return TypeConversion.sqlToJavaTypes.get(getColumnType(column)).getName();
+        return SqlLiterals.sqlToJavaTypes.get(getColumnType(column)).getName();
     }
 
     @Override
