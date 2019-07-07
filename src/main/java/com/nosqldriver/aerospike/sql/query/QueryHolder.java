@@ -56,9 +56,6 @@ public class QueryHolder {
     private final AerospikePolicyProvider policyProvider;
     private String set;
     private String setAlias;
-    private List<String> tables = new ArrayList<>();
-    private List<String> aliases = new ArrayList<>();
-    private Collection<String> hiddenNames = new HashSet<>();
     private Collection<String> aggregatedFields = null;
     private Collection<String> groupByFields = null;
     private List<DataColumn> columns = new ArrayList<>();
@@ -276,11 +273,6 @@ public class QueryHolder {
 
                 @Override
                 public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
-                    tables.add(getTable(expr));
-                    if (!visible) {
-                        hiddenNames.add(getText(expr));
-                    }
-                    aliases.add(alias);
                     columns.add((visible ? DATA : HIDDEN).create(getCatalog(expr), getTable(expr), getText(expr), alias));
                     statement.setBinNames(getNames());
                 }
@@ -305,8 +297,6 @@ public class QueryHolder {
                 @Override
                 public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     String column = getText(expr);
-                    aliases.add(alias);
-                    hiddenNames.addAll(expressionResultSetWrappingFactory.getVariableNames(column));
                     columns.add(EXPRESSION.create(getCatalog(expr), getTable(expr), getText(expr), alias));
                     expressionResultSetWrappingFactory.getVariableNames(column).forEach(v -> columns.add(HIDDEN.create(getCatalog(expr), getTable(expr), v, alias)));
                     statement.setBinNames(getNames());
@@ -337,7 +327,6 @@ public class QueryHolder {
                     }
                     List<String> addition = ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(Collectors.toList())).orElse(Collections.emptyList());
                     aggregatedFields.addAll(addition);
-                    aliases.add(alias);
                     columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
 
                 }
@@ -365,7 +354,6 @@ public class QueryHolder {
                         aggregatedFields = new HashSet<>();
                     }
                     aggregatedFields.add("distinct" + expr.toString());
-                    aliases.add(alias);
                     columns.add(DATA.create(catalog, table, getText(expr), alias));
                 }
             },
