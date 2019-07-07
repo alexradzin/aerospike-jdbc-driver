@@ -57,7 +57,6 @@ public class QueryHolder {
     private String set;
     private String setAlias;
     private List<String> tables = new ArrayList<>();
-    private List<String> names = new ArrayList<>();
     private List<String> aliases = new ArrayList<>();
     private Collection<String> hiddenNames = new HashSet<>();
     private Collection<String> aggregatedFields = null;
@@ -118,12 +117,8 @@ public class QueryHolder {
         }
     }
 
-    private String[] getNames(boolean hidden) {
-        List<String> all = new ArrayList<>(names);
-        if (hidden) {
-            all.addAll(hiddenNames);
-        }
-        return all.toArray(new String[0]);
+    private String[] getNames() {
+        return columns.stream().filter(c -> c.getName() != null).map(DataColumn::getName).toArray(String[]::new);
     }
 
     public void setSchema(String schema) {
@@ -155,7 +150,7 @@ public class QueryHolder {
         if (groupByFields != null) {
             Value[] args = Stream.concat(
                     groupByFields.stream().map(f -> "groupby:" + f),
-                    names.stream().filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
+                    columns.stream().filter(c -> DATA.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
             return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy());
@@ -179,7 +174,6 @@ public class QueryHolder {
                 }
                 String groupField = m.group(1);
                 statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new StringValue(groupField));
-                names = new ArrayList<>(aggregatedFields);
                 return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy());
             }
 
@@ -283,10 +277,12 @@ public class QueryHolder {
                 @Override
                 public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     tables.add(getTable(expr));
-                    (visible ? names : hiddenNames).add(getText(expr));
+                    if (!visible) {
+                        hiddenNames.add(getText(expr));
+                    }
                     aliases.add(alias);
                     columns.add((visible ? DATA : HIDDEN).create(getCatalog(expr), getTable(expr), getText(expr), alias));
-                    statement.setBinNames(getNames(true));
+                    statement.setBinNames(getNames());
                 }
             },
 
@@ -309,12 +305,11 @@ public class QueryHolder {
                 @Override
                 public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                     String column = getText(expr);
-                    names.add(null);
                     aliases.add(alias);
                     hiddenNames.addAll(expressionResultSetWrappingFactory.getVariableNames(column));
                     columns.add(EXPRESSION.create(getCatalog(expr), getTable(expr), getText(expr), alias));
                     expressionResultSetWrappingFactory.getVariableNames(column).forEach(v -> columns.add(HIDDEN.create(getCatalog(expr), getTable(expr), v, alias)));
-                    statement.setBinNames(getNames(true));
+                    statement.setBinNames(getNames());
                 }
             },
 
@@ -342,7 +337,6 @@ public class QueryHolder {
                     }
                     List<String> addition = ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(Collectors.toList())).orElse(Collections.emptyList());
                     aggregatedFields.addAll(addition);
-                    names.add(expr.toString());
                     aliases.add(alias);
                     columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
 
@@ -371,7 +365,6 @@ public class QueryHolder {
                         aggregatedFields = new HashSet<>();
                     }
                     aggregatedFields.add("distinct" + expr.toString());
-                    names.add(expr.toString());
                     aliases.add(alias);
                     columns.add(DATA.create(catalog, table, getText(expr), alias));
                 }
@@ -499,11 +492,9 @@ public class QueryHolder {
 
 
     public void copyColumnsForTable(String tableAlias, QueryHolder other) {
-        int n = names.size();
+        int n = columns.size();
         for (int i = 0; i < n; i++) {
-            if (tableAlias.equals(tables.get(i))) {
-                other.names.add(names.get(i));
-                other.aliases.add(aliases.get(i));
+            if (tableAlias.equals(columns.get(i).getTable())) {
                 other.columns.add(columns.get(i));
             }
         }
@@ -513,16 +504,11 @@ public class QueryHolder {
         return table == null || table.equals(setAlias) ? this : joins.stream().filter(j -> table.equals(j.setAlias)).findFirst().orElseThrow(() -> new IllegalArgumentException(format("Cannot find query for table  %s", table)));
     }
 
-    public String[] getByAlias(String alias) {
-        int index = aliases.indexOf(alias);
-        if (index < 0) {
-            return null;
-        }
-        return new String[] {tables.get(index), names.get(index)};
+    public Optional<DataColumn> getColumnByAlias(String alias) {
+        return columns.stream().filter(c -> alias.equals(c.getLabel())).findFirst();
     }
 
     public void addName(String name)  {
-        names.add(name);
         columns.add(DATA.create(schema, set, name, null));
     }
 

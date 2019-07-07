@@ -12,6 +12,7 @@ import com.nosqldriver.aerospike.sql.query.ColumnRefPredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
 import com.nosqldriver.aerospike.sql.query.QueryHolder;
 import com.nosqldriver.aerospike.sql.query.ValueRefPredExp;
+import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.JoinType;
 import com.nosqldriver.sql.RecordExpressionEvaluator;
 import net.sf.jsqlparser.JSQLParserException;
@@ -61,6 +62,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -253,11 +255,11 @@ public class AerospikeQueryFactory {
                                             String table = ofNullable(column.getTable()).map(Table::getName).orElse(null);
                                             String name = column.getColumnName();
                                             if (table == null) {
-                                                // assumen name is actually alias and try to retrieve real table and column name
-                                                String[] columnData = queries.getByAlias(name);
-                                                if (columnData != null) {
-                                                    table = columnData[0];
-                                                    name = columnData[1];
+                                                // assume name is actually alias and try to retrieve real table and column name
+                                                Optional<DataColumn> dc = queries.getColumnByAlias(name);
+                                                if (dc.isPresent()) {
+                                                    table = dc.get().getTable();
+                                                    name = dc.get().getName();
                                                 }
                                             }
                                             operation.setTable(table);
