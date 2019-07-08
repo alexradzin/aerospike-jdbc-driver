@@ -19,6 +19,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -681,10 +682,13 @@ class SelectTest {
         assertEquals(stream(beatles).map(Person::getFirstName).collect(Collectors.toSet()), names);
     }
 
-    @Test
-    @DisplayName("select year_of_birth, count(*) from people group by year_of_birth")
-    void groupByYearOfBirth() throws SQLException {
-        assertGroupByYearOfBirth(getDisplayName());
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year_of_birth, count(*) from people group by year_of_birth",
+            "select year_of_birth, count(*) from people group by year_of_birth having count(*) > 0",
+    })
+    void groupByYearOfBirth(String sql) throws SQLException {
+        assertGroupByYearOfBirth(sql);
     }
 
     @Test
@@ -717,6 +721,34 @@ class SelectTest {
 
         return md;
     }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year_of_birth, count(*) from people group by year_of_birth having count(*) = 2",
+            "select year_of_birth, count(*) as num from people group by year_of_birth having count(*) = 2",
+            "select year_of_birth, count(*) as n from people group by year_of_birth having n = 2",
+            "select year_of_birth, count(*) as n from people group by year_of_birth having n = 4 - 2",
+            "select year_of_birth, count(*) from people group by year_of_birth having count(*) > 1",
+            "select year_of_birth, count(*) as n from people group by year_of_birth having n > 1"
+    })
+    void groupByYearOfBirthHavingCount2(String sql) throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSetMetaData md = rs.getMetaData();
+        assertNotNull(md);
+        assertEquals(2, md.getColumnCount());
+        assertEquals("year_of_birth", md.getColumnName(1));
+        assertEquals(INTEGER, md.getColumnType(1));
+        assertEquals("count(*)", md.getColumnName(2));
+        assertEquals(BIGINT, md.getColumnType(2));
+
+        Collection<Integer> years = new HashSet<>();
+        assertTrue(rs.next());
+        years.add(assertCounts(rs));
+        assertFalse(rs.next());
+        assertEquals(Collections.singleton(1940), years);
+    }
+
 
     @Test
     void groupByYearOfBirthWithoutRequestingMetadata() throws SQLException {

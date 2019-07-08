@@ -15,6 +15,7 @@ import com.nosqldriver.sql.FilteredResultSet;
 import com.nosqldriver.sql.JoinedResultSet;
 import com.nosqldriver.sql.NameCheckResultSetWrapper;
 import com.nosqldriver.sql.OffsetLimit;
+import com.nosqldriver.sql.ResultSetRowFilter;
 import com.nosqldriver.sql.ResultSetWrapper;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DoubleValue;
@@ -59,6 +60,7 @@ public class QueryHolder {
     private String setAlias;
     private Collection<String> aggregatedFields = null;
     private Collection<String> groupByFields = null;
+    private String having = null;
     private List<DataColumn> columns = new ArrayList<>();
     private List<List<Object>> data = new ArrayList<>();
     private boolean skipDuplicates = false;
@@ -151,7 +153,7 @@ public class QueryHolder {
                     columns.stream().filter(c -> DATA.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
-            return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy());
+            return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having));
         }
 
         if (aggregatedFields != null) {
@@ -365,6 +367,10 @@ public class QueryHolder {
             groupByFields = new HashSet<>();
         }
         groupByFields.add(field);
+    }
+
+    public void setHaving(String having) {
+        this.having = having;
     }
 
     public ColumnType getColumnType(Object expr) {

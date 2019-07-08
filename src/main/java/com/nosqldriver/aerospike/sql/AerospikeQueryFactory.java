@@ -305,6 +305,10 @@ public class AerospikeQueryFactory {
                                 plainSelect.getGroupByColumnReferences().forEach(e -> queries.addGroupField(((Column) e).getColumnName()));
                             }
 
+                            if (plainSelect.getHaving() != null) {
+                                queries.setHaving(plainSelect.getHaving().toString());
+                            }
+
                             if (plainSelect.getOffset() != null) {
                                 queries.setOffset(plainSelect.getOffset().getOffset());
                             }
