@@ -16,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Statement;
@@ -859,12 +860,12 @@ public class JoinedResultSet implements ResultSet {
 
     @Override
     public void updateSQLXML(int columnIndex, SQLXML xmlObject) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateSQLXML(String columnLabel, SQLXML xmlObject) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -889,142 +890,142 @@ public class JoinedResultSet implements ResultSet {
 
     @Override
     public void updateNCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateNCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateAsciiStream(int columnIndex, InputStream x, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateBinaryStream(int columnIndex, InputStream x, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateAsciiStream(String columnLabel, InputStream x, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateBinaryStream(String columnLabel, InputStream x, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateBlob(int columnIndex, InputStream inputStream, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateBlob(String columnLabel, InputStream inputStream, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateClob(int columnIndex, Reader reader, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateClob(String columnLabel, Reader reader, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateNClob(int columnIndex, Reader reader, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateNClob(String columnLabel, Reader reader, long length) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateNCharacterStream(int columnIndex, Reader x) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateNCharacterStream(String columnLabel, Reader reader) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateAsciiStream(int columnIndex, InputStream x) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateBinaryStream(int columnIndex, InputStream x) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateCharacterStream(int columnIndex, Reader x) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateAsciiStream(String columnLabel, InputStream x) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateBinaryStream(String columnLabel, InputStream x) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateCharacterStream(String columnLabel, Reader reader) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateBlob(int columnIndex, InputStream inputStream) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateBlob(String columnLabel, InputStream inputStream) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateClob(int columnIndex, Reader reader) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateClob(String columnLabel, Reader reader) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateNClob(int columnIndex, Reader reader) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void updateNClob(String columnLabel, Reader reader) throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override

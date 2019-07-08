@@ -2,7 +2,6 @@ package com.nosqldriver.sql;
 
 import com.aerospike.client.query.PredExp;
 
-import java.sql.Date;
 import java.sql.Types;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +19,7 @@ public class SqlLiterals {
         sqlTypes.put(Double.class, Types.DOUBLE);
         sqlTypes.put(String.class, Types.VARCHAR);
         sqlTypes.put(byte[].class, Types.BLOB);
-        sqlTypes.put(Date.class, Types.DATE);
+        sqlTypes.put(java.sql.Date.class, Types.DATE);
     }
 
     public static final Map<Integer, String> sqlTypeNames = new HashMap<>();

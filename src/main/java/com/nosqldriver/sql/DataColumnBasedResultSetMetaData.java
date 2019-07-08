@@ -60,7 +60,6 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
             throw new IllegalArgumentException(String.format("Column %d does not exist", column));
         }
         return getter.apply(opt.get());
-        ///return getVisibleColumns().skip(column - 1).findFirst().map(getter).orElseThrow(() -> new IllegalArgumentException(String.format("Column %d does not exist", column)));
     }
 
     @Override
@@ -130,7 +129,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getTableName(int column) {
-        return getVisibleColumn(column, DataColumn::getTable);
+        return columns.isEmpty() ? table : getVisibleColumn(column, DataColumn::getTable);
     }
 
     @Override

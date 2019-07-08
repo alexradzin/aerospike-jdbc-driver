@@ -237,11 +237,6 @@ public class QueryHolder {
         return client -> new NameCheckResultSetWrapper(joined.apply(client), columns);
     }
 
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> void throwAny(Throwable e) throws E {
-        throw (E)e;
-    }
-
     public abstract class ColumnType {
         private final Predicate<Object> locator;
 
@@ -253,8 +248,6 @@ public class QueryHolder {
         protected abstract String getText(Expression expr);
         public abstract void addColumn(Expression expr, String alias, boolean visible, String schema, String table);
     }
-
-
 
     private ColumnType[] types = new ColumnType[] {
             new ColumnType((e) -> e instanceof Column) {

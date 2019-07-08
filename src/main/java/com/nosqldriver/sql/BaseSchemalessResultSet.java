@@ -44,8 +44,9 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
     private boolean wasNull = false;
     private volatile SQLWarning sqlWarning;
     private volatile int index = 0;
-    protected volatile boolean done = false;
+    private volatile boolean done = false;
     private volatile boolean closed = false;
+    private boolean firstNextWasCalled = false;
 
 
     protected BaseSchemalessResultSet(String schema, String table, List<DataColumn> columns) {
@@ -1088,7 +1089,6 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet {
 
     protected abstract R getRecord();
     protected abstract Map<String, Object> getData(R record);
-    private boolean firstNextWasCalled = false;
 
     @Override
     public boolean next() throws SQLException {

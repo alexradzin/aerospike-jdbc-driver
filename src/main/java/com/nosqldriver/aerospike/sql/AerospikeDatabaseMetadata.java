@@ -737,7 +737,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
             int n = md.getColumnCount();
             for (int i = 1; i <= n; i++) {
                 //TODO: validate whether it is possible to retrieve write-block-size (128K by default) using java client and do it here if possible
-                result.add(asList("".equals(tableNamePattern) ? "" : md.getCatalogName(i), null, md.getTableName(1), md.getColumnName(i), md.getColumnType(i), md.getColumnTypeName(i), 0, 0, 0, 0, columnNullable, null, null, md.getColumnType(i), 0, md.getColumnType(i) == Types.VARCHAR ? 128 * 1024 : 0, ordinal(md, md.getColumnName(i)), "YES", md.getCatalogName(i), null, md.getColumnTypeName(i), null, "NO", "NO"));
+                result.add(asList("".equals(tableNamePattern) ? "" : md.getCatalogName(i), null, md.getTableName(1), md.getColumnName(i), md.getColumnType(i), md.getColumnTypeName(i), 0, 0, 0, 0, columnNullable, null, null, md.getColumnType(i), 0, md.getColumnType(i) == VARCHAR ? 128 * 1024 : 0, ordinal(md, md.getColumnName(i)), "YES", md.getCatalogName(i), null, md.getColumnTypeName(i), null, "NO", "NO"));
             }
         }
 
