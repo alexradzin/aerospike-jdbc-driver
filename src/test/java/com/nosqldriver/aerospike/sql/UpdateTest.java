@@ -4,6 +4,8 @@ import com.nosqldriver.Person;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -17,13 +19,13 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.beatles;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.conn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
-class UpdateTest {
+abstract class UpdateTest {
 
     @BeforeEach
     void init() {
@@ -37,15 +39,22 @@ class UpdateTest {
     }
 
 
-    @Test
-    void updateAllEmptyDb() throws SQLException {
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "update people set band='Beatles'",
+            "update people set band='Beatles' where PK=1",
+            "update people set band='Beatles' where PK in (1, 2, 3, 4)",
+            "update people set band='Beatles' where PK>=1 and PK <= 4",
+            "update people set band='Beatles' where id = 1",
+    })
+    void updateEmptyDb(String sql) throws SQLException {
         deleteAllRecords(NAMESPACE, PEOPLE);
         // check that DB is empty
         AtomicInteger count = new AtomicInteger(0);
         client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> count.incrementAndGet());
         assertEquals(0, count.get());
 
-        executeUpdate("update people set band='Beatles'", 0);
+        executeUpdate(sql, 0);
         // check that DB is still empty
         count.set(0);
         client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> count.incrementAndGet());
@@ -71,6 +80,27 @@ class UpdateTest {
         client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {assertEquals("The Beatles", rec.getString("band")); count.incrementAndGet();}, "band");
         assertEquals(4, count.get());
     }
+
+    @Test
+    void updateOneFieldOneRow() throws SQLException {
+        writeBeatles();
+        Map<Integer, Integer> expectedKidsCount = Arrays.stream(beatles).collect(Collectors.toMap(Person::getId, Person::getKidsCount));
+
+        Map<Integer, Integer> kidsCount1 = new HashMap<>();
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {kidsCount1.put(rec.getInt("id"), rec.getInt("kids_count"));});
+        assertEquals(expectedKidsCount, kidsCount1);
+
+        executeUpdate("update people set kids_count=0 where id=1", 1);
+        Map<Integer, Integer> kidsCount2 = new HashMap<>();
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {kidsCount2.put(rec.getInt("id"), rec.getInt("kids_count"));});
+        assertEquals(0, kidsCount2.get(1).intValue());
+
+        Map<Integer, Integer> kidsCount3 = new HashMap<>();
+        executeUpdate("update people set kids_count=2 where id=1", 1);
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {kidsCount3.put(rec.getInt("id"), rec.getInt("kids_count"));});
+        assertEquals(expectedKidsCount, kidsCount3);
+    }
+
 
     @Test
     void updateSeveralFieldsSeveralRows() throws SQLException {
@@ -122,9 +152,6 @@ class UpdateTest {
         assertEquals(expectedAges, actualAges);
     }
 
+    protected abstract void executeUpdate(String sql, int expectedRowCount) throws SQLException;
 
-    private void executeUpdate(String sql, int expectedRowCount) throws SQLException {
-        int rowCount = conn.createStatement().executeUpdate(sql);
-        assertEquals(expectedRowCount, rowCount);
-    }
 }

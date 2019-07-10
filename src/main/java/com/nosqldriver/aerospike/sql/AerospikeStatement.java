@@ -74,7 +74,9 @@ public class AerospikeStatement implements java.sql.Statement {
                 AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema, statement.policyProvider, statement.indexes);
                 Function<IAerospikeClient, Integer> update = aqf.createUpdate(sql);
                 statement.set = aqf.getSet();
-                return update.apply(statement.client);
+                int count = update.apply(statement.client);
+                statement.setUpdateCount(count);
+                return count;
             }
 
             @Override
