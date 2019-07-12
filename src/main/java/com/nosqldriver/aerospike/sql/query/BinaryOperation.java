@@ -102,13 +102,13 @@ public class BinaryOperation {
                 return queries;
             }
         },
-        AND("AND") {
+        AND("AND", false) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 return queries;
             }
         },
-        OR("OR") {
+        OR("OR", false) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 return queries;
@@ -121,14 +121,24 @@ public class BinaryOperation {
             operators.putAll(Arrays.stream(Operator.values()).collect(Collectors.toMap(e -> e.operator, e -> e)));
         }
         private final String operator;
+        private final boolean requiresColumn;
 
         Operator(String operator) {
+            this(operator, true);
+        }
+
+        Operator(String operator, boolean requiresColumn) {
             this.operator = operator;
+            this.requiresColumn = requiresColumn;
         }
 
         public abstract QueryHolder update(QueryHolder queries, BinaryOperation operation);
         public static Operator find(String op) {
             return Optional.ofNullable(operators.get(op)).orElseThrow(() -> new IllegalArgumentException(op));
+        }
+
+        public boolean doesRequireColumn() {
+            return requiresColumn;
         }
 
         protected Key createKey(Object value, QueryHolder queries) {

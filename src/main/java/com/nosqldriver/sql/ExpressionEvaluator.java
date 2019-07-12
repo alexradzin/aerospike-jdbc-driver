@@ -25,7 +25,8 @@ abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T, Objec
 
     @Override
     public boolean test(T record) {
-        return (Boolean)eval(record, expr.replaceAll("(?<![<>])=", "=="));
+        // TODO: this replacement is pretty naive. It might corrupt strings that contain equal sign and words "and" and "or"
+        return (Boolean)eval(record, expr.replaceAll("(?<![<>])=", "==").replaceAll("(?i) AND ", " && ").replaceAll("(?i) OR ", " || "));
     }
 
     @Override

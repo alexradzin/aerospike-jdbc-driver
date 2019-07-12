@@ -81,7 +81,13 @@ class SelectTest {
 
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
-    @ValueSource(strings = {SELECT_ALL, "select * from people as p"})
+    @ValueSource(strings = {
+            SELECT_ALL,
+            "select * from people as p",
+            "select * from people where 0=0",
+            "select * from people where 0=0 and 1=1",
+            "select * from people where 0<1 or 2>1"
+    })
     void selectAll(String sql) throws SQLException {
         selectAll(sql, executeQuery);
     }
@@ -438,11 +444,27 @@ class SelectTest {
         assertSelectByOneNumericIndexedField(conn, "=", 1940, 1, 4);
     }
 
-    @Test
-    @DisplayName("year_of_birth=1940 and first_name='John'-> [John]")
-    void selectOneRecordByOneNumericIndexedFieldEqAndOneNotIndexedField() throws SQLException {
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people where year_of_birth=1940 and first_name='John'",
+            "select * from people where year_of_birth=1940 and first_name='John' and 'a'='a'",
+            "select * from people where year_of_birth=1940 and 1>0 and first_name='John'",
+            "select * from people where 2>=2 and year_of_birth=1940 and first_name='John'",
+            "select * from people where 2>=2 and year_of_birth=1940 and 0<=0 and first_name='John' and 2<3"
+    })
+    void selectOneRecordByOneNumericIndexedFieldEqAndOneNotIndexedField(String sql) throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelect(conn, "select * from people where year_of_birth=1940 and first_name='John'", 1);
+        assertSelect(conn, sql, 1);
+    }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people where year_of_birth=1940 and first_name='John' and 'a'='b'"
+    })
+    void selectRecordsWithFalseEvaluatedWhereExpression(String sql) throws SQLException {
+        createIndex("year_of_birth", IndexType.NUMERIC);
+        assertSelect(conn, sql);
     }
 
 

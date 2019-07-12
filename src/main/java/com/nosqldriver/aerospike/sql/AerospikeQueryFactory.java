@@ -8,6 +8,7 @@ import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.PredExp;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation;
+import com.nosqldriver.aerospike.sql.query.BinaryOperation.Operator;
 import com.nosqldriver.aerospike.sql.query.ColumnRefPredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
 import com.nosqldriver.aerospike.sql.query.QueryHolder;
@@ -70,6 +71,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
@@ -155,8 +158,8 @@ public class AerospikeQueryFactory {
                                         protected void visitBinaryExpression(BinaryExpression expr) {
                                             super.visitBinaryExpression(expr);
                                             System.out.println("join visitBinaryExpression " + expr);
-                                            BinaryOperation.Operator operator = BinaryOperation.Operator.find(expr.getStringExpression());
-                                            if (!BinaryOperation.Operator.EQ.equals(operator)) {
+                                            Operator operator = Operator.find(expr.getStringExpression());
+                                            if (!Operator.EQ.equals(operator)) {
                                                 throw new IllegalArgumentException(format("Join condition must use = only but was %s", operator.operator()));
                                             }
                                             currentJoin.addPredExp(new OperatorRefPredExp(expr.getStringExpression()));
@@ -190,15 +193,21 @@ public class AerospikeQueryFactory {
                             AtomicBoolean between = new AtomicBoolean(false);
                             AtomicInteger betweenEdge = new AtomicInteger(0);
                             if (where != null) {
+                                String whereExpression = where.toString();
+                                //TODO: this regex does not include parentheses because they conflict with "in (1, 2, 3)", so I have to find a way to safely detect composite mathematical expressions and function calls in where clause.
+                                if(Pattern.compile("[-+*/]").matcher(whereExpression).find()) {
+                                    queries.setWhereExpression(whereExpression);
+                                }
                                 AtomicBoolean predExpsEmpty = new AtomicBoolean(true);
                                 BinaryOperation operation = new BinaryOperation();
+                                AtomicBoolean ignoreNextOp = new AtomicBoolean(false);
                                 where.accept(new ExpressionVisitorAdapter() {
                                     @Override
                                     public void visit(Between expr) {
                                         System.out.println("visitBinaryExpression " + expr + " START");
                                         between.set(true);
                                         super.visit(expr);
-                                        BinaryOperation.Operator.BETWEEN.update(queries, operation);
+                                        Operator.BETWEEN.update(queries, operation);
                                         System.out.println("visitBinaryExpression " + expr + " END");
                                         queries.queries(operation.getTable()).addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), "AND")).get());
                                         between.set(false);
@@ -210,7 +219,7 @@ public class AerospikeQueryFactory {
                                         expr.getRightItemsList().accept(new ItemsListVisitorAdapter() {
                                             @Override
                                             public void visit(ExpressionList expressionList) {
-                                                BinaryOperation.Operator.IN.update(queries, operation);
+                                                Operator.IN.update(queries, operation);
                                             }
                                         });
                                     }
@@ -220,8 +229,20 @@ public class AerospikeQueryFactory {
                                     protected void visitBinaryExpression(BinaryExpression expr) {
                                         super.visitBinaryExpression(expr);
                                         System.out.println("visitBinaryExpression " + expr);
-                                        BinaryOperation.Operator.find(expr.getStringExpression()).update(queries, operation);
-                                        queries.queries(operation.getTable()).addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), expr.getStringExpression())).get());
+                                        Operator operator = Operator.find(expr.getStringExpression());
+                                        if (operator.doesRequireColumn() && operation.getColumn() == null) {
+                                            queries.queries(operation.getTable()).removeLastPredicates(4);
+                                            ignoreNextOp.set(true);
+                                            queries.setWhereExpression(whereExpression);
+                                        } else {
+                                            String op = expr.getStringExpression();
+                                            if (ignoreNextOp.get() && ("AND".equals(op) || "OR".equals(op))) {
+                                                ignoreNextOp.set(false);
+                                            } else {
+                                                operator.update(queries, operation);
+                                                queries.queries(operation.getTable()).addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), op)).get());
+                                            }
+                                        }
                                         operation.clear();
                                     }
 

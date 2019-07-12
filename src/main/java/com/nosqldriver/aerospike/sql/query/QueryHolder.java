@@ -64,6 +64,7 @@ public class QueryHolder {
     private List<DataColumn> columns = new ArrayList<>();
     private List<List<Object>> data = new ArrayList<>();
     private boolean skipDuplicates = false;
+    private String whereExpression = null;
 
     private final Statement statement;
     private AerospikeBatchQueryBySecondaryIndex secondayIndexQuery = null;
@@ -207,6 +208,12 @@ public class QueryHolder {
         return setAlias;
     }
 
+    public void removeLastPredicates(int n) {
+        for (int i = 0; i < n; i++) {
+            predExps.remove(predExps.size() - 1);
+        }
+    }
+
     public void addPredExp(PredExp predExp) {
         predExps.add(predExp);
     }
@@ -234,7 +241,8 @@ public class QueryHolder {
 
     private Function<IAerospikeClient, ResultSet> wrap(Function<IAerospikeClient, ResultSet> nakedQuery) {
         Function<IAerospikeClient, ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns), columns);
-        Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(expressioned.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) : expressioned;
+        Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), new ResultSetRowFilter(whereExpression)) : expressioned;
+        Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(filtered.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) : filtered;
         Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? limited : client -> new JoinedResultSet(limited.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), new ResultSetMetadataSupplier(client, join), join.skipIfMissing)).collect(Collectors.toList()));
 
         return client -> new NameCheckResultSetWrapper(joined.apply(client), columns);
@@ -514,6 +522,10 @@ public class QueryHolder {
 
     public void setSkipDuplicates(boolean skipDuplicates) {
         this.skipDuplicates = skipDuplicates;
+    }
+
+    public void setWhereExpression(String whereExpression) {
+        this.whereExpression = whereExpression;
     }
 
     private static class ResultSetMetadataSupplier implements Supplier<ResultSetMetaData> {
