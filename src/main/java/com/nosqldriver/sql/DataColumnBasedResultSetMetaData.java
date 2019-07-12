@@ -16,6 +16,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
     private final String schema;
     private final String table;
     private final List<DataColumn> columns;
+    private boolean discovered;
 
     public DataColumnBasedResultSetMetaData(String schema, String table) {
         this(schema, table, Collections.emptyList());
@@ -38,17 +39,25 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
     public DataColumnBasedResultSetMetaData updateTypes(ResultSetMetaData md) throws SQLException {
         int n = md.getColumnCount();
         for (int i = 0; i < n; i++) {
-            // TODO: use table and catalog names as well
-            //md.getCatalogName(i);
-            //md.getTableName(i);
             int index = i + 1;
+            String catalog = md.getCatalogName(index);
+            String table = md.getTableName(index);
             String name = md.getColumnName(index);
             int type = md.getColumnType(index);
-            columns.stream().filter(c -> Objects.equals(c.getName(), name)).findFirst().map(c -> c.withType(type));
+            columns.stream()
+                    .filter(c -> Objects.equals(c.getCatalog(), catalog) && Objects.equals(c.getTable(), table) && Objects.equals(c.getName(), name))
+                    .findFirst().map(c -> c.withType(type));
         }
         return new DataColumnBasedResultSetMetaData(columns);
     }
 
+    public void setDiscovered(boolean discovered) {
+        this.discovered = discovered;
+    }
+
+    public boolean isDiscovered() {
+        return discovered;
+    }
 
     private Stream<DataColumn> getVisibleColumns() {
         return columns.stream().filter(c -> !HIDDEN.equals(c.getRole()));

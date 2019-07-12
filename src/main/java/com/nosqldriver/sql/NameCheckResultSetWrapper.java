@@ -13,12 +13,13 @@ public class NameCheckResultSetWrapper extends ResultSetWrapper {
     }
 
     @Override
-    protected String getName(String alias) {
+    protected String getName(String alias) throws SQLException {
         return validate(alias);
     }
 
 
-    private String validate(String alias) {
+    private String validate(String alias) throws SQLException {
+        List<DataColumn> columns = ((DataColumnBasedResultSetMetaData)getMetaData()).getColumns();
         if (!columns.isEmpty() && columns.stream().noneMatch(c -> Objects.equals(alias, c.getLabel()) || (c.getLabel() == null && Objects.equals(alias, c.getName())))) {
             throwAny(new SQLException(format("Column '%s' not found", alias)));
         }
@@ -29,5 +30,4 @@ public class NameCheckResultSetWrapper extends ResultSetWrapper {
     private static <E extends Throwable> void throwAny(Throwable e) throws E {
         throw (E)e;
     }
-
 }

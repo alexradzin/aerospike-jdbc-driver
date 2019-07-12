@@ -85,6 +85,4 @@ class SelectLeftJoinTest {
         Collection<String> guitarAndKeyboards = new HashSet<>(asList("guitar", "keyboards"));
         asList("John", "Paul").forEach(name -> assertEquals(guitarAndKeyboards, result.get(name)));
     }
-
-
 }

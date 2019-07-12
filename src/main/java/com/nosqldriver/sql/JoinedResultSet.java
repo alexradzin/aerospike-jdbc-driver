@@ -280,8 +280,16 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
     public ResultSetMetaData getMetaData() throws SQLException {
         if (metadata == null) {
             metadata = (DataColumnBasedResultSetMetaData) resultSet.getMetaData();
-            for (JoinHolder jh : joinHolders) {
-                metadata.updateTypes(jh.getMetaDataSupplier().get());
+            if (metadata.isDiscovered()) {
+                List<DataColumn> allColumns = new ArrayList<>(metadata.getColumns());
+                for (JoinHolder jh : joinHolders) {
+                    allColumns.addAll(((DataColumnBasedResultSetMetaData)jh.getMetaDataSupplier().get()).getColumns());
+                }
+                metadata = new DataColumnBasedResultSetMetaData(allColumns);
+            } else {
+                for (JoinHolder jh : joinHolders) {
+                    metadata.updateTypes(jh.getMetaDataSupplier().get());
+                }
             }
         }
         return metadata;

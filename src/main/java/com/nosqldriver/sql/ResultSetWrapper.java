@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
+
 public class ResultSetWrapper implements ResultSet {
     private final ResultSet rs;
     private final Map<String, String> aliasToName; // alias to name map
@@ -40,7 +42,7 @@ public class ResultSetWrapper implements ResultSet {
         aliasToName = columns.stream().filter(c -> c.getName() != null && c.getLabel() != null).collect(Collectors.toMap(DataColumn::getLabel, DataColumn::getName));
     }
     
-    protected String getName(String alias) {
+    protected String getName(String alias) throws SQLException {
         return aliasToName.getOrDefault(alias, alias);
     }
 
@@ -239,7 +241,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        if (columns.isEmpty()) {
+        if (columns.stream().allMatch(c -> HIDDEN.equals(c.getRole()))) {
             return rs.getMetaData();
         }
         DataColumnBasedResultSetMetaData md = new DataColumnBasedResultSetMetaData(columns);

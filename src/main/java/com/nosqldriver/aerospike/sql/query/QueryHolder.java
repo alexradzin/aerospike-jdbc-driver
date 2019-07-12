@@ -146,6 +146,9 @@ public class QueryHolder {
         if (predExps.size() >= 3) {
             statement.setPredExp(predExps.toArray(new PredExp[0]));
         }
+        if (!joins.isEmpty() && columns.stream().allMatch(c -> HIDDEN.equals(c.getRole()))) {
+            statement.setBinNames();
+        }
 
         if (groupByFields != null) {
             Value[] args = Stream.concat(
@@ -324,7 +327,6 @@ public class QueryHolder {
                     List<String> addition = ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(Collectors.toList())).orElse(Collections.emptyList());
                     aggregatedFields.addAll(addition);
                     columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
-
                 }
             },
 
@@ -350,6 +352,8 @@ public class QueryHolder {
                         aggregatedFields = new HashSet<>();
                     }
                     aggregatedFields.add("distinct" + expr.toString());
+                    // TODO: theoretically we shoould use AGGREGATED instead of DATA Here but this breaks tests. However this should be fixed.
+                    // Once this is fixed we could completely remove aggregatedFields and call statement.setBins(). when building result set
                     columns.add(DATA.create(catalog, table, getText(expr), alias));
                 }
             },

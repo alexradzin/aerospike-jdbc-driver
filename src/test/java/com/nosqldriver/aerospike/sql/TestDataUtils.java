@@ -10,6 +10,7 @@ import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.IndexType;
 import com.nosqldriver.Person;
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.sql.DataColumn;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -263,6 +264,19 @@ class TestDataUtils {
         return rs;
     }
 
+
+    @VisibleForPackage
+    static ResultSet executeQuery(String sql, DataColumn... expectedColumns) throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+
+        if (expectedColumns.length > 0) {
+            validate(rs.getMetaData(), expectedColumns);
+        }
+
+        return rs;
+    }
+
+
     /**
      * Validates metadata against expected values
      * @param md
@@ -311,6 +325,23 @@ class TestDataUtils {
             assertEquals(expectedName2label, name2label);
             assertEquals(expectedName2type, name2type);
         }
+        return md;
+    }
+
+    @VisibleForPackage
+    static ResultSetMetaData validate(ResultSetMetaData md, DataColumn ... expectedColumns) throws SQLException {
+        assertNotNull(md);
+        assertEquals(expectedColumns.length, md.getColumnCount());
+
+        for (int i = 0; i < expectedColumns.length; i++) {
+            int j = i + 1;
+            assertEquals(expectedColumns[i].getCatalog(), md.getSchemaName(j));
+            assertEquals(expectedColumns[i].getTable(), md.getTableName(j));
+            assertEquals(expectedColumns[i].getName(), md.getColumnName(j));
+            assertEquals(expectedColumns[i].getLabel(), md.getColumnLabel(j));
+            assertEquals(expectedColumns[i].getType(), md.getColumnType(j), String.format("Wrong type of %s.%s.%s", md.getSchemaName(j), md.getTableName(j), md.getColumnLabel(j)));
+        }
+
         return md;
     }
 }

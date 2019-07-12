@@ -20,6 +20,8 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeAllPersonalInstruments;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
+import static java.sql.Types.BIGINT;
 import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
@@ -66,6 +68,32 @@ class SelectJoinTest {
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
+            "select * from people as p join instruments as i on p.id=i.person_id",
+    })
+    void oneToManyJoinSelectAllFields(String sql) throws SQLException {
+        ResultSet rs = executeQuery(sql,
+                DATA.create(NAMESPACE, PEOPLE, "kids_count", "kids_count").withType(BIGINT),
+                DATA.create(NAMESPACE, PEOPLE, "last_name", "last_name").withType(VARCHAR),
+                DATA.create(NAMESPACE, PEOPLE, "id", "id").withType(BIGINT),
+                DATA.create(NAMESPACE, PEOPLE, "first_name", "first_name").withType(VARCHAR),
+                DATA.create(NAMESPACE, PEOPLE, "year_of_birth", "year_of_birth").withType(BIGINT),
+                DATA.create(NAMESPACE, INSTRUMENTS, "name", "name").withType(VARCHAR),
+                DATA.create(NAMESPACE, INSTRUMENTS, "id", "id").withType(BIGINT),
+                DATA.create(NAMESPACE, INSTRUMENTS, "person_id", "person_id").withType(BIGINT)
+        );
+
+        Map<String, Collection<String>> result = collect(rs, "first_name", "name");
+        assertEquals(4, result.size());
+        assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
+        assertEquals(new HashSet<>(asList("vocals", "bass guitar", "guitar", "keyboards")), result.get("Paul"));
+        assertEquals(new HashSet<>(asList("vocals", "guitar", "sitar")), result.get("George"));
+        assertEquals(new HashSet<>(asList("vocals", "drums")), result.get("Ringo"));
+    }
+
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
             "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id where first_name='John'",
     })
     void oneToManyJoinWhereMainTable(String sql) throws SQLException {
@@ -103,18 +131,13 @@ class SelectJoinTest {
     }
 
 
-    @VisibleForPackage static Map<String, Collection<String>> collect(ResultSet rs, String ... names) throws SQLException {
+    @VisibleForPackage static Map<String, Collection<String>> collect(ResultSet rs, String keyName, String ... valueNames) throws SQLException {
         Map<String, Collection<String>> result = new HashMap<>();
         while(rs.next()) {
-            for (int i = 0; i < names.length; i++) {
-                assertEquals(rs.getString(i + 1), rs.getString(names[i]));
-            }
-
-            String key = rs.getString(1);
-
+            String key = rs.getString(keyName);
             Collection<String> values = result.getOrDefault(key, new HashSet<>());
-            for (int i = 1; i < names.length; i++) {
-                String value = rs.getString(i + 1);
+            for (String valueName : valueNames) {
+                String value = rs.getString(valueName);
                 if (value != null) {
                     values.add(value);
                 }
