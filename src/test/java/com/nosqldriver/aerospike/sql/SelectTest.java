@@ -16,7 +16,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -443,6 +442,20 @@ class SelectTest {
         createIndex("year_of_birth", IndexType.NUMERIC);
         assertSelectByOneNumericIndexedField(conn, "=", 1940, 1, 4);
     }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people where year_of_birth-1900=40",
+            "select * from people where year_of_birth-1900=2*20",
+            "select * from people where year_of_birth-1900=2*2*10",
+            "select * from people where year_of_birth-19*100=2*2*10",
+            "select * from people where year_of_birth-19*(20+80)=(2+3-1)*100/10",
+    })
+    void selectSeveralRecordsByOneFieldWithCalculationInWhereClause(String sql) throws SQLException {
+        assertSelect(conn, sql, 1, 4);
+    }
+
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {

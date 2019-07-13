@@ -209,7 +209,7 @@ public class QueryHolder {
     }
 
     public void removeLastPredicates(int n) {
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n && !predExps.isEmpty(); i++) {
             predExps.remove(predExps.size() - 1);
         }
     }

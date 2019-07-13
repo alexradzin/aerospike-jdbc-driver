@@ -133,8 +133,8 @@ public class BinaryOperation {
         }
 
         public abstract QueryHolder update(QueryHolder queries, BinaryOperation operation);
-        public static Operator find(String op) {
-            return Optional.ofNullable(operators.get(op)).orElseThrow(() -> new IllegalArgumentException(op));
+        public static Optional<Operator> find(String op) {
+            return Optional.ofNullable(operators.get(op));
         }
 
         public boolean doesRequireColumn() {

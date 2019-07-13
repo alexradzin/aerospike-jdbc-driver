@@ -71,7 +71,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -158,9 +157,10 @@ public class AerospikeQueryFactory {
                                         protected void visitBinaryExpression(BinaryExpression expr) {
                                             super.visitBinaryExpression(expr);
                                             System.out.println("join visitBinaryExpression " + expr);
-                                            Operator operator = Operator.find(expr.getStringExpression());
-                                            if (!Operator.EQ.equals(operator)) {
-                                                throw new IllegalArgumentException(format("Join condition must use = only but was %s", operator.operator()));
+                                            Optional<Operator> operator = Operator.find(expr.getStringExpression());
+
+                                            if (!operator.map(Operator.EQ::equals).orElse(false)) {
+                                                throw new IllegalArgumentException(format("Join condition must use = only but was %s", operator.map(Operator::operator).orElse("N/A")));
                                             }
                                             currentJoin.addPredExp(new OperatorRefPredExp(expr.getStringExpression()));
                                         }
@@ -229,8 +229,8 @@ public class AerospikeQueryFactory {
                                     protected void visitBinaryExpression(BinaryExpression expr) {
                                         super.visitBinaryExpression(expr);
                                         System.out.println("visitBinaryExpression " + expr);
-                                        Operator operator = Operator.find(expr.getStringExpression());
-                                        if (operator.doesRequireColumn() && operation.getColumn() == null) {
+                                        Optional<Operator> operator = Operator.find(expr.getStringExpression());
+                                        if (!operator.isPresent() || (operator.get().doesRequireColumn() && operation.getColumn() == null)) {
                                             queries.queries(operation.getTable()).removeLastPredicates(4);
                                             ignoreNextOp.set(true);
                                             queries.setWhereExpression(whereExpression);
@@ -239,7 +239,7 @@ public class AerospikeQueryFactory {
                                             if (ignoreNextOp.get() && ("AND".equals(op) || "OR".equals(op))) {
                                                 ignoreNextOp.set(false);
                                             } else {
-                                                operator.update(queries, operation);
+                                                operator.get().update(queries, operation);
                                                 queries.queries(operation.getTable()).addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), op)).get());
                                             }
                                         }
