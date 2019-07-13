@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
@@ -44,8 +45,8 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     private boolean nextResult = false;
     private Map<String, Object> sampleRecord;
 
-    public ResultSetOverDistinctMap(String schema, String table, List<DataColumn> columns, ResultSet rs) {
-        super(schema, table, columns, rs);
+    public ResultSetOverDistinctMap(String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier) {
+        super(schema, table, columns, rs, anyRecordSupplier);
     }
 
     @Override

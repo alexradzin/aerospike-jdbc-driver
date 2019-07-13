@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -42,6 +43,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     protected final String schema;
     protected final String table;
     protected final List<DataColumn> columns;
+    private final Supplier<R> anyRecordSupplier;
     private boolean wasNull = false;
     private volatile SQLWarning sqlWarning;
     private volatile int index = 0;
@@ -50,10 +52,11 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     private boolean firstNextWasCalled = false;
 
 
-    protected BaseSchemalessResultSet(String schema, String table, List<DataColumn> columns) {
+    protected BaseSchemalessResultSet(String schema, String table, List<DataColumn> columns, Supplier<R> anyRecordSupplier) {
         this.schema = schema;
         this.table = table;
         this.columns = Collections.unmodifiableList(columns);
+        this.anyRecordSupplier = anyRecordSupplier;
     }
 
 
@@ -668,7 +671,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
             return null;
         }
 
-        return null;
+        return anyRecordSupplier.get();
     }
 
     protected abstract boolean moveToNext();

@@ -7,14 +7,15 @@ import com.nosqldriver.sql.DataColumn;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 
 
 public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map<String, Object>> {
     protected final ResultSet rs;
-    public ResultSetOverAerospikeResultSet(String schema, String table, List<DataColumn> columns, ResultSet rs) {
-        super(schema, table, columns);
+    public ResultSetOverAerospikeResultSet(String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier) {
+        super(schema, table, columns, anyRecordSupplier);
         this.rs = rs;
     }
 

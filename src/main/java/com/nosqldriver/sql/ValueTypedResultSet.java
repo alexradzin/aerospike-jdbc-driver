@@ -1,12 +1,13 @@
 package com.nosqldriver.sql;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 
 abstract class ValueTypedResultSet<R> extends BaseSchemalessResultSet<R> {
-    protected ValueTypedResultSet(String schema, String table, List<DataColumn> columns) {
-        super(schema, table, columns);
+    protected ValueTypedResultSet(String schema, String table, List<DataColumn> columns, Supplier<R> anyRecordSupplier) {
+        super(schema, table, columns, anyRecordSupplier);
     }
 
     @Override

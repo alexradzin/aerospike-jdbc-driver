@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.function.Function;
 
 import static java.lang.String.format;
@@ -67,7 +68,7 @@ public class AerospikeStatement implements java.sql.Statement {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-                return new ListRecordSet(statement.schema, statement.set, emptyList(), emptyList());
+                return new ListRecordSet(statement.schema, statement.set, emptyList(), emptyList(), Collections::emptyList);
             }
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {

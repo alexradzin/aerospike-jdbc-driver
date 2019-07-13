@@ -1,8 +1,8 @@
 package com.nosqldriver.sql;
 
 public class DataColumn {
-    private final String catalog;
-    private final String table;
+    private String catalog;
+    private String table;
     private final String name;
     private final String label;
     private final String expression;
@@ -34,6 +34,16 @@ public class DataColumn {
         this.role = role;
     }
 
+
+    public DataColumn withCatalog(String catalog) {
+        this.catalog = catalog;
+        return this;
+    }
+
+    public DataColumn withTable(String table) {
+        this.table = table;
+        return this;
+    }
 
     public DataColumn withType(int type) {
         this.type = type;

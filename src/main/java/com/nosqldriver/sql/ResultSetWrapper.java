@@ -241,10 +241,10 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        if (columns.stream().allMatch(c -> HIDDEN.equals(c.getRole()))) {
+        if (rs != null && columns.stream().allMatch(c -> HIDDEN.equals(c.getRole()))) {
             return rs.getMetaData();
         }
-        DataColumnBasedResultSetMetaData md = new DataColumnBasedResultSetMetaData(columns);
+        DataColumnBasedResultSetMetaData md = new DataColumnBasedResultSetMetaData(columns); //TODO: should we filter not HIDDEN columns here?
         if (rs != null) {
             md.updateTypes(rs.getMetaData());
         }

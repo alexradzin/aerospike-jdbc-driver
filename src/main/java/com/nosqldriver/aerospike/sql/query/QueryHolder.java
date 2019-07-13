@@ -2,10 +2,13 @@ package com.nosqldriver.aerospike.sql.query;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
+import com.aerospike.client.Record;
 import com.aerospike.client.Value;
 import com.aerospike.client.Value.StringValue;
+import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
+import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
@@ -31,10 +34,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -75,6 +81,7 @@ public class QueryHolder {
     private long offset = -1;
     private long limit = -1;
 
+    private Collection<QueryHolder> subQeueries = new ArrayList<>();
     private Collection<QueryHolder> joins = new ArrayList<>();
     private boolean skipIfMissing;
 
@@ -92,6 +99,20 @@ public class QueryHolder {
     }
 
     public Function<IAerospikeClient, ResultSet> getQuery() {
+        if (!subQeueries.isEmpty()) {
+            List<QueryHolder> all = new ArrayList<>(subQeueries);
+            all.add(0, this);
+            Collections.reverse(all);
+            QueryHolder real = all.remove(0);
+            Function<IAerospikeClient, ResultSet> realRs = real.getQuery();
+            AtomicReference<Function<IAerospikeClient, ResultSet>> currentRsRef = new AtomicReference<>(realRs);
+            for (QueryHolder h : all) {
+                currentRsRef.set(h.wrap(currentRsRef.get()));
+            }
+            return currentRsRef.get();
+        }
+
+
         if (pkQuery != null) {
             assertNull(pkBatchQuery, secondayIndexQuery);
             return wrap(pkQuery);
@@ -157,7 +178,7 @@ public class QueryHolder {
                     columns.stream().filter(c -> DATA.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
-            return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having));
+            return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having), (c, p) -> new HashMap<>()); // TODO: implement BiFunction that returns fake record for schema discoevery
         }
 
         if (aggregatedFields != null) {
@@ -178,26 +199,26 @@ public class QueryHolder {
                 }
                 String groupField = m.group(1);
                 statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new StringValue(groupField));
-                return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy());
+                return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy(), (client, policy) -> new HashMap<>()); // TODO: implement BiFunction that returns fake record for schema discoevery
             }
 
 
             statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", fieldsForAggregation);
-            return new AerospikeAggregationQuery(schema, set, columns, statement, policyProvider.getQueryPolicy());
+            return new AerospikeAggregationQuery(schema, set, columns, statement, policyProvider.getQueryPolicy(), (client, policy) -> toMap(getAnyRecord(client, policy)));
         }
 
 
-        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, columns, statement, policyProvider.getQueryPolicy());
+        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(schema, columns, statement, policyProvider.getQueryPolicy(), this::getAnyRecord);
     }
 
     @VisibleForPackage
     void createPkQuery(Key key) {
-        pkQuery = new AerospikeQueryByPk(schema, columns, key, policyProvider.getPolicy());
+        pkQuery = new AerospikeQueryByPk(schema, columns, key, policyProvider.getPolicy(), (client, policy) -> getAnyRecord(client, new QueryPolicy())); //TODO: copy properties of policy to QueryPolicy
     }
 
     @VisibleForPackage
     void createPkBatchQuery(Key ... keys) {
-        pkBatchQuery = new AerospikeBatchQueryByPk(schema, set, columns, keys, policyProvider.getBatchPolicy());
+        pkBatchQuery = new AerospikeBatchQueryByPk(schema, set, columns, keys, policyProvider.getBatchPolicy(), (client, policy) -> getAnyRecord(client, new QueryPolicy())); //TODO: copy properties of policy to QueryPolicy
     }
 
     public String getSetName() {
@@ -389,6 +410,13 @@ public class QueryHolder {
         return join;
     }
 
+    public QueryHolder addSubQuery() {
+        QueryHolder subQuery = new QueryHolder(schema, indexes, policyProvider);
+        subQeueries.add(subQuery);
+        return subQuery;
+    }
+
+
     private static class JoinRetriever implements Function<ResultSet, ResultSet> {
         private final IAerospikeClient client;
         private final QueryHolder joinQuery;
@@ -487,6 +515,19 @@ public class QueryHolder {
         }
 
 
+    }
+
+
+    private Record getAnyRecord(IAerospikeClient client, QueryPolicy policy) {
+        Statement statement = new Statement();
+        statement.setNamespace(schema);
+        statement.setSetName(set);
+        RecordSet rs = client.query(policy, statement);
+        return rs.next() ? rs.getRecord() : null;
+    }
+
+    private Map<String, Object> toMap(Record record) {
+        return record == null ? Collections.emptyMap() : record.bins;
     }
 
 

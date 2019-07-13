@@ -18,14 +18,14 @@ import java.util.stream.IntStream;
 
 import static java.util.Collections.emptyList;
 
-public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>, WritePolicy> {
+public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>, WritePolicy, Object> {
     private final int indexOfPK;
     private final boolean skipDuplicates;
     public final static ThreadLocal<Integer> updatedRecordsCount = new ThreadLocal<>();
 
 
     public AerospikeInsertQuery(String schema, String set, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
-        super(schema, set, columns, data, policy);
+        super(schema, set, columns, data, policy, null);
         this.skipDuplicates = skipDuplicates;
         columns.stream().map(DataColumn::getName).filter("PK"::equals).findFirst().orElseThrow(() -> new IllegalArgumentException("PK is not specified"));
 

@@ -44,9 +44,24 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
             String table = md.getTableName(index);
             String name = md.getColumnName(index);
             int type = md.getColumnType(index);
-            columns.stream()
-                    .filter(c -> Objects.equals(c.getCatalog(), catalog) && Objects.equals(c.getTable(), table) && Objects.equals(c.getName(), name))
-                    .findFirst().map(c -> c.withType(type));
+
+            for (DataColumn column : columns) {
+                if (Objects.equals(column.getName(), name)) {
+                    if (column.getCatalog() == null) {
+                        column.withCatalog(catalog);
+                    }
+                    if (column.getTable() == null) {
+                        column.withTable(table);
+                    }
+                    if (Objects.equals(column.getCatalog(), catalog) && Objects.equals(column.getTable(), table) && column.getType() == 0) {
+                        column.withType(type);
+                    }
+                }
+            }
+
+//            columns.stream()
+//                    .filter(c -> Objects.equals(c.getCatalog(), catalog) && Objects.equals(c.getTable(), table) && Objects.equals(c.getName(), name))
+//                    .findFirst().map(c -> c.withType(type));
         }
         return new DataColumnBasedResultSetMetaData(columns);
     }

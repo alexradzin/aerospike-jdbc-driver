@@ -41,6 +41,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.createIndex;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.dropIndexSafely;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQueryPreparedStatement;
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.lang.String.format;
 import static java.sql.Types.BIGINT;
 import static java.sql.Types.DOUBLE;
@@ -85,7 +86,11 @@ class SelectTest {
             "select * from people as p",
             "select * from people where 0=0",
             "select * from people where 0=0 and 1=1",
-            "select * from people where 0<1 or 2>1"
+            "select * from people where 0<1 or 2>1",
+            "select * from (select * from people)",
+            "select * from (select * from people where 0=0)",
+            "select * from (select * from people) where 1=1",
+            "select * from (select * from people where 0=0) where 1=1",
     })
     void selectAll(String sql) throws SQLException {
         selectAll(sql, executeQuery);
@@ -158,6 +163,9 @@ class SelectTest {
             "select first_name, p.year_of_birth from people as p",
             "select p.first_name, p.year_of_birth from people as p",
             "select p.first_name, p.year_of_birth from people as p",
+            "select * from (select first_name, year_of_birth from people)",
+            "select first_name, year_of_birth from (select * from people)",
+            "select first_name, year_of_birth from (select first_name, last_name, year_of_birth from people)",
     })
     void selectSpecificFields(String sql) throws SQLException {
         selectSpecificFields(sql, sql1 -> {
@@ -473,7 +481,10 @@ class SelectTest {
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
-            "select * from people where year_of_birth=1940 and first_name='John' and 'a'='b'"
+            "select * from people where year_of_birth=1940 and first_name='John' and 'a'='b'",
+            "select * from (select * from people where year_of_birth=1940 and first_name='John') where 'a'='b'",
+            "select * from (select * from people where year_of_birth=1940 and first_name='John') where 1=0",
+            "select * from (select * from people) where 1=0",
     })
     void selectRecordsWithFalseEvaluatedWhereExpression(String sql) throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
@@ -906,8 +917,13 @@ class SelectTest {
     }
 
     private void assertSelect(Connection conn, String sql, int ... expectedIds) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        ResultSet rs = executeQuery(sql,
+                DATA.create(NAMESPACE, PEOPLE, "kids_count", "kids_count").withType(BIGINT),
+                DATA.create(NAMESPACE, PEOPLE, "last_name", "last_name").withType(VARCHAR),
+                DATA.create(NAMESPACE, PEOPLE, "id", "id").withType(BIGINT),
+                DATA.create(NAMESPACE, PEOPLE, "first_name", "first_name").withType(VARCHAR),
+                DATA.create(NAMESPACE, PEOPLE, "year_of_birth", "year_of_birth").withType(BIGINT)
+        );
         assertPeople(rs, beatles, expectedIds);
     }
 
