@@ -11,7 +11,6 @@ import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -440,15 +439,15 @@ class SelectTest {
     @DisplayName("year_of_birth=1942 -> [Paul], year_of_birth=1943 -> [George]")
     void selectOneRecordByOneNumericIndexedFieldEq() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelectByOneNumericIndexedField(conn, "=", 1942, 2);
-        assertSelectByOneNumericIndexedField(conn, "=", 1943, 3);
+        assertSelectByOneNumericIndexedField("=", 1942, 2);
+        assertSelectByOneNumericIndexedField("=", 1943, 3);
     }
 
     @Test
     @DisplayName("year_of_birth=1940 -> [John, Ringo]")
     void selectSeveralRecordsByOneNumericIndexedFieldEq() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelectByOneNumericIndexedField(conn, "=", 1940, 1, 4);
+        assertSelectByOneNumericIndexedField("=", 1940, 1, 4);
     }
 
 
@@ -461,7 +460,7 @@ class SelectTest {
             "select * from people where year_of_birth-19*(20+80)=(2+3-1)*100/10",
     })
     void selectSeveralRecordsByOneFieldWithCalculationInWhereClause(String sql) throws SQLException {
-        assertSelect(conn, sql, 1, 4);
+        assertSelect(sql, 1, 4);
     }
 
 
@@ -475,7 +474,7 @@ class SelectTest {
     })
     void selectOneRecordByOneNumericIndexedFieldEqAndOneNotIndexedField(String sql) throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelect(conn, sql, 1);
+        assertSelect(sql, 1);
     }
 
 
@@ -488,7 +487,7 @@ class SelectTest {
     })
     void selectRecordsWithFalseEvaluatedWhereExpression(String sql) throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelect(conn, sql);
+        assertSelect(sql);
     }
 
 
@@ -496,7 +495,7 @@ class SelectTest {
     @DisplayName("year_of_birth=1940 and first_name='John'-> [John]")
     void selectOneRecordByOneNumericIndexedFieldEqAndOneNotIndexedFieldUsingPreparedStatement() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelect(conn, "select * from people where year_of_birth=1940 and first_name='John'", 1);
+        assertSelect("select * from people where year_of_birth=1940 and first_name='John'", 1);
 
         PreparedStatement ps = conn.prepareStatement("select * from people where year_of_birth=? and first_name=?");
         ps.setInt(1, 1940);
@@ -510,14 +509,14 @@ class SelectTest {
     @Test
     @DisplayName("year_of_birth=1940 and last_name='Lennon'-> [John]")
     void selectOneRecordByOneNumericEqAndOneStringFieldAllNotIndexed() throws SQLException {
-        assertSelect(conn, "select * from people where year_of_birth=1940 and last_name='Lennon'", 1);
+        assertSelect("select * from people where year_of_birth=1940 and last_name='Lennon'", 1);
     }
 
 
     @Test
     @DisplayName("last_name='Lennon' or last_name='Harrison' -> [John, George]")
     void selectSeveralPersonsByLastNameOr() throws SQLException {
-        assertSelect(conn, "select * from people where last_name='Lennon' or last_name='Harrison'", 1, 3);
+        assertSelect("select * from people where last_name='Lennon' or last_name='Harrison'", 1, 3);
     }
 
 
@@ -525,55 +524,55 @@ class SelectTest {
     @DisplayName("year_of_birth=1939 -> nothing")
     void selectNothingByOneNumericIndexedFieldEq() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelectByOneNumericIndexedField(conn, "=", 1939);
+        assertSelectByOneNumericIndexedField("=", 1939);
     }
 
     @Test
     @DisplayName("year_of_birth>1939 -> [John, Paul, George, Ringo]")
     void selectAllRecordsByOneNumericIndexedFieldGt() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelectByOneNumericIndexedField(conn, ">", 1939, 1, 2, 3, 4);
+        assertSelectByOneNumericIndexedField(">", 1939, 1, 2, 3, 4);
     }
 
     @Test
     @DisplayName("year_of_birth>=1940 -> [John, Paul, George, Ringo]")
     void selectAllRecordsByOneNumericIndexedFieldGe() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelectByOneNumericIndexedField(conn, ">=", 1940, 1, 2, 3, 4);
+        assertSelectByOneNumericIndexedField(">=", 1940, 1, 2, 3, 4);
     }
 
     @Test
     @DisplayName("year_of_birth>1940 -> [Paul, George]")
     void selectSeveralRecordsByOneNumericIndexedFieldGe() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelectByOneNumericIndexedField(conn, ">", 1940, 2, 3);
+        assertSelectByOneNumericIndexedField(">", 1940, 2, 3);
     }
 
     @Test
     @DisplayName("year_of_birth between 1942 and 1943 -> [Paul, George]")
     void selectSeveralRecordsByOneNumericIndexedFieldBetween() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelect(conn, "select * from people where year_of_birth between 1942 and 1943", 2, 3);
+        assertSelect("select * from people where year_of_birth between 1942 and 1943", 2, 3);
     }
 
     @Test
     @DisplayName("year_of_birth between 1941 and 1944 -> [Paul, George]")
     void selectSeveralRecordsByOneNumericIndexedFieldBetween2() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelect(conn, "select * from people where year_of_birth between 1941 and 1944", 2, 3);
+        assertSelect("select * from people where year_of_birth between 1941 and 1944", 2, 3);
     }
 
 
     @Test
     @DisplayName("PK IN (2, 3) -> [Paul, George]")
     void selectSeveralRecordsByPkIn() throws SQLException {
-        assertSelect(conn, "select * from people where PK in (2, 3)", 2, 3);
+        assertSelect("select * from people where PK in (2, 3)", 2, 3);
     }
 
     @Test
     @DisplayName("PK IN (20, 30) -> []")
     void selectNoRecordsByPkIn() throws SQLException {
-        assertSelect(conn, "select * from people where PK in (20, 30)");
+        assertSelect("select * from people where PK in (20, 30)");
     }
 
 
@@ -581,27 +580,27 @@ class SelectTest {
     @DisplayName("year_of_birth<1939 -> nothing")
     void selectNothingRecordsByOneNumericIndexedFieldLt() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelectByOneNumericIndexedField(conn, "<", 1939);
+        assertSelectByOneNumericIndexedField("<", 1939);
     }
 
     @Test
     @DisplayName("year_of_birth<1940 -> nothing")
     void selectNothingRecordsByOneNumericIndexedFieldLt2() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelectByOneNumericIndexedField(conn, "<", 1940);
+        assertSelectByOneNumericIndexedField("<", 1940);
     }
 
     @Test
     @DisplayName("year_of_birth<=1940 -> [John, Ringo]")
     void selectNothingRecordsByOneNumericIndexedFieldLe() throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
-        assertSelectByOneNumericIndexedField(conn, "<=", 1940, 1, 4);
+        assertSelectByOneNumericIndexedField("<=", 1940, 1, 4);
     }
 
     @Test
     @DisplayName("limit 2 -> [John, Paul]")
     void selectAllWithLimit2() throws SQLException {
-        assertSelect(conn, "select * from people limit 2", 1, 2);
+        assertSelect("select * from people limit 2", 1, 2);
 
         //ResultSet rs = conn.createStatement().executeQuery("select * from people limit 2");
         // "id", "first_name", "last_name", "year_of_birth", "kids_count"
@@ -912,11 +911,11 @@ class SelectTest {
         assertFalse(rs.next());
     }
 
-    private void assertSelectByOneNumericIndexedField(Connection conn, String operation, int year, int ... expectedIds) throws SQLException {
-        assertSelect(conn, format("select * from people where year_of_birth%s%s", operation, year), expectedIds);
+    private void assertSelectByOneNumericIndexedField(String operation, int year, int ... expectedIds) throws SQLException {
+        assertSelect(format("select * from people where year_of_birth%s%s", operation, year), expectedIds);
     }
 
-    private void assertSelect(Connection conn, String sql, int ... expectedIds) throws SQLException {
+    private void assertSelect(String sql, int ... expectedIds) throws SQLException {
         ResultSet rs = executeQuery(sql,
                 DATA.create(NAMESPACE, PEOPLE, "kids_count", "kids_count").withType(BIGINT),
                 DATA.create(NAMESPACE, PEOPLE, "last_name", "last_name").withType(VARCHAR),

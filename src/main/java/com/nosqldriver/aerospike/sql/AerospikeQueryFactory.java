@@ -101,7 +101,6 @@ public class AerospikeQueryFactory {
     Function<IAerospikeClient, ResultSet> createQuery(String sql) throws SQLException {
         try {
             QueryHolder queries = new QueryHolder(schema, indexes, policyProvider);
-            AtomicReference<Class> lastValueType = new AtomicReference<>();
             parserManager.parse(new StringReader(sql)).accept(new StatementVisitorAdapter() {
                 @Override
                 public void visit(Select select) {
@@ -203,7 +202,7 @@ public class AerospikeQueryFactory {
 
 
 
-    void createSelect(SelectBody selectBody, QueryHolder queries) {
+    private void createSelect(SelectBody selectBody, QueryHolder queries) {
         AtomicReference<Class> lastValueType = new AtomicReference<>();
         selectBody.accept(new SelectVisitorAdapter() {
             @Override
