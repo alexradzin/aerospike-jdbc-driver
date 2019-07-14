@@ -21,17 +21,7 @@ class ConnectionParametersParser {
 
     @VisibleForPackage
     ClientPolicy policy(String url, Properties info) {
-        ClientPolicy clientPolicy = new ClientPolicy();
-
-        clientInfo(url, info).forEach((key, value) -> {
-            try {
-                ClientPolicy.class.getField((String)key).set(clientPolicy, value);
-            } catch (ReflectiveOperationException e1) {
-                // ignore it; this property does not belong to ClientPolicy
-            }
-        });
-
-        return clientPolicy;
+        return PolicyFactory.copy(clientInfo(url, info), new ClientPolicy());
     }
 
     @VisibleForPackage
@@ -77,17 +67,7 @@ class ConnectionParametersParser {
 
     @VisibleForPackage
     <T> T initProperties(T object, Properties props) {
-        @SuppressWarnings("unchecked")
-        Class<T> clazz = (Class<T>)object.getClass();
-        props.forEach((key, value) -> {
-            try {
-                clazz.getField((String)key).set(object, value);
-            } catch (ReflectiveOperationException e1) {
-                // ignore it; this property does not belong to ClientPolicy
-            }
-        });
-
-        return object;
+        return PolicyFactory.copy(props, object);
     }
 
     @VisibleForPackage
@@ -112,6 +92,8 @@ class ConnectionParametersParser {
             }
             return props;
         }).map(p -> indexKey(p.getProperty("ns"), p.getProperty("set"), p.getProperty("bin"))).collect(Collectors.toSet());
+
+
     }
 
     private String indexKey(String namespace, String set, String bin) {

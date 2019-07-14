@@ -178,7 +178,7 @@ public class QueryHolder {
                     columns.stream().filter(c -> DATA.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
-            return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having), (c, p) -> new HashMap<>()); // TODO: implement BiFunction that returns fake record for schema discoevery
+            return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having), (c, p) -> new HashMap<>()); // TODO: implement BiFunction that returns fake record for schema discovery
         }
 
         if (aggregatedFields != null) {
@@ -213,12 +213,12 @@ public class QueryHolder {
 
     @VisibleForPackage
     void createPkQuery(Key key) {
-        pkQuery = new AerospikeQueryByPk(schema, columns, key, policyProvider.getPolicy(), (client, policy) -> getAnyRecord(client, new QueryPolicy())); //TODO: copy properties of policy to QueryPolicy
+        pkQuery = new AerospikeQueryByPk(schema, columns, key, policyProvider.getPolicy(), (client, policy) -> getAnyRecord(client, policyProvider.getQueryPolicy()));
     }
 
     @VisibleForPackage
     void createPkBatchQuery(Key ... keys) {
-        pkBatchQuery = new AerospikeBatchQueryByPk(schema, set, columns, keys, policyProvider.getBatchPolicy(), (client, policy) -> getAnyRecord(client, new QueryPolicy())); //TODO: copy properties of policy to QueryPolicy
+        pkBatchQuery = new AerospikeBatchQueryByPk(schema, set, columns, keys, policyProvider.getBatchPolicy(), (client, policy) -> getAnyRecord(client, policyProvider.getQueryPolicy()));
     }
 
     public String getSetName() {
