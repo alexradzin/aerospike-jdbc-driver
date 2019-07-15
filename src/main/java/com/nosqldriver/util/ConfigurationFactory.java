@@ -1,4 +1,4 @@
-package com.nosqldriver.aerospike.sql;
+package com.nosqldriver.util;
 
 import com.aerospike.client.policy.Policy;
 import com.nosqldriver.VisibleForPackage;
@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.function.Function;
 
-public class PolicyFactory {
+public class ConfigurationFactory {
     private static final Map<Class, Function<String, Object>> typeTransformers = new HashMap<>();
     static {
         typeTransformers.put(byte.class, Byte::parseByte);
@@ -31,8 +31,7 @@ public class PolicyFactory {
 
 
 
-    @VisibleForPackage
-    static Policy copy(Policy src, Policy dst) {
+    public static Policy copy(Policy src, Policy dst) {
         Class<? extends Policy> clazz = dst.getClass();
         Arrays.stream(src.getClass().getFields())
                 .forEach(f -> {
@@ -45,8 +44,7 @@ public class PolicyFactory {
         return dst;
     }
 
-    @VisibleForPackage
-    static <T> T copy(Properties props, T object) {
+    public static <T> T copy(Properties props, T object) {
         @SuppressWarnings("unchecked")
         Class<T> clazz = (Class<T>)object.getClass();
         props.forEach((key, value) -> {

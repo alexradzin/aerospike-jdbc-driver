@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.Host;
 import com.aerospike.client.policy.ClientPolicy;
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.util.ConfigurationFactory;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -21,7 +22,7 @@ class ConnectionParametersParser {
 
     @VisibleForPackage
     ClientPolicy policy(String url, Properties info) {
-        return PolicyFactory.copy(clientInfo(url, info), new ClientPolicy());
+        return ConfigurationFactory.copy(clientInfo(url, info), new ClientPolicy());
     }
 
     @VisibleForPackage
@@ -67,7 +68,7 @@ class ConnectionParametersParser {
 
     @VisibleForPackage
     <T> T initProperties(T object, Properties props) {
-        return PolicyFactory.copy(props, object);
+        return ConfigurationFactory.copy(props, object);
     }
 
     @VisibleForPackage
