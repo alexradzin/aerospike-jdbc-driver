@@ -15,6 +15,7 @@ import com.nosqldriver.aerospike.sql.query.QueryHolder;
 import com.nosqldriver.aerospike.sql.query.ValueRefPredExp;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.JoinType;
+import com.nosqldriver.sql.OrderItem;
 import com.nosqldriver.sql.RecordExpressionEvaluator;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
@@ -78,6 +79,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
+import static com.nosqldriver.sql.OrderItem.Direction.ASC;
+import static com.nosqldriver.sql.OrderItem.Direction.DESC;
 import static com.nosqldriver.sql.SqlLiterals.operatorKey;
 import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
 import static java.lang.String.format;
@@ -427,6 +430,10 @@ public class AerospikeQueryFactory {
                     }
                 }
 
+
+                if (plainSelect.getOrderByElements() != null) {
+                    plainSelect.getOrderByElements().stream().map(o -> new OrderItem(o.getExpression().toString(), o.isAsc() ? ASC :DESC)).forEach(o -> queries.addOrdering(o));
+                }
 
                 if (plainSelect.getGroupByColumnReferences() != null) {
                     plainSelect.getGroupByColumnReferences().forEach(e -> queries.addGroupField(((Column) e).getColumnName()));

@@ -4,7 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.function.Predicate;
 
-public class FilteredResultSet extends ResultSetWrapper {
+public class FilteredResultSet extends ResultSetWrapper implements DelegatingResultSet {
     private final ResultSet rs;
     private final Predicate<ResultSet> filter;
     private int row = 0;

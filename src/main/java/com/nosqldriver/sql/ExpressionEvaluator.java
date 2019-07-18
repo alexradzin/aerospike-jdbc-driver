@@ -13,7 +13,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 @VisibleForPackage
-abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T, Object> {
+public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T, Object> {
     private final String expr;
     private final ScriptEngine engine;
 

@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 
 public class ResultSetWrapper implements ResultSet {
-    private final ResultSet rs;
+    protected final ResultSet rs;
     private final Map<String, String> aliasToName; // alias to name map
     protected List<DataColumn> columns;
 
