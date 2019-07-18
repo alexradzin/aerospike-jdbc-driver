@@ -32,8 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 /**
  * This class contains various utilities needed for easier manipulations with data in DB.
  */
-@VisibleForPackage
-class TestDataUtils {
+public class TestDataUtils {
     @VisibleForPackage static final String NAMESPACE = "test";
     @VisibleForPackage static final String PEOPLE = "people";
     @VisibleForPackage static final String INSTRUMENTS = "instruments";
@@ -58,7 +57,7 @@ class TestDataUtils {
         }
     }
 
-    @VisibleForPackage static final Person[] beatles = new Person[] {
+    public static final Person[] beatles = new Person[] {
             new Person(1, "John", "Lennon", 1940, 2),
             new Person(2, "Paul", "McCartney", 1942, 5),
             new Person(3, "George", "Harrison", 1943, 1),
