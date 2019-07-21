@@ -2,22 +2,30 @@ package com.nosqldriver.util;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.function.Function;
 
-public class PagedCollection<T> implements Collection<T> {
-    private final Collection<T> collection;
+public class PagedCollection<C extends Collection<T>, T> implements Collection<T> {
+    private final C collection;
     private final int pageSize;
+    private final Function<C, T> lastElementRemover;
     private int currentPageSize = 0;
     private final boolean rewrite;
 
-    public PagedCollection(Collection<T> collection, int pageSize, boolean rewrite) {
+
+    public PagedCollection(C collection, int pageSize, boolean rewrite) {
+        this(collection, pageSize, rewrite, c -> null);
+    }
+
+    public PagedCollection(C collection, int pageSize, boolean rewrite, Function<C, T> lastElementRemover) {
         this.collection = collection;
         this.pageSize = pageSize;
         this.rewrite = rewrite;
+        this.lastElementRemover = lastElementRemover;
     }
 
     @Override
     public int size() {
-        return 0;
+        return collection.size();
     }
 
     @Override
@@ -52,13 +60,19 @@ public class PagedCollection<T> implements Collection<T> {
             return addImpl(t);
         }
         if (currentPageSize == pageSize) {
-            currentPageSize = 0;
             if (rewrite) {
+                currentPageSize = 0;
                 collection.clear();
+            } else {
+                currentPageSize--;
             }
             if (currentPageSize < pageSize) {
                 currentPageSize++;
-                return addImpl(t);
+                boolean addResult = addImpl(t);
+                if (!rewrite) {
+                    lastElementRemover.apply(collection);
+                }
+                return addResult;
             }
             return false;
         }
@@ -66,7 +80,7 @@ public class PagedCollection<T> implements Collection<T> {
     }
 
     private boolean addImpl(T t) {
-        return collection.add(t) && currentPageSize < pageSize;
+        return collection.add(t) && (currentPageSize < pageSize || !rewrite);
     }
 
 

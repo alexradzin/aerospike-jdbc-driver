@@ -70,12 +70,13 @@ public class OrderItemsComparator<T> implements Comparator<T> {
         this.getter = getter;
     }
 
-;
+
     @Override
     public int compare(T o1, T o2) {
         for (OrderItem orderItem : orderItems) {
-            Object v1 = getter.apply(o1, orderItem.getName());
-            Object v2 = getter.apply(o2, orderItem.getName());
+            String name = orderItem.getName();
+            Object v1 = getter.apply(o1, name);
+            Object v2 = getter.apply(o2, name);
             Class baseType = getClass(v1, v2);
             //noinspection unchecked
             int comparison = typedComparators.get(baseType).compare(typedConverters.get(baseType).apply(v1), typedConverters.get(baseType).apply(v2));

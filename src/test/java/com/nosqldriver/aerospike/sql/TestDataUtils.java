@@ -17,9 +17,11 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -342,5 +344,20 @@ public class TestDataUtils {
         }
 
         return md;
+    }
+
+    public static Collection<Map<String, Object>> toListOfMaps(ResultSet rs) throws SQLException {
+        ResultSetMetaData md = rs.getMetaData();
+        int n = md.getColumnCount();
+
+        Collection<Map<String, Object>> result = new ArrayList<>();
+        while (rs.next()) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            for (int i = 1; i <= n; i++) {
+                map.put(md.getColumnLabel(i), rs.getObject(i));
+            }
+            result.add(map);
+        }
+        return result;
     }
 }

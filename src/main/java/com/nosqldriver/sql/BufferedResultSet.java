@@ -31,19 +31,22 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
         if (bufferIsFull) {
             if (row < buffer.size()) {
                 row++;
-                it.next();
+                current = it.next();
                 return true;
+            } else {
+                bufferIsFull = false;
+                return false;
             }
         }
 
         while (rs.next()) {
             if(!buffer.add(getData())) {
-                bufferIsFull = true;
                 break;
             }
         }
-        absolute(row);
+        bufferIsFull = true;
         row++;
+        absolute(row);
         return !buffer.isEmpty();
 
     }
@@ -135,7 +138,7 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
         // TODO: lists and navigable sets can do this much better.
         int i = 0;
         for (; i < row && it.hasNext(); i++) {
-            it.next();
+            current = it.next();
         }
         return i == row;
     }
@@ -215,7 +218,7 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
     private Map<String, Object> getData() throws SQLException {
         int n = getMetaData().getColumnCount();
         Map<String, Object> row = new LinkedHashMap<String, Object>(n);
-        for (int i = 0; i < n ; i++) {
+        for (int i = 1; i <= n ; i++) {
             row.put(getMetaData().getColumnLabel(i), rs.getObject(i)); // TODO: should catalog and table names be part of key?
         }
         return row;

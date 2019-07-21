@@ -1,9 +1,15 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.aerospike.sql.TestDataUtils;
 import com.nosqldriver.sql.OrderItem.Direction;
+import com.nosqldriver.util.PojoHelper;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.OrderItem.Direction.ASC;
 import static com.nosqldriver.sql.OrderItem.Direction.DESC;
@@ -12,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OrderItemsComparatorTest {
+    private static List<Map<String, Object>> peopleMap = Arrays.stream(TestDataUtils.beatles).map(PojoHelper::fieldsToMap).collect(Collectors.toList());
+
     @Test
     void intEq() {
         intValue(ASC, 123, 123, 0);
@@ -127,7 +135,6 @@ class OrderItemsComparatorTest {
         anyValue(ASC, 3.14, "2.718281828", 1);
     }
 
-    @Test
     void dates() {
         long now = System.currentTimeMillis();
         anyValue(ASC, new Date(now), new Date(now), 0);
@@ -149,11 +156,32 @@ class OrderItemsComparatorTest {
         anyValue(DESC, new java.sql.Timestamp(now + 1), new java.sql.Timestamp(now), -1);
     }
 
+
+    @Test
+    void mapsAscOrderByStringField() {
+        assertEquals(Arrays.asList("George", "John", "Paul", "Ringo"), maps(new OrderItem("firstName")));
+    }
+
+    @Test
+    void mapsOrderByYearOfBirthAndKidsCount() {
+        assertEquals(Arrays.asList("John", "Ringo", "Paul", "George"), maps(new OrderItem("yearOfBirth"), new OrderItem("kidsCount")));
+    }
+
+    @Test
+    void mapsOrderByYearOfBirthAscAndKidsCountDesc() {
+        assertEquals(Arrays.asList("Ringo", "John", "Paul", "George"), maps(new OrderItem("yearOfBirth"), new OrderItem("kidsCount", DESC)));
+    }
+
+
     private void intValue(Direction direction, int one, int two, int expected) {
         assertEquals(expected, new OrderItemsComparator<>(singletonList(new OrderItem("value", direction)), (value, name) -> value).compare(one, two));
     }
 
     private <X, Y> void anyValue(Direction direction, X one, Y two, int expected) {
         assertEquals(expected, new OrderItemsComparator<>(singletonList(new OrderItem("value", direction)), (value, name) -> value).compare(one, two));
+    }
+
+    private List<String> maps(OrderItem ... orderItems) {
+        return peopleMap.stream().sorted(new OrderItemsComparator<>(Arrays.asList(orderItems), Map::get)).map(p -> (String)p.get("firstName")).collect(Collectors.toList());
     }
 }

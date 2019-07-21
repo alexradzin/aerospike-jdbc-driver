@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.stream.IntStream;
 
@@ -75,12 +76,12 @@ class PagedCollectionTest {
         assertTrue(collection.isEmpty());
         assertFalse(collection.iterator().hasNext());
 
-        assertFalse(collection.add("hello"));
+        assertTrue(collection.add("hello"));
         assertFalse(collection.isEmpty());
         assertTrue(collection.iterator().hasNext());
         assertEquals("hello", collection.iterator().next());
 
-        assertFalse(collection.add("bye"));
+        assertTrue(collection.add("bye"));
         assertFalse(collection.isEmpty());
         assertTrue(collection.iterator().hasNext());
         assertArrayEquals(new String[] {"hello", "bye"}, collection.toArray(new String[0]));
@@ -94,15 +95,28 @@ class PagedCollectionTest {
         assertTrue(collection.isEmpty());
         assertFalse(collection.iterator().hasNext());
 
-        assertFalse(collection.add("hello"));
+        assertTrue(collection.add("hello"));
         assertFalse(collection.isEmpty());
         assertTrue(collection.iterator().hasNext());
         assertEquals("hello", collection.iterator().next());
 
-        assertFalse(collection.add("bye"));
+        assertTrue(collection.add("bye"));
         assertFalse(collection.isEmpty());
         assertTrue(collection.iterator().hasNext());
         assertArrayEquals(new String[] {"bye", "hello"}, collection.toArray(new String[0]));
+    }
+
+
+    @Test
+    void ascSortedMoreThanPageSize() {
+        Collection<String> collection =  new PagedCollection<>(new TreeSet<>(), 4, false, NavigableSet::pollLast);
+
+        String[] input = new String[] {"b", "d", "c", "f", "a", "e"};
+        for (String s : input) {
+            assertTrue(collection.add(s));
+        }
+        assertArrayEquals(new String[] {"a", "b", "c", "d"}, collection.toArray(new String[0]));
+
     }
 
 

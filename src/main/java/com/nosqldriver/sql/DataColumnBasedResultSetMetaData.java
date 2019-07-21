@@ -128,7 +128,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnLabel(int column) {
-        return getVisibleColumn(column, c -> Optional.ofNullable(c.getLabel()).orElseGet(() -> c.getName()));
+        return getVisibleColumn(column, c -> Optional.ofNullable(c.getLabel()).orElseGet(c::getName));
     }
 
     @Override
