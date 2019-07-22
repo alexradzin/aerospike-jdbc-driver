@@ -11,7 +11,11 @@ import java.util.TreeSet;
 import static java.util.Comparator.comparingInt;
 
 public class SortedResultSet extends BufferedResultSet {
-    protected SortedResultSet(ResultSet rs, List<OrderItem> orderItems) {
-        super(rs, new PagedCollection<>(new TreeSet<>(new CompositeComparator<>(new ExpressionAwareMapComparator(orderItems), comparingInt(System::identityHashCode))), Integer.MAX_VALUE, false, TreeSet::pollLast));
+    public SortedResultSet(ResultSet rs, List<OrderItem> orderItems) {
+        this(rs, orderItems, Integer.MAX_VALUE);
+    }
+
+    public SortedResultSet(ResultSet rs, List<OrderItem> orderItems, long limit) {
+        super(rs, new PagedCollection<>(new TreeSet<>(new CompositeComparator<>(new ExpressionAwareMapComparator(orderItems), comparingInt(System::identityHashCode))), limit, false, TreeSet::pollLast));
     }
 }

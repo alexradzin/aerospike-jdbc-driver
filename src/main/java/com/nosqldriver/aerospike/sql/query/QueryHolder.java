@@ -18,8 +18,10 @@ import com.nosqldriver.sql.FilteredResultSet;
 import com.nosqldriver.sql.JoinedResultSet;
 import com.nosqldriver.sql.NameCheckResultSetWrapper;
 import com.nosqldriver.sql.OffsetLimit;
+import com.nosqldriver.sql.OrderItem;
 import com.nosqldriver.sql.ResultSetRowFilter;
 import com.nosqldriver.sql.ResultSetWrapper;
+import com.nosqldriver.sql.SortedResultSet;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
@@ -54,9 +56,11 @@ import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.SqlLiterals.operatorKey;
 import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
+import static java.lang.Math.max;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toList;
 
 public class QueryHolder {
     private String schema;
@@ -81,6 +85,7 @@ public class QueryHolder {
     private long offset = -1;
     private long limit = -1;
 
+    private List<OrderItem> ordering = new ArrayList<>();
     private Collection<QueryHolder> subQeueries = new ArrayList<>();
     private Collection<QueryHolder> joins = new ArrayList<>();
     private boolean skipIfMissing;
@@ -263,10 +268,11 @@ public class QueryHolder {
     private Function<IAerospikeClient, ResultSet> wrap(Function<IAerospikeClient, ResultSet> nakedQuery) {
         Function<IAerospikeClient, ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns), columns);
         Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), new ResultSetRowFilter(whereExpression)) : expressioned;
-        Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(filtered.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) : filtered;
-        Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? limited : client -> new JoinedResultSet(limited.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), new ResultSetMetadataSupplier(client, join), join.skipIfMissing)).collect(Collectors.toList()));
+        Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? filtered : client -> new JoinedResultSet(filtered.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), new ResultSetMetadataSupplier(client, join), join.skipIfMissing)).collect(toList()));
+        Function<IAerospikeClient, ResultSet> ordered = !ordering.isEmpty() ? client -> new SortedResultSet(joined.apply(client), ordering, max(offset, 0) + (limit >=0 ? limit : Integer.MAX_VALUE)) : joined;
+        Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(ordered.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) : ordered;
+        return client -> new NameCheckResultSetWrapper(limited.apply(client), columns);
 
-        return client -> new NameCheckResultSetWrapper(joined.apply(client), columns);
     }
 
     public abstract class ColumnType {
@@ -353,7 +359,7 @@ public class QueryHolder {
                     if (aggregatedFields == null) { // && !addition.isEmpty()) {
                         aggregatedFields = new HashSet<>();
                     }
-                    List<String> addition = ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(Collectors.toList())).orElse(Collections.emptyList());
+                    List<String> addition = ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(toList())).orElse(Collections.emptyList());
                     aggregatedFields.addAll(addition);
                     columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
                 }
@@ -408,6 +414,10 @@ public class QueryHolder {
         join.skipIfMissing = skipIfMissing;
         joins.add(join);
         return join;
+    }
+
+    public void addOrdering(OrderItem orderItem) {
+        ordering.add(orderItem);
     }
 
     public QueryHolder addSubQuery() {

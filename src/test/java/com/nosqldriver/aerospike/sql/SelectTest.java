@@ -2,6 +2,8 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.query.IndexType;
 import com.nosqldriver.Person;
+import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.util.VariableSource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.sql.PreparedStatement;
@@ -40,6 +43,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.createIndex;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.dropIndexSafely;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQueryPreparedStatement;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.toListOfMaps;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.lang.String.format;
 import static java.sql.Types.BIGINT;
@@ -49,6 +53,7 @@ import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -197,6 +202,25 @@ class SelectTest {
             }
         });
     }
+
+    @VisibleForPackage // visible for tests
+    private static Stream<Arguments> arguments = Stream.of(
+            Arguments.of("select * from people order by first_name", new String[] {"George", "John", "Paul", "Ringo"}),
+            Arguments.of("select * from people order by first_name desc", new String[] {"Ringo", "Paul", "John", "George"}),
+            Arguments.of("select * from people order by year_of_birth, kids_count", new String[] {"John", "Ringo", "Paul", "George"}),
+            Arguments.of("select * from people order by year_of_birth, kids_count desc", new String[] {"Ringo", "John", "Paul", "George"}),
+            Arguments.of("select * from people order by first_name limit 3", new String[] {"George", "John", "Paul"}),
+            Arguments.of("select * from people order by first_name offset 1", new String[] {"John", "Paul", "Ringo"}),
+            Arguments.of("select * from people order by first_name limit 2 offset 1", new String[] {"John", "Paul"})
+    );
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @VariableSource("arguments")
+    void selectWithOrderBy(String query, String[] expected) throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery(query);
+        assertArrayEquals(expected, toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).toArray(String[]::new));
+    }
+
+
 
     private void selectSpecificFields(String sql, Function<String, ResultSet> resultSetFactory) throws SQLException {
         ResultSet rs = resultSetFactory.apply(sql);

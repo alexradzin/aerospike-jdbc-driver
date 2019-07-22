@@ -6,17 +6,17 @@ import java.util.function.Function;
 
 public class PagedCollection<C extends Collection<T>, T> implements Collection<T> {
     private final C collection;
-    private final int pageSize;
+    private final long pageSize;
     private final Function<C, T> lastElementRemover;
-    private int currentPageSize = 0;
+    private long currentPageSize = 0;
     private final boolean rewrite;
 
 
-    public PagedCollection(C collection, int pageSize, boolean rewrite) {
+    public PagedCollection(C collection, long pageSize, boolean rewrite) {
         this(collection, pageSize, rewrite, c -> null);
     }
 
-    public PagedCollection(C collection, int pageSize, boolean rewrite, Function<C, T> lastElementRemover) {
+    public PagedCollection(C collection, long pageSize, boolean rewrite, Function<C, T> lastElementRemover) {
         this.collection = collection;
         this.pageSize = pageSize;
         this.rewrite = rewrite;

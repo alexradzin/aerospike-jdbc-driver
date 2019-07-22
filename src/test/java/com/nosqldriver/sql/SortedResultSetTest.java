@@ -8,7 +8,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.beatles;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
@@ -67,12 +66,22 @@ class SortedResultSetTest {
 
 
     @Test
-    void severalColumnsOrderBy() throws SQLException {
+    void severalColumnsOrderByOne() throws SQLException {
         List<List<?>> data = Arrays.stream(beatles).map(PojoHelper::fieldValues).collect(toList());
         oneColumnOneOrderBySeveralRecords(peopleColumns, data, new OrderItem("firstName"), "firstName", new String[] {"George", "John", "Paul", "Ringo"});
     }
 
+    @Test
+    void severalColumnsOrderBySeveral() throws SQLException {
+        List<List<?>> data = Arrays.stream(beatles).map(PojoHelper::fieldValues).collect(toList());
+        oneColumnSeveralOrderBySeveralRecords(peopleColumns, data, asList(new OrderItem("yearOfBirth"), new OrderItem("kidsCount")), "firstName", new String[] {"John", "Ringo", "Paul", "George"});
+    }
 
+    @Test
+    void severalColumnsOrderBySeveralAscDesc() throws SQLException {
+        List<List<?>> data = Arrays.stream(beatles).map(PojoHelper::fieldValues).collect(toList());
+        oneColumnSeveralOrderBySeveralRecords(peopleColumns, data, asList(new OrderItem("yearOfBirth"), new OrderItem("kidsCount", DESC)), "firstName", new String[] {"Ringo", "John", "Paul", "George"});
+    }
 
     private ResultSet dataRs(List<DataColumn> columns, Iterable<List<?>> data) {
         return new ListRecordSet(NAMESPACE, TABLE, columns, data);
@@ -80,8 +89,14 @@ class SortedResultSetTest {
 
     void oneColumnOneOrderBySeveralRecords(List<DataColumn> columns, List<List<?>> data, OrderItem orderBy, String extractColumn, String[] expected) throws SQLException {
         assertEquals(
-                Arrays.asList(expected),
+                asList(expected),
                 TestDataUtils.toListOfMaps(new SortedResultSet(dataRs(columns, data), singletonList(orderBy))).stream().map(row -> row.get(extractColumn)).collect(toList()));
+    }
+
+    void oneColumnSeveralOrderBySeveralRecords(List<DataColumn> columns, List<List<?>> data, List<OrderItem> orderBy, String extractColumn, String[] expected) throws SQLException {
+        assertEquals(
+                asList(expected),
+                TestDataUtils.toListOfMaps(new SortedResultSet(dataRs(columns, data), orderBy)).stream().map(row -> row.get(extractColumn)).collect(toList()));
     }
 
 }
