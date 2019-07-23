@@ -204,7 +204,7 @@ class SelectTest {
     }
 
     @VisibleForPackage // visible for tests
-    private static Stream<Arguments> arguments = Stream.of(
+    private static Stream<Arguments> orderBy = Stream.of(
             Arguments.of("select * from people order by first_name", new String[] {"George", "John", "Paul", "Ringo"}),
             Arguments.of("select * from people order by first_name desc", new String[] {"Ringo", "Paul", "John", "George"}),
             Arguments.of("select * from people order by year_of_birth, kids_count", new String[] {"John", "Ringo", "Paul", "George"}),
@@ -214,7 +214,7 @@ class SelectTest {
             Arguments.of("select * from people order by first_name limit 2 offset 1", new String[] {"John", "Paul"})
     );
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
-    @VariableSource("arguments")
+    @VariableSource("orderBy")
     void selectWithOrderBy(String query, String[] expected) throws SQLException {
         ResultSet rs = conn.createStatement().executeQuery(query);
         assertArrayEquals(expected, toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).toArray(String[]::new));
@@ -848,6 +848,32 @@ class SelectTest {
 
         assertFalse(rs.next());
     }
+
+
+    @Test
+    @DisplayName("select year_of_birth, count(*) from people group by year_of_birth order by count(*) desc, year_of_birth")
+    void groupByOrderByCountDesc() throws SQLException {
+        groupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1940, 1942, 1943});
+    }
+
+    @Test
+    @DisplayName("select year_of_birth, count(*) from people group by year_of_birth order by count(*) desc, year_of_birth")
+    void groupByOrderByCountDescCount() throws SQLException {
+        groupByOrderBy(getDisplayName(), "count(*)", new Object[] {2L, 1L, 1L});
+    }
+
+    @Test
+    @DisplayName("select year_of_birth, count(*) from people group by year_of_birth order by count(*), year_of_birth")
+    void groupByOrderByCount() throws SQLException {
+        groupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1942, 1943, 1940});
+    }
+
+    private void groupByOrderBy(String query, String column, Object[] expected) throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery(query);
+        assertArrayEquals(expected, toListOfMaps(rs).stream().map(e -> e.get(column)).toArray());
+    }
+
+
 
     @Test
     @DisplayName("select year_of_birth as year, count(*) as counter, sum(kids_count) as total_kids, max(kids_count) as max_kids, min(kids_count) as min_kids from people group by year_of_birth")
