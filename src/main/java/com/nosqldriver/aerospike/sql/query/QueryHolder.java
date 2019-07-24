@@ -63,6 +63,7 @@ import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 
 public class QueryHolder {
+    public static final String BIN_NAME_DOES_NOT_EXIST = "NSDOESNOTEXIST";
     private String schema;
     private final Collection<String> indexes;
     private final AerospikePolicyProvider policyProvider;
@@ -140,7 +141,7 @@ public class QueryHolder {
     @SafeVarargs
     private final void assertNull(Function<IAerospikeClient, ResultSet>... queries) {
         if (Arrays.stream(queries).anyMatch(Objects::nonNull)) {
-            throw new IllegalStateException("More than one queires have been created");
+            throw new IllegalStateException("More than one queries have been created");
         }
     }
 

@@ -301,6 +301,7 @@ public class AerospikeQueryFactory {
                 // In terms of predicates additional "stringBin" and "and" predicates must be added. This is implemented using the following variables.
                 AtomicBoolean between = new AtomicBoolean(false);
                 AtomicInteger betweenEdge = new AtomicInteger(0);
+                AtomicBoolean in = new AtomicBoolean(false);
                 if (where != null) {
                     String whereExpression = where.toString();
                     //TODO: this regex does not include parentheses because they conflict with "in (1, 2, 3)", so I have to find a way to safely detect composite mathematical expressions and function calls in where clause.
@@ -324,6 +325,7 @@ public class AerospikeQueryFactory {
                         }
 
                         public void visit(InExpression expr) {
+                            in.set(true);
                             super.visit(expr);
                             expr.getRightItemsList().accept(new ItemsListVisitorAdapter() {
                                 @Override
@@ -331,6 +333,7 @@ public class AerospikeQueryFactory {
                                     Operator.IN.update(queries, operation);
                                 }
                             });
+                            in.set(false);
                         }
 
 
@@ -384,6 +387,9 @@ public class AerospikeQueryFactory {
                         public void visit(LongValue value) {
                             System.out.println("visit(LongValue value): " + value);
                             operation.addValue(value.getValue());
+                            if (in.get()) {
+                                return;
+                            }
                             queries.queries(operation.getTable()).addPredExp(PredExp.integerBin(operation.getColumn()));
                             queries.queries(operation.getTable()).addPredExp(PredExp.integerValue(value.getValue()));
                             lastValueType.set(Long.class);
@@ -401,6 +407,9 @@ public class AerospikeQueryFactory {
                         public void visit(StringValue value) {
                             System.out.println("visit(StringValue value): " + value);
                             operation.addValue(value.getValue());
+                            if (in.get()) {
+                                return;
+                            }
                             queries.queries(operation.getTable()).addPredExp(PredExp.stringBin(operation.getColumn()));
                             queries.queries(operation.getTable()).addPredExp(PredExp.stringValue(value.getValue()));
                             lastValueType.set(String.class);

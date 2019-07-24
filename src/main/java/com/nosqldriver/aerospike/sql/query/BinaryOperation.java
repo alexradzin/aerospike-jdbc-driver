@@ -2,15 +2,26 @@ package com.nosqldriver.aerospike.sql.query;
 
 import com.aerospike.client.Key;
 import com.aerospike.client.query.Filter;
+import com.aerospike.client.query.PredExp;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+import static com.aerospike.client.query.PredExp.integerBin;
+import static com.aerospike.client.query.PredExp.integerEqual;
+import static com.aerospike.client.query.PredExp.integerValue;
+import static com.aerospike.client.query.PredExp.or;
+import static com.aerospike.client.query.PredExp.stringBin;
+import static com.aerospike.client.query.PredExp.stringEqual;
+import static com.aerospike.client.query.PredExp.stringValue;
+import static com.nosqldriver.aerospike.sql.query.QueryHolder.BIN_NAME_DOES_NOT_EXIST;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 
@@ -96,10 +107,38 @@ public class BinaryOperation {
                 if ("PK".equals(operation.column)) {
                     queries.createPkBatchQuery(operation.values.stream().map(v -> createKey(v, queries)).toArray(Key[]::new));
                 } else {
-                    throw new IllegalArgumentException("select ... from ... where IN is not supported with secondary index");
-                    // TODO: think how to support this anyway.
+                    int nValues = operation.values.size();
+                    QueryHolder qh = queries.queries(operation.getTable());
+                    if (nValues == 0) {
+                        prefix(BIN_NAME_DOES_NOT_EXIST, BIN_NAME_DOES_NOT_EXIST).forEach(qh::addPredExp);
+                    } else {
+                        operation.values.stream().map(v -> prefix(operation.column, v)).flatMap(List::stream).forEach(qh::addPredExp);
+                        if (nValues > 1) {
+                            qh.addPredExp(or(nValues));
+                        }
+                    }
                 }
                 return queries;
+            }
+
+            private List<PredExp> prefix(String column, Object value) {
+                final List<PredExp> prefixes;
+                if (value instanceof Long || value instanceof Integer || value instanceof Short || value instanceof Byte) {
+                    prefixes = asList(integerBin(column), integerValue(((Number) value).longValue()), integerEqual());
+                } else if (value instanceof Date || value instanceof Calendar) {
+                    Calendar calendar = value instanceof Calendar ? (Calendar)value : calendar((Date)value);
+                    prefixes = asList(integerBin(column), integerValue(calendar), integerEqual());
+                } else {
+                    prefixes = asList(stringBin(column), stringValue(value == null ? null : value.toString()), stringEqual());
+                }
+                return prefixes;
+            }
+
+
+            private Calendar calendar(Date date) {
+                Calendar c = Calendar.getInstance();
+                c.setTime(date);
+                return c;
             }
         },
         AND("AND", false) {

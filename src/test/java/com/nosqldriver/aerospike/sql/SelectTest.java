@@ -595,8 +595,38 @@ class SelectTest {
 
     @Test
     @DisplayName("PK IN (20, 30) -> []")
-    void selectNoRecordsByPkIn() throws SQLException {
+    void selectNoRecordsByPkInWrongIds() throws SQLException {
         assertSelect("select * from people where PK in (20, 30)");
+    }
+
+    @Test
+    @DisplayName("id IN (2, 3) -> [Paul, George]")
+    void selectSeveralRecordsByIntColumnIn() throws SQLException {
+        assertSelect("select * from people where id in (2, 3)", 2, 3);
+    }
+
+    @Test
+    @DisplayName("id IN (1) -> [John]")
+    void selectOneRecordByIntColumnIn() throws SQLException {
+        assertSelect("select * from people where id in (1)", 1);
+    }
+
+    @Test
+    @DisplayName("id IN (1, 2, 3, 4) -> [John, Paul, George, Ringo]")
+    void selectAllRecordsByIntColumnIn() throws SQLException {
+        assertSelect("select * from people where id in (1, 2, 3, 4)", 1, 2, 3, 4);
+    }
+
+    @Test
+    @DisplayName("id IN (22, 33) -> []")
+    void selectNoRecordsByIntColumnIn() throws SQLException {
+        assertSelect("select * from people where id in (22, 33)");
+    }
+
+    @Test
+    @DisplayName("first_name IN ('Paul', 'George') -> [Paul, George]")
+    void selectSeveralRecordsByStringColumnIn() throws SQLException {
+        assertSelect("select * from people where first_name in ('Paul', 'George')", 2, 3);
     }
 
 
