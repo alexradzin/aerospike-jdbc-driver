@@ -329,8 +329,7 @@ public class TestDataUtils {
         return md;
     }
 
-    @VisibleForPackage
-    static ResultSetMetaData validate(ResultSetMetaData md, DataColumn ... expectedColumns) throws SQLException {
+    public static ResultSetMetaData validate(ResultSetMetaData md, DataColumn ... expectedColumns) throws SQLException {
         assertNotNull(md);
         assertEquals(expectedColumns.length, md.getColumnCount());
 

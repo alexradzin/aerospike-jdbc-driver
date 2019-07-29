@@ -51,6 +51,10 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     private volatile boolean closed = false;
     private boolean firstNextWasCalled = false;
 
+    private boolean beforeFirst = true;
+    private boolean afterLast = false;
+
+
 
     protected BaseSchemalessResultSet(String schema, String table, List<DataColumn> columns, Supplier<R> anyRecordSupplier) {
         this.schema = schema;
@@ -331,12 +335,12 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public boolean isBeforeFirst() throws SQLException {
-        return false;
+        return beforeFirst;
     }
 
     @Override
     public boolean isAfterLast() throws SQLException {
-        return false;
+        return afterLast;
     }
 
     @Override
@@ -645,6 +649,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     public boolean next() throws SQLException {
         if (firstNextWasCalled && index == 1) {
             firstNextWasCalled = false;
+            beforeFirst = false;
             return true;
         }
         boolean result = moveToNext();
@@ -652,6 +657,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
             index++;
         } else {
             done = true;
+            afterLast = true;
         }
         return result;
     }

@@ -12,6 +12,7 @@ import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
+import com.nosqldriver.sql.ChainedResultSetWrapper;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.FilteredResultSet;
@@ -90,9 +91,13 @@ public class QueryHolder {
     private Collection<QueryHolder> subQeueries = new ArrayList<>();
     private Collection<QueryHolder> joins = new ArrayList<>();
     private boolean skipIfMissing;
+    private ChainOperation chainOperation = null;
 
     private final ExpressionAwareResultSetFactory expressionResultSetWrappingFactory = new ExpressionAwareResultSetFactory();
 
+    public enum ChainOperation {
+        UNION, UNION_ALL, SUB_QUERY;
+    }
 
     public QueryHolder(String schema, Collection<String> indexes, AerospikePolicyProvider policyProvider) {
         this.schema = schema;
@@ -106,16 +111,25 @@ public class QueryHolder {
 
     public Function<IAerospikeClient, ResultSet> getQuery() {
         if (!subQeueries.isEmpty()) {
-            List<QueryHolder> all = new ArrayList<>(subQeueries);
-            all.add(0, this);
-            Collections.reverse(all);
-            QueryHolder real = all.remove(0);
-            Function<IAerospikeClient, ResultSet> realRs = real.getQuery();
-            AtomicReference<Function<IAerospikeClient, ResultSet>> currentRsRef = new AtomicReference<>(realRs);
-            for (QueryHolder h : all) {
-                currentRsRef.set(h.wrap(currentRsRef.get()));
+            //TODO: add support of chained UNION and sub queries
+            if (subQeueries.stream().anyMatch(q -> ChainOperation.UNION_ALL.equals(q.chainOperation))) {
+                return client -> new ChainedResultSetWrapper(
+                        subQeueries.stream()
+                                .filter(q -> ChainOperation.UNION_ALL.equals(q.chainOperation))
+                                .map(QueryHolder::getQuery).map(f -> f.apply(client)).collect(toList()));
             }
-            return currentRsRef.get();
+            if (subQeueries.stream().anyMatch(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation))) { // nested queries
+                List<QueryHolder> all = subQeueries.stream().filter(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation)).collect(Collectors.toList());
+                all.add(0, this);
+                Collections.reverse(all);
+                QueryHolder real = all.remove(0);
+                Function<IAerospikeClient, ResultSet> realRs = real.getQuery();
+                AtomicReference<Function<IAerospikeClient, ResultSet>> currentRsRef = new AtomicReference<>(realRs);
+                for (QueryHolder h : all) {
+                    currentRsRef.set(h.wrap(currentRsRef.get()));
+                }
+                return currentRsRef.get();
+            }
         }
 
 
@@ -421,9 +435,10 @@ public class QueryHolder {
         ordering.add(orderItem);
     }
 
-    public QueryHolder addSubQuery() {
+    public QueryHolder addSubQuery(ChainOperation operation) {
         QueryHolder subQuery = new QueryHolder(schema, indexes, policyProvider);
         subQeueries.add(subQuery);
+        subQuery.chainOperation = operation;
         return subQuery;
     }
 

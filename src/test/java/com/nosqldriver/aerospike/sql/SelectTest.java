@@ -339,6 +339,28 @@ class SelectTest {
 
 
     @Test
+    @DisplayName("select 1 as number union all select 2 as number")
+    void selectIntUnion() throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals("number", md.getColumnLabel(1));
+        assertEquals(INTEGER, md.getColumnType(1));
+
+        assertTrue(rs.next());
+        assertEquals("number", rs.getMetaData().getColumnLabel(1));
+        assertEquals(1, rs.getInt(1));
+        assertEquals(1, rs.getInt("number"));
+        assertTrue(rs.next());
+        assertEquals("number", rs.getMetaData().getColumnLabel(1));
+        assertEquals(2, rs.getInt(1));
+        assertEquals(2, rs.getInt("number"));
+
+        assertFalse(rs.next());
+    }
+
+
+
+    @Test
     @DisplayName("select (4+5)/3 as three, first_name as name, year_of_birth - 1900 as year from people where PK=1")
     void selectExpressionAndFieldFromPeople() throws SQLException {
         ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
@@ -938,6 +960,26 @@ class SelectTest {
 
         assertFalse(rs.next());
     }
+
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select first_name, last_name from people where year_of_birth=1940 union all select first_name, last_name from people where year_of_birth>1940",
+    })
+    void unionAll(String query) throws SQLException {
+        ResultSet rs = executeQuery(query, DATA.create(NAMESPACE, PEOPLE, "first_name", "first_name").withType(VARCHAR), DATA.create(NAMESPACE, PEOPLE, "last_name", "last_name").withType(VARCHAR));
+
+        List<String> selectedPeople = new ArrayList<>();
+
+        while (rs.next()) {
+            selectedPeople.add(rs.getString("first_name"));
+        }
+
+        assertFalse(rs.next());
+        assertEquals(asList("John", "Ringo", "Paul", "George"), selectedPeople);
+    }
+
 
 
     private int assertCounts(ResultSet rs) throws SQLException {

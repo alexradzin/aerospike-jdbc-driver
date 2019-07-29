@@ -12,6 +12,7 @@ import com.nosqldriver.aerospike.sql.query.BinaryOperation.Operator;
 import com.nosqldriver.aerospike.sql.query.ColumnRefPredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
 import com.nosqldriver.aerospike.sql.query.QueryHolder;
+import com.nosqldriver.aerospike.sql.query.QueryHolder.ChainOperation;
 import com.nosqldriver.aerospike.sql.query.ValueRefPredExp;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.JoinType;
@@ -54,6 +55,7 @@ import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItemVisitorAdapter;
 import net.sf.jsqlparser.statement.select.SelectVisitorAdapter;
+import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.select.SubSelect;
 import net.sf.jsqlparser.statement.update.Update;
 
@@ -207,7 +209,28 @@ public class AerospikeQueryFactory {
 
     private void createSelect(SelectBody selectBody, QueryHolder queries) {
         AtomicReference<Class> lastValueType = new AtomicReference<>();
+
         selectBody.accept(new SelectVisitorAdapter() {
+            @Override
+            public void visit(SetOperationList setOpList) {
+                setOpList.getOperations().get(0);
+                if (setOpList.getOffset() != null) {
+                    queries.setOffset(setOpList.getOffset().getOffset());
+                }
+                if (setOpList.getLimit() != null && setOpList.getLimit().getRowCount() != null) {
+                    setOpList.getLimit().getRowCount().accept(new ExpressionVisitorAdapter() {
+                        @Override
+                        public void visit(LongValue value) {
+                            queries.setLimit(value.getValue());
+                        }
+                    });
+                }
+                if (setOpList.getOrderByElements() != null) {
+                    setOpList.getOrderByElements().stream().map(o -> new OrderItem(o.getExpression().toString(), o.isAsc() ? ASC :DESC)).forEach(queries::addOrdering);
+                }
+                setOpList.getSelects().forEach(sb -> createSelect(sb, queries.addSubQuery(ChainOperation.UNION_ALL)));
+            }
+
             @Override
             public void visit(PlainSelect plainSelect) {
                 if (plainSelect.getFromItem() != null) {
@@ -223,7 +246,7 @@ public class AerospikeQueryFactory {
 
                              @Override
                              public void visit(SubSelect subSelect) {
-                                 createSelect(subSelect.getSelectBody(), queries.addSubQuery());
+                                 createSelect(subSelect.getSelectBody(), queries.addSubQuery(ChainOperation.SUB_QUERY));
                              }
                          }
                     );
