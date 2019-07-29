@@ -1,6 +1,6 @@
 language: java
 jdk:
-  - oraclejdk8
+  - oraclejdk9
 install:
   - wget -O aerospike-server.tgz https://www.aerospike.com/download/server/4.5.3.4/artifact/ubuntu14
   - tar xvzf aerospike-server.tgz
