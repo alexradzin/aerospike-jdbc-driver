@@ -55,8 +55,10 @@ import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItemVisitorAdapter;
 import net.sf.jsqlparser.statement.select.SelectVisitorAdapter;
+import net.sf.jsqlparser.statement.select.SetOperation;
 import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.select.SubSelect;
+import net.sf.jsqlparser.statement.select.UnionOp;
 import net.sf.jsqlparser.statement.update.Update;
 
 import java.io.StringReader;
@@ -213,7 +215,6 @@ public class AerospikeQueryFactory {
         selectBody.accept(new SelectVisitorAdapter() {
             @Override
             public void visit(SetOperationList setOpList) {
-                setOpList.getOperations().get(0);
                 if (setOpList.getOffset() != null) {
                     queries.setOffset(setOpList.getOffset().getOffset());
                 }
@@ -228,7 +229,21 @@ public class AerospikeQueryFactory {
                 if (setOpList.getOrderByElements() != null) {
                     setOpList.getOrderByElements().stream().map(o -> new OrderItem(o.getExpression().toString(), o.isAsc() ? ASC :DESC)).forEach(queries::addOrdering);
                 }
-                setOpList.getSelects().forEach(sb -> createSelect(sb, queries.addSubQuery(ChainOperation.UNION_ALL)));
+                List<SetOperation> operations = setOpList.getOperations();
+                if (operations.size() != 1) {
+                    throw new IllegalArgumentException(format("Query can contain only one concatenation operation but was %d: %s", operations.size(), operations));
+                }
+                SetOperation operation = operations.get(0);
+                final ChainOperation chainOperation;
+                if (operation instanceof UnionOp) {
+                    UnionOp union = (UnionOp)operation;
+                    chainOperation = union.isAll() ? ChainOperation.UNION_ALL : ChainOperation.UNION;
+                } else {
+                    throw new UnsupportedOperationException(operation.toString());
+                }
+
+
+                setOpList.getSelects().forEach(sb -> createSelect(sb, queries.addSubQuery(chainOperation)));
             }
 
             @Override

@@ -210,17 +210,17 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Date getDate(String columnLabel) throws SQLException {
-        return getValue(columnLabel, v -> new Date((Long)v));
+        return getValue(columnLabel, v -> v instanceof Date ? (Date)v : new Date((Long)v));
     }
 
     @Override
     public Time getTime(String columnLabel) throws SQLException {
-        return getValue(columnLabel, v -> new Time((Long)v));
+        return getValue(columnLabel, v -> v instanceof Time ? (Time)v : new Time((Long)v));
     }
 
     @Override
     public Timestamp getTimestamp(String columnLabel) throws SQLException {
-        return getValue(columnLabel, v -> new Timestamp((Long)v));
+        return getValue(columnLabel, v -> v instanceof Timestamp ? (Timestamp)v : new Timestamp((Long)v));
     }
 
     @Override

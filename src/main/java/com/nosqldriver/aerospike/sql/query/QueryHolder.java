@@ -20,9 +20,12 @@ import com.nosqldriver.sql.JoinedResultSet;
 import com.nosqldriver.sql.NameCheckResultSetWrapper;
 import com.nosqldriver.sql.OffsetLimit;
 import com.nosqldriver.sql.OrderItem;
+import com.nosqldriver.sql.ResultSetDistinctFilter;
+import com.nosqldriver.sql.ResultSetHashExtractor;
 import com.nosqldriver.sql.ResultSetRowFilter;
 import com.nosqldriver.sql.ResultSetWrapper;
 import com.nosqldriver.sql.SortedResultSet;
+import com.nosqldriver.util.ByteArrayComparator;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
@@ -43,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -118,6 +122,20 @@ public class QueryHolder {
                                 .filter(q -> ChainOperation.UNION_ALL.equals(q.chainOperation))
                                 .map(QueryHolder::getQuery).map(f -> f.apply(client)).collect(toList()));
             }
+            if (subQeueries.stream().anyMatch(q -> ChainOperation.UNION.equals(q.chainOperation))) {
+                Function<IAerospikeClient, ResultSet> chained = client -> new ChainedResultSetWrapper(
+                        subQeueries.stream()
+                                .filter(q -> ChainOperation.UNION.equals(q.chainOperation))
+                                .map(QueryHolder::getQuery).map(f -> f.apply(client)).collect(toList()));
+
+
+                return client -> new FilteredResultSet(
+                        chained.apply(client),
+                        new ResultSetDistinctFilter<>(new ResultSetHashExtractor(), new TreeSet<>(new ByteArrayComparator())));
+            }
+
+
+
             if (subQeueries.stream().anyMatch(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation))) { // nested queries
                 List<QueryHolder> all = subQeueries.stream().filter(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation)).collect(Collectors.toList());
                 all.add(0, this);
@@ -210,7 +228,7 @@ public class QueryHolder {
             Optional<String> distinctExpression = aggregatedFields.stream().filter(s -> p.matcher(s).find()).findAny();
             if (distinctExpression.isPresent()) {
                 if (aggregatedFields.size() > 1) {
-                    throw new IllegalArgumentException("Wrong query syntax: distinct is used together with other fileds");
+                    throw new IllegalArgumentException("Wrong query syntax: distinct is used together with other fields");
                 }
 
                 Matcher m = p.matcher(distinctExpression.get());
@@ -219,7 +237,7 @@ public class QueryHolder {
                 }
                 String groupField = m.group(1);
                 statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new StringValue(groupField));
-                return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy(), (client, policy) -> new HashMap<>()); // TODO: implement BiFunction that returns fake record for schema discoevery
+                return new AerospikeDistinctQuery(schema, columns, statement, policyProvider.getQueryPolicy(), (client, policy) -> new HashMap<>()); // TODO: implement BiFunction that returns fake record for schema discovery
             }
 
 
