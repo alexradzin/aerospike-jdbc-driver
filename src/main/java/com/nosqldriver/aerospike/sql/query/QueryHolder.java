@@ -299,27 +299,7 @@ public class QueryHolder {
 
 
     private Function<IAerospikeClient, ResultSet> wrap(Function<IAerospikeClient, ResultSet> nakedQuery) {
-        final Function<IAerospikeClient, ResultSet> expressioned;
-        Pattern p = Pattern.compile("distinct\\((\\w+)\\)");
-        Optional<String> distinctExpression = columns.stream().map(DataColumn::getName).filter(n -> p.matcher(n).find()).findAny();
-        if (set == null && distinctExpression.isPresent()) {
-            if (columns.size() > 1) {
-                throw new IllegalArgumentException("Wrong query syntax: distinct is used together with other fields");
-            }
-
-            Matcher m = p.matcher(distinctExpression.get());
-            if (!m.find()) {
-                throw new IllegalStateException(); // actually cannot happen
-            }
-
-            String distinctField = m.group(1);
-            expressioned = client -> new FilteredResultSet(
-                    nakedQuery.apply(client),
-                    new ResultSetDistinctFilter<>(new ResultSetHashExtractor(distinctField::equals), new TreeSet<>(new ByteArrayComparator())));
-        } else {
-            expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns), columns);
-        }
-
+        Function<IAerospikeClient, ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns), columns);
         Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), new ResultSetRowFilter(whereExpression)) : expressioned;
         Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? filtered : client -> new JoinedResultSet(filtered.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), new ResultSetMetadataSupplier(client, join), join.skipIfMissing)).collect(toList()));
         Function<IAerospikeClient, ResultSet> ordered = !ordering.isEmpty() ? client -> new SortedResultSet(joined.apply(client), ordering, max(offset, 0) + (limit >=0 ? limit : Integer.MAX_VALUE)) : joined;
