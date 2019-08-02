@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -170,6 +169,7 @@ class SelectTest {
             "select * from (select first_name, year_of_birth from people)",
             "select first_name, year_of_birth from (select * from people)",
             "select first_name, year_of_birth from (select first_name, last_name, year_of_birth from people)",
+            "select first_name, year_of_birth from (select year_of_birth, first_name from (select first_name, last_name, year_of_birth from people))",
     })
     void selectSpecificFields(String sql) throws SQLException {
         selectSpecificFields(sql, sql1 -> {
@@ -789,21 +789,30 @@ class SelectTest {
         assertFalse(rs.next());
     }
 
-    @Test
-    @DisplayName("select distinct(year_of_birth) as year from people")
-    void selectDistinctYearOfBirth() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select distinct(year_of_birth) as year from people",
+            "select distinct(year_of_birth) as year from (select year_of_birth, first_name from people)",
+            "select distinct(year_of_birth) as year from (select first_name, year_of_birth from people)",
+            "select distinct(year_of_birth) as year from (select first_name, year_of_birth, last_name from people)",
+            "select distinct(year_of_birth) as year from (select year_of_birth from people)",
+            "select distinct(year_of_birth) as year from (select * from people)",
+    })
+    void selectDistinctYearOfBirth(String query) throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery(query);
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(NAMESPACE, md.getSchemaName(1));
         assertEquals(1, rs.getMetaData().getColumnCount());
         assertEquals("distinct(year_of_birth)", rs.getMetaData().getColumnName(1));
         assertEquals("year", rs.getMetaData().getColumnLabel(1));
 
-        Collection<Integer> years = new LinkedHashSet<>();
+        //TODO: put years to list and somehow compare without taking order into consideration
+        List<Integer> years = new ArrayList<>();
         while(rs.next()) {
             years.add(rs.getInt(1));
         }
-        assertEquals(new HashSet<>(asList(1940, 1942, 1943)), years);
+        Collections.sort(years);
+        assertEquals(asList(1940, 1942, 1943), years);
     }
 
     @Test
