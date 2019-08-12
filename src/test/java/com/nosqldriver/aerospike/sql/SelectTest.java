@@ -170,6 +170,7 @@ class SelectTest {
             "select * from (select first_name, year_of_birth from people)",
             "select first_name, year_of_birth from (select * from people)",
             "select first_name, year_of_birth from (select first_name, last_name, year_of_birth from people)",
+            "select first_name, year_of_birth from (select year_of_birth, first_name from people)",
     })
     void selectSpecificFields(String sql) throws SQLException {
         selectSpecificFields(sql, sql1 -> {
@@ -238,8 +239,8 @@ class SelectTest {
 
         assertEquals("year_of_birth", metaData.getColumnName(2));
         assertEquals("people", metaData.getTableName(2));
-        assertEquals(VARCHAR, metaData.getColumnType(1));
-        assertEquals("varchar", metaData.getColumnTypeName(1));
+        assertEquals(BIGINT, metaData.getColumnType(2));
+        assertEquals("long", metaData.getColumnTypeName(2));
 
 
         while (rs.next()) {
