@@ -330,7 +330,16 @@ public class QueryHolder {
 
                 @Override
                 protected String getTable(Expression expr) {
-                    return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(set);
+                    String table = ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(set);
+                    // resolve alias
+                    if (Objects.equals(table, setAlias)) {
+                        return set;
+                    }
+                    Optional<String> joinAlias = joins.stream().filter(j -> Objects.equals(table, j.setAlias)).findFirst().map(j -> j.setAlias);
+                    if (joinAlias.isPresent()) {
+                        return joinAlias.get();
+                    }
+                    return table;
                 }
 
                 @Override

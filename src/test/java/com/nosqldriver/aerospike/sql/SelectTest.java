@@ -232,12 +232,12 @@ class SelectTest {
         assertEquals(NAMESPACE, metaData.getSchemaName(1));
 
         assertEquals("first_name", metaData.getColumnName(1));
-        //assertEquals("people", metaData.getTableName(1));
+        assertEquals("people", metaData.getTableName(1));
         assertEquals(VARCHAR, metaData.getColumnType(1));
         assertEquals("varchar", metaData.getColumnTypeName(1));
 
         assertEquals("year_of_birth", metaData.getColumnName(2));
-        //assertEquals("people", metaData.getTableName(2));
+        assertEquals("people", metaData.getTableName(2));
         assertEquals(VARCHAR, metaData.getColumnType(1));
         assertEquals("varchar", metaData.getColumnTypeName(1));
 
