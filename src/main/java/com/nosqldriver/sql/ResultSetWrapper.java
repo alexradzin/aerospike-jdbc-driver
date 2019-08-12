@@ -64,7 +64,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public String getString(int columnIndex) throws SQLException {
-        return rs.getString(columnIndex);
+        return rs.getString(getLabel(columnIndex));
     }
 
     @Override
@@ -84,52 +84,52 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        return rs.getInt(columnIndex);
+        return rs.getInt(getLabel(columnIndex));
     }
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        return rs.getLong(columnIndex);
+        return rs.getLong(getLabel(columnIndex));
     }
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        return rs.getFloat(columnIndex);
+        return rs.getFloat(getLabel(columnIndex));
     }
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        return rs.getDouble(columnIndex);
+        return rs.getDouble(getLabel(columnIndex));
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        return rs.getBigDecimal(columnIndex);
+        return rs.getBigDecimal(getLabel(columnIndex));
     }
 
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
-        return rs.getBytes(columnIndex);
+        return rs.getBytes(getLabel(columnIndex));
     }
 
     @Override
     public Date getDate(int columnIndex) throws SQLException {
-        return rs.getDate(columnIndex);
+        return rs.getDate(getLabel(columnIndex));
     }
 
     @Override
     public Time getTime(int columnIndex) throws SQLException {
-        return rs.getTime(columnIndex);
+        return rs.getTime(getLabel(columnIndex));
     }
 
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        return rs.getTimestamp(columnIndex);
+        return rs.getTimestamp(getLabel(columnIndex));
     }
 
     @Override
     public InputStream getAsciiStream(int columnIndex) throws SQLException {
-        return rs.getAsciiStream(columnIndex);
+        return rs.getAsciiStream(getLabel(columnIndex));
     }
 
     @Override
@@ -140,7 +140,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public InputStream getBinaryStream(int columnIndex) throws SQLException {
-        return rs.getBinaryStream(columnIndex);
+        return rs.getBinaryStream(getLabel(columnIndex));
     }
 
     @Override
@@ -253,7 +253,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        return rs.getObject(columnIndex);
+        return rs.getObject(getLabel(columnIndex));
     }
 
     @Override
@@ -268,7 +268,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public Reader getCharacterStream(int columnIndex) throws SQLException {
-        return rs.getCharacterStream(columnIndex);
+        return rs.getCharacterStream(getLabel(columnIndex));
     }
 
     @Override
@@ -278,7 +278,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
-        return rs.getBigDecimal(columnIndex);
+        return rs.getBigDecimal(getLabel(columnIndex));
     }
 
     @Override
@@ -629,22 +629,22 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public Ref getRef(int columnIndex) throws SQLException {
-        return rs.getRef(columnIndex);
+        return rs.getRef(getLabel(columnIndex));
     }
 
     @Override
     public Blob getBlob(int columnIndex) throws SQLException {
-        return rs.getBlob(columnIndex);
+        return rs.getBlob(getLabel(columnIndex));
     }
 
     @Override
     public Clob getClob(int columnIndex) throws SQLException {
-        return rs.getClob(columnIndex);
+        return rs.getClob(getLabel(columnIndex));
     }
 
     @Override
     public Array getArray(int columnIndex) throws SQLException {
-        return rs.getArray(columnIndex);
+        return rs.getArray(getLabel(columnIndex));
     }
 
     @Override
@@ -704,7 +704,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public URL getURL(int columnIndex) throws SQLException {
-        return rs.getURL(columnIndex);
+        return rs.getURL(getLabel(columnIndex));
     }
 
     @Override
@@ -754,7 +754,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public RowId getRowId(int columnIndex) throws SQLException {
-        return rs.getRowId(columnIndex);
+        return rs.getRowId(getLabel(columnIndex));
     }
 
     @Override
@@ -804,7 +804,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public NClob getNClob(int columnIndex) throws SQLException {
-        return rs.getNClob(columnIndex);
+        return rs.getNClob(getLabel(columnIndex));
     }
 
     @Override
@@ -814,7 +814,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public SQLXML getSQLXML(int columnIndex) throws SQLException {
-        return rs.getSQLXML(columnIndex);
+        return rs.getSQLXML(getLabel(columnIndex));
     }
 
     @Override
@@ -834,7 +834,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public String getNString(int columnIndex) throws SQLException {
-        return rs.getNString(columnIndex);
+        return rs.getNString(getLabel(columnIndex));
     }
 
     @Override
@@ -844,7 +844,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public Reader getNCharacterStream(int columnIndex) throws SQLException {
-        return rs.getNCharacterStream(columnIndex);
+        return rs.getNCharacterStream(getLabel(columnIndex));
     }
 
     @Override
@@ -1010,5 +1010,9 @@ public class ResultSetWrapper implements ResultSet {
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return rs.isWrapperFor(iface);
+    }
+
+    private String getLabel(int index) throws SQLException {
+        return getMetaData().getColumnLabel(index);
     }
 }

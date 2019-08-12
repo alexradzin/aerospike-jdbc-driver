@@ -244,6 +244,8 @@ class SelectTest {
 
 
         while (rs.next()) {
+            assertEquals(rs.getString("first_name"), rs.getString(1));
+            assertEquals(rs.getInt("year_of_birth"), rs.getInt(2));
             selectedPeople.put(rs.getString("first_name"), rs.getInt("year_of_birth"));
             assertThrowsSqlException(() -> rs.getString("last_name"), "last_name");
             assertThrowsSqlException(() -> rs.getString("id"), "id");
