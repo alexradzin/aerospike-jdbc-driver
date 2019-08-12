@@ -22,11 +22,11 @@ function left(str, n) {
     return str.substring(0, n);
 }
 
-function lower(str, n) {
+function lower(str) {
     return str.toLowerCase();
 }
 
-function upper(str, n) {
+function upper(str) {
     return str.toUpperCase();
 }
 
