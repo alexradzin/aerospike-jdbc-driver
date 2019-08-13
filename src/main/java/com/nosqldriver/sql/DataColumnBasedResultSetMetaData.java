@@ -36,17 +36,17 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
         return columns;
     }
 
-    public DataColumnBasedResultSetMetaData updateTypes(ResultSetMetaData md) throws SQLException {
+    public DataColumnBasedResultSetMetaData updateData(ResultSetMetaData md) throws SQLException {
         int n = md.getColumnCount();
         for (int i = 0; i < n; i++) {
             int index = i + 1;
             String catalog = md.getCatalogName(index);
             String table = md.getTableName(index);
-            String name = md.getColumnName(index);
+            String label = md.getColumnLabel(index);
             int type = md.getColumnType(index);
 
             for (DataColumn column : columns) {
-                if (Objects.equals(column.getName(), name)) {
+                if (Objects.equals(column.getName(), label)) {
                     if (column.getCatalog() == null) {
                         column.withCatalog(catalog);
                     }
@@ -78,10 +78,13 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
         return columns.stream().filter(c -> !HIDDEN.equals(c.getRole()));
     }
 
-    private <T> T getVisibleColumn(int column, Function<DataColumn, T> getter) {
+    private <T> T getVisibleColumn(int column, Function<DataColumn, T> getter) throws SQLException {
+        if (column <= 0) {
+            throw ExceptionFactory.invalidColumnIndex(column);
+        }
         Optional<DataColumn> opt = getVisibleColumns().skip(column - 1).findFirst();
         if (!opt.isPresent()) {
-            throw new IllegalArgumentException(String.format("Column %d does not exist", column));
+            throw ExceptionFactory.invalidColumnIndex(column);
         }
         return getter.apply(opt.get());
     }
@@ -127,18 +130,21 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
     }
 
     @Override
-    public String getColumnLabel(int column) {
+    public String getColumnLabel(int column) throws SQLException {
         return getVisibleColumn(column, c -> Optional.ofNullable(c.getLabel()).orElseGet(c::getName));
     }
 
     @Override
-    public String getColumnName(int column) {
+    public String getColumnName(int column) throws SQLException {
         return getVisibleColumn(column, c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole()) ? c.getExpression() : c.getName());
     }
 
     @Override
-    public String getSchemaName(int column) {
-        return columns.isEmpty() ? schema : getVisibleColumn(column, DataColumn::getCatalog); //TODO: ??? schema vs catalog
+    public String getSchemaName(int column) throws SQLException {
+        if (columns.isEmpty()) {
+            throw ExceptionFactory.invalidColumnIndex(column);
+        }
+        return toEmpty(getVisibleColumn(column, DataColumn::getCatalog)); //TODO: ??? schema vs catalog
     }
 
     @Override
@@ -152,22 +158,28 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
     }
 
     @Override
-    public String getTableName(int column) {
-        return columns.isEmpty() ? table : getVisibleColumn(column, DataColumn::getTable);
+    public String getTableName(int column) throws SQLException {
+        if (columns.isEmpty()) {
+            throw ExceptionFactory.invalidColumnIndex(column);
+        }
+        return toEmpty(getVisibleColumn(column, DataColumn::getTable));
     }
 
     @Override
-    public String getCatalogName(int column) {
-        return columns.isEmpty() ? schema : getVisibleColumn(column, DataColumn::getCatalog);
+    public String getCatalogName(int column) throws SQLException {
+        if (columns.isEmpty()) {
+            throw ExceptionFactory.invalidColumnIndex(column);
+        }
+        return toEmpty(getVisibleColumn(column, DataColumn::getCatalog));
     }
 
     @Override
-    public int getColumnType(int column) {
+    public int getColumnType(int column) throws SQLException {
         return getVisibleColumn(column, DataColumn::getType);
     }
 
     @Override
-    public String getColumnTypeName(int column) {
+    public String getColumnTypeName(int column) throws SQLException {
         return sqlTypeNames.get(getColumnType(column));
     }
 
@@ -187,7 +199,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
     }
 
     @Override
-    public String getColumnClassName(int column) {
+    public String getColumnClassName(int column) throws SQLException {
         return SqlLiterals.sqlToJavaTypes.get(getColumnType(column)).getName();
     }
 
@@ -199,5 +211,9 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
     @Override
     public boolean isWrapperFor(Class<?> iface) {
         return false;
+    }
+
+    private String toEmpty(String s) {
+        return s == null ? "" : s;
     }
 }

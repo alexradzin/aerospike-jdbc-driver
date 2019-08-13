@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.stream.IntStream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
@@ -13,7 +14,8 @@ import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DataColumnBasedResultSetMetaDataTest {
     @Test
@@ -23,12 +25,54 @@ class DataColumnBasedResultSetMetaDataTest {
     }
 
     @Test
+    void emptyIndexDoesNotExist() throws SQLException {
+        ResultSetMetaData md = new DataColumnBasedResultSetMetaData(emptyList());
+        assertEquals(0, md.getColumnCount());
+        assertThrows(SQLException.class, () -> md.getCatalogName(1));
+        assertThrows(SQLException.class, () -> md.getTableName(1));
+        assertThrows(SQLException.class, () -> md.getColumnName(1));
+        assertThrows(SQLException.class, () -> md.getColumnLabel(1));
+        assertThrows(SQLException.class, () -> md.getColumnType(1));
+    }
+
+
+    @Test
     void oneDataFieldWithoutType() throws SQLException {
         ResultSetMetaData md = new DataColumnBasedResultSetMetaData(singletonList(
                 DATA.create("test", "people", "first_name", "given_name")
         ));
         assertEquals(1, md.getColumnCount());
         assertColumn(md, 1, "test", "people", "first_name", "given_name", 0);
+    }
+
+    @Test
+    void oneDataFieldWithoutTable() throws SQLException {
+        ResultSetMetaData md = new DataColumnBasedResultSetMetaData(singletonList(
+                DATA.create(null, null, "first_name", "given_name")
+        ));
+        assertEquals(1, md.getColumnCount());
+        assertColumn(md, 1, "", "", "first_name", "given_name", 0);
+    }
+
+    @Test
+    void oneDataFieldWrongIndex() throws SQLException {
+        ResultSetMetaData md = new DataColumnBasedResultSetMetaData(singletonList(
+                DATA.create(null, null, "first_name", "given_name")
+        ));
+        assertEquals(1, md.getColumnCount());
+        assertColumn(md, 1, "", "", "first_name", "given_name", 0);
+        IntStream.of(-1, 0, 2).boxed().forEach(index -> {
+            assertThrows(SQLException.class, () -> md.getCatalogName(index));
+            assertThrows(SQLException.class, () -> md.getTableName(index));
+            assertThrows(SQLException.class, () -> md.getColumnName(index));
+            assertThrows(SQLException.class, () -> md.getColumnLabel(index));
+            assertThrows(SQLException.class, () -> md.getColumnType(index));
+        });
+
+
+
+
+
     }
 
     @Test

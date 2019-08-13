@@ -288,7 +288,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
                 metadata = new DataColumnBasedResultSetMetaData(allColumns);
             } else {
                 for (JoinHolder jh : joinHolders) {
-                    metadata.updateTypes(jh.getMetaDataSupplier().get());
+                    metadata.updateData(jh.getMetaDataSupplier().get());
                 }
             }
         }

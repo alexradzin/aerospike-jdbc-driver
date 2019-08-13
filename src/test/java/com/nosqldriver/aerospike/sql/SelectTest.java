@@ -171,6 +171,7 @@ class SelectTest {
             "select first_name, year_of_birth from (select * from people)",
             "select first_name, year_of_birth from (select first_name, last_name, year_of_birth from people)",
             "select first_name, year_of_birth from (select year_of_birth, first_name from people)",
+            "select name as first_name, year as year_of_birth from (select first_name as name, year_of_birth as year from people)",
     })
     void selectSpecificFields(String sql) throws SQLException {
         selectSpecificFields(sql, sql1 -> {
@@ -179,8 +180,25 @@ class SelectTest {
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }
-        });
+        }, "first_name", "year_of_birth");
     }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select name as given_name, year from (select first_name as name, year_of_birth as year from people)",
+            "select name as given_name, year from (select year_of_birth as year, first_name as name from people)",
+    })
+    void selectSpecificFields2(String sql) throws SQLException {
+        selectSpecificFields(sql, sql1 -> {
+            try {
+                return conn.createStatement().executeQuery(sql);
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        }, "given_name", "year");
+    }
+
+
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
@@ -201,7 +219,7 @@ class SelectTest {
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }
-        });
+        }, "first_name", "year_of_birth");
     }
 
     @VisibleForPackage // visible for tests
@@ -223,7 +241,7 @@ class SelectTest {
 
 
 
-    private void selectSpecificFields(String sql, Function<String, ResultSet> resultSetFactory) throws SQLException {
+    private void selectSpecificFields(String sql, Function<String, ResultSet> resultSetFactory, String keyColumn, String valueColumn) throws SQLException {
         ResultSet rs = resultSetFactory.apply(sql);
         Map<String, Integer> selectedPeople = new HashMap<>();
 
@@ -232,21 +250,21 @@ class SelectTest {
         assertEquals(2, metaData.getColumnCount());
         assertEquals(NAMESPACE, metaData.getSchemaName(1));
 
-        assertEquals("first_name", metaData.getColumnName(1));
+        assertEquals(keyColumn, metaData.getColumnLabel(1));
         assertEquals("people", metaData.getTableName(1));
         assertEquals(VARCHAR, metaData.getColumnType(1));
         assertEquals("varchar", metaData.getColumnTypeName(1));
 
-        assertEquals("year_of_birth", metaData.getColumnName(2));
+        assertEquals(valueColumn, metaData.getColumnLabel(2));
         assertEquals("people", metaData.getTableName(2));
         assertEquals(BIGINT, metaData.getColumnType(2));
         assertEquals("long", metaData.getColumnTypeName(2));
 
 
         while (rs.next()) {
-            assertEquals(rs.getString("first_name"), rs.getString(1));
-            assertEquals(rs.getInt("year_of_birth"), rs.getInt(2));
-            selectedPeople.put(rs.getString("first_name"), rs.getInt("year_of_birth"));
+            assertEquals(rs.getString(keyColumn), rs.getString(1));
+            assertEquals(rs.getInt(valueColumn), rs.getInt(2));
+            selectedPeople.put(rs.getString(keyColumn), rs.getInt(valueColumn));
             assertThrowsSqlException(() -> rs.getString("last_name"), "last_name");
             assertThrowsSqlException(() -> rs.getString("id"), "id");
         }

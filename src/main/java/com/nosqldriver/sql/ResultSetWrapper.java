@@ -246,7 +246,7 @@ public class ResultSetWrapper implements ResultSet {
         }
         DataColumnBasedResultSetMetaData md = new DataColumnBasedResultSetMetaData(columns); //TODO: should we filter not HIDDEN columns here?
         if (rs != null) {
-            md.updateTypes(rs.getMetaData());
+            md.updateData(rs.getMetaData());
         }
         return md;
     }
