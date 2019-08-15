@@ -31,15 +31,14 @@ public class ResultSetWrapper implements ResultSet {
     protected volatile ResultSet rs;
     private final Map<String, String> aliasToName; // alias to name map
     protected List<DataColumn> columns;
+    private final boolean indexByName;
 
-    protected ResultSetWrapper(ResultSet rs) {
-        this(rs, Collections.emptyList());
-    }
 
-    public ResultSetWrapper(ResultSet rs, List<DataColumn> columns) {
+    public ResultSetWrapper(ResultSet rs, List<DataColumn> columns, boolean indexByName) {
         this.rs = rs;
         this.columns = Collections.unmodifiableList(columns);
         aliasToName = columns.stream().filter(c -> c.getName() != null && c.getLabel() != null).collect(Collectors.toMap(DataColumn::getLabel, DataColumn::getName));
+        this.indexByName = indexByName;
     }
     
     protected String getName(String alias) throws SQLException {
@@ -64,83 +63,83 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public String getString(int columnIndex) throws SQLException {
-        return rs.getString(getLabel(columnIndex));
+        return indexByName ? rs.getString(getLabel(columnIndex)) : rs.getString(columnIndex);
     }
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        return rs.getBoolean(columnIndex);
+        return indexByName ? rs.getBoolean(getLabel(columnIndex)) : rs.getBoolean(columnIndex);
     }
 
     @Override
     public byte getByte(int columnIndex) throws SQLException {
-        return rs.getByte(columnIndex);
+        return indexByName ? rs.getByte(getLabel(columnIndex)) : rs.getByte(columnIndex);
     }
 
     @Override
     public short getShort(int columnIndex) throws SQLException {
-        return rs.getShort(columnIndex);
+        return indexByName ? rs.getShort(getLabel(columnIndex)) : rs.getShort(columnIndex);
     }
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        return rs.getInt(getLabel(columnIndex));
+        return indexByName ? rs.getInt(getLabel(columnIndex)) : rs.getInt(columnIndex);
     }
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        return rs.getLong(getLabel(columnIndex));
+        return indexByName ? rs.getLong(getLabel(columnIndex)) : rs.getLong(columnIndex);
     }
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        return rs.getFloat(getLabel(columnIndex));
+        return indexByName ? rs.getFloat(getLabel(columnIndex)) : rs.getFloat(columnIndex);
     }
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        return rs.getDouble(getLabel(columnIndex));
+        return indexByName ? rs.getDouble(getLabel(columnIndex)) : rs.getDouble(columnIndex);
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        return rs.getBigDecimal(getLabel(columnIndex));
+        return indexByName ? rs.getBigDecimal(getLabel(columnIndex)) : rs.getBigDecimal(columnIndex);
     }
 
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
-        return rs.getBytes(getLabel(columnIndex));
+        return indexByName ? rs.getBytes(getLabel(columnIndex)) : rs.getBytes(columnIndex);
     }
 
     @Override
     public Date getDate(int columnIndex) throws SQLException {
-        return rs.getDate(getLabel(columnIndex));
+        return indexByName ? rs.getDate(getLabel(columnIndex)) : rs.getDate(columnIndex);
     }
 
     @Override
     public Time getTime(int columnIndex) throws SQLException {
-        return rs.getTime(getLabel(columnIndex));
+        return indexByName ? rs.getTime(getLabel(columnIndex)) : rs.getTime(columnIndex);
     }
 
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        return rs.getTimestamp(getLabel(columnIndex));
+        return indexByName ? rs.getTimestamp(getLabel(columnIndex)) : rs.getTimestamp(columnIndex);
     }
 
     @Override
     public InputStream getAsciiStream(int columnIndex) throws SQLException {
-        return rs.getAsciiStream(getLabel(columnIndex));
+        return indexByName ? rs.getAsciiStream(getLabel(columnIndex)) : rs.getAsciiStream(columnIndex);
     }
 
     @Override
     @Deprecated
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
-        return rs.getUnicodeStream(columnIndex);
+        return indexByName ? rs.getUnicodeStream(getLabel(columnIndex)) : rs.getUnicodeStream(columnIndex);
     }
 
     @Override
     public InputStream getBinaryStream(int columnIndex) throws SQLException {
-        return rs.getBinaryStream(getLabel(columnIndex));
+        return indexByName ? rs.getBinaryStream(getLabel(columnIndex)) : rs.getBinaryStream(columnIndex);
     }
 
     @Override

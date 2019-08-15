@@ -32,8 +32,8 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     private final Map<String, String> aliasToEval;
 
     @VisibleForPackage
-    ExpressionAwareResultSet(ResultSet rs, List<DataColumn> columns) {
-        super(rs, columns);
+    ExpressionAwareResultSet(ResultSet rs, List<DataColumn> columns, boolean indexByName) {
+        super(rs, columns, indexByName);
         aliasToEval = columns.stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).collect(Collectors.toMap(DataColumn::getLabel, DataColumn::getExpression));
         engine = new JavascriptEngineFactory().getEngine();
         this.rs = rs;

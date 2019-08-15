@@ -8,8 +8,8 @@ import java.util.Objects;
 import static java.lang.String.format;
 
 public class NameCheckResultSetWrapper extends ResultSetWrapper {
-    public NameCheckResultSetWrapper(ResultSet rs, List<DataColumn> columns) {
-        super(rs, columns);
+    public NameCheckResultSetWrapper(ResultSet rs, List<DataColumn> columns, boolean indexByName) {
+        super(rs, columns, true);
     }
 
     @Override

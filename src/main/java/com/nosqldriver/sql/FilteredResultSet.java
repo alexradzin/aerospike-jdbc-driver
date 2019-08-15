@@ -2,6 +2,7 @@ package com.nosqldriver.sql;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.function.Predicate;
 
 public class FilteredResultSet extends ResultSetWrapper implements DelegatingResultSet {
@@ -9,8 +10,8 @@ public class FilteredResultSet extends ResultSetWrapper implements DelegatingRes
     private final Predicate<ResultSet> filter;
     private int row = 0;
 
-    public FilteredResultSet(ResultSet rs, Predicate<ResultSet> filter) {
-        super(rs);
+    public FilteredResultSet(ResultSet rs, List<DataColumn> columns, Predicate<ResultSet> filter, boolean indexByName) {
+        super(rs, columns, indexByName);
         this.rs = rs;
         this.filter = filter;
     }
@@ -63,7 +64,7 @@ public class FilteredResultSet extends ResultSetWrapper implements DelegatingRes
         return row;
     }
 
-    //TODO: shold absolute() and realative() be overloaded too?
+    //TODO: should absolute() and relative() be overloaded too?
     @Override
     public boolean absolute(int row) throws SQLException {
         return rs.absolute(row);

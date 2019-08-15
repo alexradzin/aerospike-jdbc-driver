@@ -96,6 +96,7 @@ public class QueryHolder {
     private Collection<QueryHolder> joins = new ArrayList<>();
     private boolean skipIfMissing;
     private ChainOperation chainOperation = null;
+    private boolean indexByName = false;
 
     private final ExpressionAwareResultSetFactory expressionResultSetWrappingFactory = new ExpressionAwareResultSetFactory();
 
@@ -120,18 +121,18 @@ public class QueryHolder {
                 return client -> new ChainedResultSetWrapper(
                         subQeueries.stream()
                                 .filter(q -> ChainOperation.UNION_ALL.equals(q.chainOperation))
-                                .map(QueryHolder::getQuery).map(f -> f.apply(client)).collect(toList()));
+                                .map(QueryHolder::getQuery).map(f -> f.apply(client)).collect(toList()), indexByName);
             }
             if (subQeueries.stream().anyMatch(q -> ChainOperation.UNION.equals(q.chainOperation))) {
                 Function<IAerospikeClient, ResultSet> chained = client -> new ChainedResultSetWrapper(
                         subQeueries.stream()
                                 .filter(q -> ChainOperation.UNION.equals(q.chainOperation))
-                                .map(QueryHolder::getQuery).map(f -> f.apply(client)).collect(toList()));
+                                .map(QueryHolder::getQuery).map(f -> f.apply(client)).collect(toList()), indexByName);
 
 
                 return client -> new FilteredResultSet(
-                        chained.apply(client),
-                        new ResultSetDistinctFilter<>(new ResultSetHashExtractor(), new TreeSet<>(new ByteArrayComparator())));
+                        chained.apply(client), columns,
+                        new ResultSetDistinctFilter<>(new ResultSetHashExtractor(), new TreeSet<>(new ByteArrayComparator())), indexByName);
             }
 
 
@@ -140,6 +141,7 @@ public class QueryHolder {
                 List<QueryHolder> all = subQeueries.stream().filter(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation)).collect(Collectors.toList());
                 all.add(0, this);
                 Collections.reverse(all);
+                all.forEach(h -> h.indexByName = true);
                 QueryHolder real = all.remove(0);
                 Function<IAerospikeClient, ResultSet> realRs = real.getQuery();
                 AtomicReference<Function<IAerospikeClient, ResultSet>> currentRsRef = new AtomicReference<>(realRs);
@@ -299,12 +301,40 @@ public class QueryHolder {
 
 
     private Function<IAerospikeClient, ResultSet> wrap(Function<IAerospikeClient, ResultSet> nakedQuery) {
-        Function<IAerospikeClient, ResultSet> expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns), columns);
-        Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), new ResultSetRowFilter(whereExpression)) : expressioned;
+        final Function<IAerospikeClient, ResultSet> expressioned;
+        Pattern p = Pattern.compile("distinct\\((\\w+)\\)");
+        Optional<DataColumn> distinctColumn = columns.stream().filter(c -> c.getName() != null).filter(c -> p.matcher(c.getName()).find()).findAny();
+        if (set == null && distinctColumn.isPresent()) {
+            if (columns.size() > 1) {
+                throw new IllegalArgumentException("Wrong query syntax: distinct is used together with other fields");
+            }
+
+            String distinctColumnExpression = distinctColumn.get().getName();
+            Matcher m = p.matcher(distinctColumn.get().getName());
+            if (!m.find()) {
+                throw new IllegalStateException(); // actually cannot happen
+            }
+
+            String distinctField = m.group(1);
+            expressioned = client -> new FilteredResultSet(
+                    nakedQuery.apply(client), columns,
+                    new ResultSetDistinctFilter<>(new ResultSetHashExtractor(distinctField::equals), new TreeSet<>(new ByteArrayComparator())), indexByName) {
+                @Override
+                protected String getName(String alias) throws SQLException {
+                    String name = super.getName(alias);
+                    return distinctColumnExpression.equals(name) ? distinctField : name;
+                }
+            };
+        } else {
+            expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns, indexByName), columns, indexByName);
+        }
+
+
+        Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), columns, new ResultSetRowFilter(whereExpression), indexByName) : expressioned;
         Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? filtered : client -> new JoinedResultSet(filtered.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(client, join), new ResultSetMetadataSupplier(client, join), join.skipIfMissing)).collect(toList()));
         Function<IAerospikeClient, ResultSet> ordered = !ordering.isEmpty() ? client -> new SortedResultSet(joined.apply(client), ordering, max(offset, 0) + (limit >=0 ? limit : Integer.MAX_VALUE)) : joined;
-        Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(ordered.apply(client), new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit)) : ordered;
-        return client -> new NameCheckResultSetWrapper(limited.apply(client), columns);
+        Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(ordered.apply(client), columns, new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit), indexByName) : ordered;
+        return client -> new NameCheckResultSetWrapper(limited.apply(client), columns, indexByName);
 
     }
 

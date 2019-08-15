@@ -22,21 +22,21 @@ class ChainedResultSetWrapperTest {
 
     @Test
     void noFieldsNoRecords() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(emptyList());
+        ResultSet rs = new ChainedResultSetWrapper(emptyList(), false);
         assertEquals(0, rs.getMetaData().getColumnCount());
         assertEmpty(rs);
     }
 
     @Test
     void noRecordsOneEmptySubResultSet() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(singletonList(createSsimpleResultSet(emptyList())));
+        ResultSet rs = new ChainedResultSetWrapper(singletonList(createSsimpleResultSet(emptyList())), false);
         assertEquals(3, rs.getMetaData().getColumnCount());
         assertEmpty(rs);
     }
 
     @Test
     void noRecordsSeveralEmptySubResultSet() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(asList(createSsimpleResultSet(emptyList()), createSsimpleResultSet(emptyList()), createSsimpleResultSet(emptyList())));
+        ResultSet rs = new ChainedResultSetWrapper(asList(createSsimpleResultSet(emptyList()), createSsimpleResultSet(emptyList()), createSsimpleResultSet(emptyList())), false);
         assertEquals(3, rs.getMetaData().getColumnCount());
         assertEmpty(rs);
     }
@@ -44,7 +44,7 @@ class ChainedResultSetWrapperTest {
 
     @Test
     void oneRecord() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(singletonList(createSsimpleResultSet(singletonList(asList("John", "Smith", 1970)))));
+        ResultSet rs = new ChainedResultSetWrapper(singletonList(createSsimpleResultSet(singletonList(asList("John", "Smith", 1970)))), false);
         TestDataUtils.validate(rs.getMetaData(),
                 DATA.create(catalog, table, "first_name", "first_name").withType(Types.VARCHAR),
                 DATA.create(catalog, table, "last_name", "last_name").withType(Types.VARCHAR),
@@ -57,7 +57,7 @@ class ChainedResultSetWrapperTest {
     @Test
     void twoRecords() throws SQLException {
         ResultSet rs = new ChainedResultSetWrapper(singletonList(createSsimpleResultSet(asList(
-                asList("John", "Lennon", 1940), asList("Paul", "McCartney", 1942)))));
+                asList("John", "Lennon", 1940), asList("Paul", "McCartney", 1942)))), false);
         TestDataUtils.validate(rs.getMetaData(),
                 DATA.create(catalog, table, "first_name", "first_name").withType(Types.VARCHAR),
                 DATA.create(catalog, table, "last_name", "last_name").withType(Types.VARCHAR),
@@ -74,7 +74,7 @@ class ChainedResultSetWrapperTest {
     void twoRecordsThenEmptySet() throws SQLException {
         ResultSet rs = new ChainedResultSetWrapper(asList(
                 createSsimpleResultSet(asList(asList("John", "Lennon", 1940), asList("Paul", "McCartney", 1942))),
-                createSsimpleResultSet(emptyList())));
+                createSsimpleResultSet(emptyList())), false);
         TestDataUtils.validate(rs.getMetaData(),
                 DATA.create(catalog, table, "first_name", "first_name").withType(Types.VARCHAR),
                 DATA.create(catalog, table, "last_name", "last_name").withType(Types.VARCHAR),
@@ -90,7 +90,7 @@ class ChainedResultSetWrapperTest {
     void emptyThenTwoRecords() throws SQLException {
         ResultSet rs = new ChainedResultSetWrapper(asList(
                 createSsimpleResultSet(emptyList()),
-                createSsimpleResultSet(asList(asList("John", "Lennon", 1940), asList("Paul", "McCartney", 1942)))));
+                createSsimpleResultSet(asList(asList("John", "Lennon", 1940), asList("Paul", "McCartney", 1942)))), false);
         TestDataUtils.validate(rs.getMetaData(),
                 DATA.create(catalog, table, "first_name", "first_name").withType(Types.VARCHAR),
                 DATA.create(catalog, table, "last_name", "last_name").withType(Types.VARCHAR),
@@ -109,7 +109,7 @@ class ChainedResultSetWrapperTest {
                 createSsimpleResultSet(emptyList()),
                 createSsimpleResultSet(asList(asList("John", "Lennon", 1940), asList("Paul", "McCartney", 1942))),
                 createSsimpleResultSet(asList(asList("George", "Harrison", 1943), asList("Ringo", "Starr", 1940)))
-        ));
+        ), false);
         TestDataUtils.validate(rs.getMetaData(),
                 DATA.create(catalog, table, "first_name", "first_name").withType(Types.VARCHAR),
                 DATA.create(catalog, table, "last_name", "last_name").withType(Types.VARCHAR),

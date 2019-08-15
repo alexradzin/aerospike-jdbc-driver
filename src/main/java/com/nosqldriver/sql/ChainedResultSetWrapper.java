@@ -12,12 +12,12 @@ public class ChainedResultSetWrapper extends ResultSetWrapper {
     private boolean beforeFirst = true;
     private boolean afterLast = false;
 
-    public ChainedResultSetWrapper(List<ResultSet> resultSets) {
-        this(resultSets, Collections.emptyList());
+    public ChainedResultSetWrapper(List<ResultSet> resultSets, boolean indexByName) {
+        this(resultSets, Collections.emptyList(), indexByName);
     }
 
-    public ChainedResultSetWrapper(List<ResultSet> resultSets, List<DataColumn> columns) {
-        super(null, columns);
+    private ChainedResultSetWrapper(List<ResultSet> resultSets, List<DataColumn> columns, boolean indexByName) {
+        super(null, columns, indexByName);
         this.resultSets = resultSets;
         lit = resultSets.listIterator();
         rs = resultSets.isEmpty() ? new ListRecordSet(null, null, Collections.emptyList(), Collections.emptyList()) : lit.next();
@@ -98,6 +98,7 @@ public class ChainedResultSetWrapper extends ResultSetWrapper {
     }
 
     @Override
+    @SuppressWarnings("StatementWithEmptyBody") // for loop is used to reach the last element
     public void afterLast() throws SQLException {
         for (; lit.hasNext(); rs = lit.next());
         rs.afterLast();
