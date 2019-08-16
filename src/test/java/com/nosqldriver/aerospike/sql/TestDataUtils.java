@@ -48,12 +48,12 @@ public class TestDataUtils {
         setLevel(Log.Level.DEBUG);
     }
     @VisibleForPackage static final AerospikeClient client = new AerospikeClient("localhost", 3000);
-    @VisibleForPackage static Connection conn;
+    @VisibleForPackage static Connection testConn;
 
     static {
         try {
-            conn = DriverManager.getConnection("jdbc:aerospike:localhost/test");
-            assertNotNull(conn);
+            testConn = DriverManager.getConnection("jdbc:aerospike:localhost/test");
+            assertNotNull(testConn);
         } catch (SQLException e) {
             throw new  IllegalStateException("Cannot create connection to DB", e);
         }
@@ -71,7 +71,7 @@ public class TestDataUtils {
         @Override
         public Integer apply(String sql) {
             try {
-                return conn.createStatement().executeUpdate(sql);
+                return testConn.createStatement().executeUpdate(sql);
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }
@@ -82,7 +82,7 @@ public class TestDataUtils {
         @Override
         public Boolean apply(String sql) {
             try {
-                return conn.createStatement().execute(sql);
+                return testConn.createStatement().execute(sql);
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }
@@ -93,7 +93,7 @@ public class TestDataUtils {
         @Override
         public ResultSet apply(String sql) {
             try {
-                return conn.createStatement().executeQuery(sql);
+                return testConn.createStatement().executeQuery(sql);
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }
@@ -104,7 +104,7 @@ public class TestDataUtils {
         @Override
         public ResultSet apply(String sql) {
             try {
-                return conn.prepareStatement(sql).executeQuery();
+                return testConn.prepareStatement(sql).executeQuery();
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }
@@ -121,7 +121,7 @@ public class TestDataUtils {
     }
 
     @VisibleForPackage static Collection<String> retrieveColumn(String sql, String column) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
         Collection<String> data = new HashSet<>();
         while (rs.next()) {
             data.add(rs.getString(column));
@@ -256,7 +256,7 @@ public class TestDataUtils {
 
     @VisibleForPackage
     static ResultSet executeQuery(String sql, String expectedSchema, boolean orderedValidation, Object ... expectedMetadataFields) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
 
         if (expectedMetadataFields.length > 0) {
             validate(rs.getMetaData(), expectedSchema, orderedValidation, expectedMetadataFields);
@@ -268,7 +268,7 @@ public class TestDataUtils {
 
     @VisibleForPackage
     static ResultSet executeQuery(String sql, DataColumn... expectedColumns) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
 
         if (expectedColumns.length > 0) {
             validate(rs.getMetaData(), expectedColumns);

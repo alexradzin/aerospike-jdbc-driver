@@ -13,7 +13,7 @@ import java.util.Map;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.conn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -87,7 +87,7 @@ class InsertTest {
 
     @Test
     void insertSeveralRowsUsingExecute() throws SQLException {
-        assertTrue(conn.createStatement().execute("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2), (2, 2, 'Paul', 'McCartney', 1942, 5)"));
+        assertTrue(testConn.createStatement().execute("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2), (2, 2, 'Paul', 'McCartney', 1942, 5)"));
         assertEquals("John", client.get(null, new Key("test", "people", 1)).getString("first_name"));
         assertEquals("Paul", client.get(null, new Key("test", "people", 2)).getString("first_name"));
     }
@@ -95,7 +95,7 @@ class InsertTest {
 
 
     private void insert(String sql, int expectedRowCount) throws SQLException {
-        int rowCount = conn.createStatement().executeUpdate(sql);
+        int rowCount = testConn.createStatement().executeUpdate(sql);
         assertEquals(expectedRowCount, rowCount);
     }
 }

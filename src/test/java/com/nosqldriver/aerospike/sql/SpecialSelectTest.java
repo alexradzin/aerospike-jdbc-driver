@@ -20,7 +20,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SELECT_ALL;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SUBJECT_SELECTION;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.conn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeMainPersonalInstruments;
@@ -47,7 +47,7 @@ class SpecialSelectTest {
 
     @Test
     void selectEmpty() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(SELECT_ALL);
+        ResultSet rs = testConn.createStatement().executeQuery(SELECT_ALL);
         assertFalse(rs.next());
     }
 
@@ -57,7 +57,7 @@ class SpecialSelectTest {
     void groupByMulti() throws SQLException {
         writeBeatles();
         writeSubjectSelection();
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(3, md.getColumnCount());
@@ -106,7 +106,7 @@ class SpecialSelectTest {
     void oneToOneJoin(String sql) throws SQLException {
         writeBeatles();
         writeMainPersonalInstruments();
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());

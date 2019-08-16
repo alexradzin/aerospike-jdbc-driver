@@ -37,7 +37,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SELECT_ALL;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.beatles;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.conn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.createIndex;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.dropIndexSafely;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
@@ -176,7 +176,7 @@ class SelectTest {
     void selectSpecificFields(String sql) throws SQLException {
         selectSpecificFields(sql, sql1 -> {
             try {
-                return conn.createStatement().executeQuery(sql);
+                return testConn.createStatement().executeQuery(sql);
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }
@@ -191,7 +191,7 @@ class SelectTest {
     void selectSpecificFields2(String sql) throws SQLException {
         selectSpecificFields(sql, sql1 -> {
             try {
-                return conn.createStatement().executeQuery(sql);
+                return testConn.createStatement().executeQuery(sql);
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }
@@ -213,7 +213,7 @@ class SelectTest {
     void selectSpecificFieldsUsingExecute(String sql) throws SQLException {
         selectSpecificFields(sql, sql1 -> {
             try {
-                java.sql.Statement statement = conn.createStatement();
+                java.sql.Statement statement = testConn.createStatement();
                 statement.execute(sql1);
                 return statement.getResultSet();
             } catch (SQLException e) {
@@ -236,7 +236,7 @@ class SelectTest {
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @VariableSource("orderBy")
     void selectWithOrderBy(String query, String[] expected) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(query);
+        ResultSet rs = testConn.createStatement().executeQuery(query);
         assertArrayEquals(expected, toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).toArray(String[]::new));
     }
 
@@ -279,7 +279,7 @@ class SelectTest {
     @Test
     @DisplayName("select first_name as name, year_of_birth as year from people")
     void selectSpecificFieldsWithAliases() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
 
         Map<String, Integer> selectedPeople = new HashMap<>();
 
@@ -303,7 +303,7 @@ class SelectTest {
     @Test
     @DisplayName("select 1 as one from people where PK=1")
     void select1fromPeople() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
 
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(1, md.getColumnCount());
@@ -322,7 +322,7 @@ class SelectTest {
     @Test
     @DisplayName("select 1 as one from people where PK=?")
     void select1fromPeopleUsingPreparedStatement() throws SQLException {
-        PreparedStatement ps = conn.prepareStatement(getDisplayName());
+        PreparedStatement ps = testConn.prepareStatement(getDisplayName());
         ps.setInt(1, 1);
         ResultSet rs = ps.executeQuery();
         assertTrue(rs.next());
@@ -335,7 +335,7 @@ class SelectTest {
     @Test
     @DisplayName("select (1+2)*3 as nine from people where PK=1")
     void selectIntExpressionFromPeople() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
         assertTrue(rs.next());
         assertEquals("nine", rs.getMetaData().getColumnLabel(1));
         assertEquals(9, rs.getInt(1));
@@ -347,7 +347,7 @@ class SelectTest {
     @Test
     @DisplayName("select (1+2)*3 as nine")
     void selectIntExpressionNoFrom() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
         ResultSetMetaData md = rs.getMetaData();
         assertEquals("nine", md.getColumnLabel(1));
         assertEquals(INTEGER, md.getColumnType(1));
@@ -366,7 +366,7 @@ class SelectTest {
             "select 1 as number union select 2 as number",
     })
     void selectIntUnion(String sql) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
         assertEquals("number", md.getColumnLabel(1));
         assertEquals(INTEGER, md.getColumnType(1));
@@ -388,7 +388,7 @@ class SelectTest {
             "select 1 as number union select 1 as number",
     })
     void selectIntUnionWithRepeatedValues(String sql) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
         assertEquals("number", md.getColumnLabel(1));
         assertEquals(INTEGER, md.getColumnType(1));
@@ -405,7 +405,7 @@ class SelectTest {
     @Test
     @DisplayName("select (4+5)/3 as three, first_name as name, year_of_birth - 1900 as year from people where PK=1")
     void selectExpressionAndFieldFromPeople() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
         assertTrue(rs.next());
         assertEquals("three", rs.getMetaData().getColumnLabel(1));
         assertEquals(3, rs.getInt(1));
@@ -430,7 +430,7 @@ class SelectTest {
             "select first_name as name, LEN(first_name) as name_len from people"
     })
     void selectSpecificFieldsWithLenFunction(String query) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(query);
+        ResultSet rs = testConn.createStatement().executeQuery(query);
 
         Map<String, Integer> selectedPeople = new HashMap<>();
 
@@ -446,7 +446,7 @@ class SelectTest {
 
     @Test
     void selectSpecificFieldsWithFunctions2() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery("select 1 as one, 2 + 3 as two_plus_three, (1+2)*3 as someexpr, year() - year_of_birth as years_ago, first_name as name, year_of_birth - 1900 as y, len(last_name) as surname_length from people");
+        ResultSet rs = testConn.createStatement().executeQuery("select 1 as one, 2 + 3 as two_plus_three, (1+2)*3 as someexpr, year() - year_of_birth as years_ago, first_name as name, year_of_birth - 1900 as y, len(last_name) as surname_length from people");
 
         Map<String, Integer> selectedPeople = new HashMap<>();
 
@@ -483,7 +483,7 @@ class SelectTest {
     void selectByPk() throws SQLException {
         for (int i = 0; i < beatles.length; i++) {
             int id = i + 1;
-            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where PK=%d", id));
+            ResultSet rs = testConn.createStatement().executeQuery(format("select * from people where PK=%d", id));
 
             assertTrue(rs.next());
             assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
@@ -497,7 +497,7 @@ class SelectTest {
     @Test
     void selectByNotIndexedField() throws SQLException {
         for (Person person : beatles) {
-            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where last_name=%s", person.getLastName()));
+            ResultSet rs = testConn.createStatement().executeQuery(format("select * from people where last_name=%s", person.getLastName()));
 
             assertTrue(rs.next());
             assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
@@ -512,7 +512,7 @@ class SelectTest {
     void selectByOneStringIndexedField() throws SQLException {
         createIndex("first_name", IndexType.STRING);
         for (Person person : beatles) {
-            ResultSet rs = conn.createStatement().executeQuery(format("select * from people where first_name=%s", person.getFirstName()));
+            ResultSet rs = testConn.createStatement().executeQuery(format("select * from people where first_name=%s", person.getFirstName()));
 
             assertTrue(rs.next());
             assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
@@ -585,7 +585,7 @@ class SelectTest {
         createIndex("year_of_birth", IndexType.NUMERIC);
         assertSelect("select * from people where year_of_birth=1940 and first_name='John'", 1);
 
-        PreparedStatement ps = conn.prepareStatement("select * from people where year_of_birth=? and first_name=?");
+        PreparedStatement ps = testConn.prepareStatement("select * from people where year_of_birth=? and first_name=?");
         ps.setInt(1, 1940);
         ps.setString(2, "John");
         ResultSet rs = ps.executeQuery();
@@ -720,7 +720,7 @@ class SelectTest {
     void selectAllWithLimit2() throws SQLException {
         assertSelect("select * from people limit 2", 1, 2);
 
-        //ResultSet rs = conn.createStatement().executeQuery("select * from people limit 2");
+        //ResultSet rs = testConn.createStatement().executeQuery("select * from people limit 2");
         // "id", "first_name", "last_name", "year_of_birth", "kids_count"
         ResultSet rs = executeQuery("select * from people limit 2", NAMESPACE, false, "id", null, INTEGER, "first_name", null, VARCHAR, "last_name", null, VARCHAR, "year_of_birth", null, INTEGER, "kids_count", null, INTEGER);
         //assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
@@ -734,11 +734,11 @@ class SelectTest {
     @DisplayName("offset 1 -> [Paul, George, Ringo]")
     void selectAllWithOffset1() throws SQLException {
         String sql = "select * from people offset 1";
-        //select(conn, sql, 2, 3, 4);
+        //select(testConn, sql, 2, 3, 4);
 
         // since order of records returned from the DB is not deterministic unless order by is used we cannot really
         // validate here the names of people and ought to check the number of rows in record set.
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
         int n = 0;
         //noinspection StatementWithEmptyBody // counter
@@ -845,7 +845,7 @@ class SelectTest {
     }
 
     void selectDistinctYearOfBirth(String query, String expectedName, String expectedLabel) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(query);
+        ResultSet rs = testConn.createStatement().executeQuery(query);
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(NAMESPACE, md.getSchemaName(1));
         assertEquals(1, rs.getMetaData().getColumnCount());
@@ -863,7 +863,7 @@ class SelectTest {
     @Test
     @DisplayName("select distinct(first_name) as given_name from people")
     void selectDistinctFirstName() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(NAMESPACE, md.getSchemaName(1));
         assertEquals(1, rs.getMetaData().getColumnCount());
@@ -896,7 +896,7 @@ class SelectTest {
 
 
     private ResultSetMetaData assertGroupByYearOfBirth(String sql) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());
@@ -928,7 +928,7 @@ class SelectTest {
             "select year_of_birth, count(*) as n from people group by year_of_birth having n > 1"
     })
     void groupByYearOfBirthHavingCount2(String sql) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());
@@ -947,7 +947,7 @@ class SelectTest {
 
     @Test
     void groupByYearOfBirthWithoutRequestingMetadata() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery("select year_of_birth, count(*) from people group by year_of_birth");
+        ResultSet rs = testConn.createStatement().executeQuery("select year_of_birth, count(*) from people group by year_of_birth");
         Collection<Integer> years = new HashSet<>();
         assertTrue(rs.next());
         years.add(assertCounts(rs));
@@ -995,7 +995,7 @@ class SelectTest {
     }
 
     private void groupByOrderBy(String query, String column, Object[] expected) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(query);
+        ResultSet rs = testConn.createStatement().executeQuery(query);
         assertArrayEquals(expected, toListOfMaps(rs).stream().map(e -> e.get(column)).toArray());
     }
 
@@ -1004,7 +1004,7 @@ class SelectTest {
     @Test
     @DisplayName("select year_of_birth as year, count(*) as counter, sum(kids_count) as total_kids, max(kids_count) as max_kids, min(kids_count) as min_kids from people group by year_of_birth")
     void groupByYearOfBirthWithMultipleAggregations() throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(getDisplayName());
+        ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(5, md.getColumnCount());
@@ -1096,7 +1096,7 @@ class SelectTest {
     }
 
     private void assertAggregateOneField(String sql, String name, String label, int expected) throws SQLException {
-        ResultSet rs = conn.createStatement().executeQuery(sql);
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(1, md.getColumnCount());

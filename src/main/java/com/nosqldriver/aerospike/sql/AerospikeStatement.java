@@ -12,6 +12,7 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static java.lang.String.format;
@@ -24,7 +25,7 @@ import static java.util.Collections.emptyList;
 public class AerospikeStatement implements java.sql.Statement {
     private final IAerospikeClient client;
     private final Connection connection;
-    protected final String schema;
+    protected final AtomicReference<String> schema;
     private String set;
     private int maxRows = Integer.MAX_VALUE;
     private int queryTimeout = 0;
@@ -38,7 +39,7 @@ public class AerospikeStatement implements java.sql.Statement {
         SELECT {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema, statement.policyProvider, statement.indexes);
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, statement.indexes);
                 Function<IAerospikeClient, ResultSet> query = aqf.createQuery(sql);
                 statement.set = aqf.getSet();
                 return query.apply(statement.client);
@@ -52,7 +53,7 @@ public class AerospikeStatement implements java.sql.Statement {
         },
         INSERT {
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema, statement.policyProvider, statement.indexes);
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, statement.indexes);
                 Function<IAerospikeClient, ResultSet> insert = aqf.createQuery(sql);
                 insert.apply(statement.client);
                 statement.set = aqf.getSet();
@@ -68,11 +69,11 @@ public class AerospikeStatement implements java.sql.Statement {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-                return new ListRecordSet(statement.schema, statement.set, emptyList(), emptyList(), Collections::emptyList);
+                return new ListRecordSet(statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
             }
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema, statement.policyProvider, statement.indexes);
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, statement.indexes);
                 Function<IAerospikeClient, Integer> update = aqf.createUpdate(sql);
                 statement.set = aqf.getSet();
                 int count = update.apply(statement.client);
@@ -87,6 +88,26 @@ public class AerospikeStatement implements java.sql.Statement {
         },
         DELETE(UPDATE),
         SHOW,
+        USE {
+            @Override
+            ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
+                String schema = execute(statement, sql) ? statement.schema.get() : null;
+                return new ListRecordSet(schema, null, emptyList(), emptyList(), Collections::emptyList);
+            }
+
+            @Override
+            int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
+                return execute(statement, sql) ? 1 :  0;
+            }
+
+            @Override
+            boolean execute(AerospikeStatement statement, String sql) throws SQLException {
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, statement.indexes);
+                aqf.createQuery(sql);
+                statement.schema.set(aqf.getSchema());
+                return statement.schema.get() != null;
+            }
+        },
         ;
 
         private final StatementType prototype;
@@ -118,7 +139,7 @@ public class AerospikeStatement implements java.sql.Statement {
         }
     }
 
-    public AerospikeStatement(IAerospikeClient client, Connection connection, String schema, AerospikePolicyProvider policyProvider) {
+    public AerospikeStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider) {
         this.client = client;
         this.connection = connection;
         this.schema = schema;

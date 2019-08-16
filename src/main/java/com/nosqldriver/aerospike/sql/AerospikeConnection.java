@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.String.format;
 import static java.sql.ResultSet.CLOSE_CURSORS_AT_COMMIT;
@@ -42,15 +43,15 @@ public class AerospikeConnection implements Connection {
     private volatile Map<String, Class<?>> typeMap = Collections.emptyMap();
     private volatile int holdability = HOLD_CURSORS_OVER_COMMIT;
     private final Properties clientInfo = new Properties();
-    private volatile String schema;
+    private final AtomicReference<String> schema = new AtomicReference<>(null); // schema can be updated by use statement
     private final AerospikePolicyProvider policyProvider;
 
     public AerospikeConnection(String url, Properties props) {
         this.url = url;
         this.props = props;
         Host[] hosts = parser.hosts(url);
-        client = new AerospikeClient(parser.policy(url, props), hosts);
-        schema = parser.schema(url);
+        client = new AerospikeSqlClient(new AerospikeClient(parser.policy(url, props), hosts));
+        schema.set(parser.schema(url));
         policyProvider = new AerospikePolicyProvider(parser.clientInfo(url, props));
 
         registerScript("stats", "distinct", "groupby");
@@ -316,12 +317,12 @@ public class AerospikeConnection implements Connection {
 
     @Override
     public void setSchema(String schema) throws SQLException {
-        this.schema = schema;
+        this.schema.set(schema);
     }
 
     @Override
     public String getSchema() throws SQLException {
-        return schema;
+        return schema.get();
     }
 
     @Override

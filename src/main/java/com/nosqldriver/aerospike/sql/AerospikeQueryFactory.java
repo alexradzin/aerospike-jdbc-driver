@@ -45,6 +45,7 @@ import net.sf.jsqlparser.parser.CCJSqlParserManager;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
+import net.sf.jsqlparser.statement.UseStatement;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.FromItemVisitorAdapter;
@@ -93,7 +94,7 @@ import static java.util.Optional.ofNullable;
 
 public class AerospikeQueryFactory {
     private CCJSqlParserManager parserManager = new CCJSqlParserManager();
-    private final String schema;
+    private String schema;
     private String set;
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
@@ -191,13 +192,16 @@ public class AerospikeQueryFactory {
                     if (!values.isEmpty()) {
                         queries.addData(values);
                     }
-
-
                 }
 
                 @Override
                 public void visit(Update update) {
                     super.visit(update);
+                }
+
+                @Override
+                public void visit(UseStatement use) {
+                    schema = use.getName();
                 }
             });
 

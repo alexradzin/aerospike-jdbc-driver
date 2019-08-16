@@ -26,6 +26,7 @@ import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.String.format;
 
@@ -33,7 +34,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
     private  final String sql;
     private Object[] parameterValues;
 
-    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, String schema, AerospikePolicyProvider policyProvider, String sql) {
+    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql) {
         super(client, connection, schema, policyProvider);
         this.sql = sql;
         int n = parametersCount(sql);
