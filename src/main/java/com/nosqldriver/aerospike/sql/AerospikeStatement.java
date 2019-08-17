@@ -2,6 +2,7 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
+import com.aerospike.client.query.IndexType;
 import com.nosqldriver.aerospike.sql.query.AerospikeInsertQuery;
 import com.nosqldriver.sql.ListRecordSet;
 
@@ -9,11 +10,18 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.sql.SQLSyntaxErrorException;
 import java.sql.SQLWarning;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 import static java.sql.ResultSet.CLOSE_CURSORS_AT_COMMIT;
@@ -35,7 +43,7 @@ public class AerospikeStatement implements java.sql.Statement {
     private ResultSet resultSet;
     private int updateCount;
 
-    private enum StatementType {
+    private enum StatementType implements Predicate<String> {
         SELECT {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
@@ -108,6 +116,53 @@ public class AerospikeStatement implements java.sql.Statement {
                 return statement.schema.get() != null;
             }
         },
+
+        CREATE_INDEX {
+            @Override
+            ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
+                executeUpdate(statement, sql);
+                return new ListRecordSet(statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
+            }
+            @Override
+            boolean execute(AerospikeStatement statement, String sql) throws SQLException {
+                return executeUpdate(statement, sql) > 0;
+            }
+            @Override
+            int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
+                List<String> indexes = new ArrayList<>();
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, indexes);
+                aqf.createQuery(sql);
+                String[] index = aqf.getIndexes().iterator().next().split(":");
+                statement.client.createIndex(null, aqf.getSchema(), aqf.getSet(), index[1], index[2], IndexType.valueOf(index[0].toUpperCase()));
+                return 1;
+            }
+
+            @Override
+            public boolean test(String sql) {
+                return createIndexPattern.matcher(sql).find();
+            }
+        },
+
+        DROP_INDEX {
+            @Override
+            ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
+                executeUpdate(statement, sql);
+                return new ListRecordSet(statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
+            }
+            @Override
+            boolean execute(AerospikeStatement statement, String sql) throws SQLException {
+                return executeUpdate(statement, sql) > 0;
+            }
+            @Override
+            int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
+                List<String> indexes = new ArrayList<>();
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, indexes);
+                aqf.createQuery(sql);
+                String indexName = aqf.getIndexes().iterator().next();
+                statement.client.dropIndex(null, aqf.getSchema(), aqf.getSet(), indexName);
+                return 1;
+            }
+        },
         ;
 
         private final StatementType prototype;
@@ -137,7 +192,15 @@ public class AerospikeStatement implements java.sql.Statement {
             }
             throw new UnsupportedOperationException(format("%s does not support %s", name(), "execute"));
         }
+
+        @Override
+        public boolean test(String sql) {
+            return sql.toUpperCase().startsWith(name().replace("_", " ") + " ");
+        }
+
     }
+
+    private static final Pattern createIndexPattern = Pattern.compile("^CREATE\\s+(STRING|NUMERIC)\\s+INDEX.*");
 
     public AerospikeStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider) {
         this.client = client;
@@ -146,6 +209,8 @@ public class AerospikeStatement implements java.sql.Statement {
         this.policyProvider = policyProvider;
         indexes = new ConnectionParametersParser().indexesParser(Info.request(client.getNodes()[0], "sindex"));
     }
+
+
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
@@ -377,7 +442,14 @@ public class AerospikeStatement implements java.sql.Statement {
         return false;
     }
 
-    private static StatementType getStatementType(String sql) {
-        return StatementType.valueOf(sql.trim().split("\\s+")[0].toUpperCase());
+
+    private static StatementType getStatementType(String sql) throws SQLException {
+        String sqlUp = sql.trim().toUpperCase();
+        Optional<StatementType> type = Arrays.stream(StatementType.values()).filter(t -> t.test(sqlUp)).findFirst();
+
+        if (!type.isPresent()) {
+            throw new SQLSyntaxErrorException(format("SQL statement %s is not supported. SQL should start with one of: %s", sql, Arrays.toString(Arrays.stream(StatementType.values()).map(Enum::name).map(name -> name.replace("_", " ")).toArray())));
+        }
+        return type.get();
     }
 }

@@ -46,7 +46,9 @@ import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
 import net.sf.jsqlparser.statement.UseStatement;
+import net.sf.jsqlparser.statement.create.index.CreateIndex;
 import net.sf.jsqlparser.statement.delete.Delete;
+import net.sf.jsqlparser.statement.drop.Drop;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.FromItemVisitorAdapter;
 import net.sf.jsqlparser.statement.select.Join;
@@ -67,6 +69,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -202,6 +205,20 @@ public class AerospikeQueryFactory {
                 @Override
                 public void visit(UseStatement use) {
                     schema = use.getName();
+                }
+
+                @Override
+                public void visit(CreateIndex createIndex) {
+                    createIndex.getIndex().getColumnsNames();
+                    String columnName = createIndex.getIndex().getColumnsNames().get(0); // todo : assert if length is not  1
+                    set = createIndex.getTable().getName();
+                    indexes.add(createIndex.getIndex().getType() + ":" + createIndex.getIndex().getName() + ":" + columnName);
+                }
+
+                @Override
+                public void visit(Drop drop) {
+                    set = drop.getName().getSchemaName();
+                    indexes.add(drop.getName().getName());
                 }
             });
 

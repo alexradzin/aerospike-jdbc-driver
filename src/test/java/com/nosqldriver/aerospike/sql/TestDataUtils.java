@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.AerospikeException;
 import com.aerospike.client.Bin;
+import com.aerospike.client.Info;
 import com.aerospike.client.Key;
 import com.aerospike.client.Log;
 import com.aerospike.client.policy.ScanPolicy;
@@ -247,6 +248,10 @@ public class TestDataUtils {
 
     private static void dropIndex(String fieldName) {
         client.dropIndex(null, NAMESPACE, PEOPLE, getIndexName(fieldName)).waitTillComplete();
+    }
+
+    @VisibleForPackage static Collection<String> getIndexes() {
+        return new ConnectionParametersParser().indexesParser(Info.request(client.getNodes()[0], "sindex"));
     }
 
     private static String getIndexName(String fieldName) {
