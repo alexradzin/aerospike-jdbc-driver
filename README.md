@@ -15,12 +15,11 @@ Simplify access to Aerospike DB.
 From other hand threre are a lot of tools that help to visualize data stored in database, create reports based on the data, perform various ETL operations etc. These tools traditionally support SQL. Database that has standards complient JDBC driver can be easilty connected to various tools. Majority of popular no-SQL databased have JDBC drivers. Aerospike did not have one. This was the reason to start this project. 
 
 ## Key Features
-
-  * Use either a single all-in-one JAR or define dependency (TBD)
-  * Use standard SQL to insert, update, retrieve and delete data to/from Aerospike DB
-  * Compliant with JDBC JDBC 4.0.
-  * Codeless integration with popular BI, reporting, and ETL tools.
-  * Use standard JDBC API from any JVM compatible language
+*   Use either a single all-in-one JAR or define dependency (TBD)
+*   Use standard SQL to insert, update, retrieve and delete data to/from Aerospike DB
+*   Compliant with JDBC JDBC 4.0.
+*   Codeless integration with popular BI, reporting, and ETL tools.
+*   Use standard JDBC API from any JVM compatible language
 
 ## Quick start
 
@@ -77,23 +76,21 @@ while (rs.next()) {
 ## SQL compliance
 
 ### Supported statements
-
-  * insert, update, delete, select
-  * Complex where clause can be used with update, delete and select. Use special field "PK" to refere to the primary key. Syntanctically there is no difference between referencing to primary key or any data column. Select statement does its best effort to use secondary indexes if defined. 
-  * Nested selects are supported. 
-  * Select can be used with distinct, group by, order by.
+*   insert, update, delete, select
+*   Complex where clause can be used with update, delete and select. Use special field "PK" to refere to the primary key. Syntanctically there is no difference between referencing to primary key or any data column. Select statement does its best effort to use secondary indexes if defined. 
+*   Nested selects are supported. 
+*   Select can be used with distinct, group by, order by.
 
 ### Statements that will be supported in future
 
-  * create/drop index
-  * drop table
-  * describe
-  * show schemas/tables/indexes
+*   create/drop index
+*   drop table
+*   describe
+*   show schemas/tables/indexes
 
 ### Statements that will not be supported
-
-  * create table. This operation is meaningless applicable to Aerospike that creates set once somebody writes to this set. 
-  * create/drop schema just cannot be implemented for Aerospike that requires static definition of namespaces using `aerospike.conf`.
+*   create table. This operation is meaningless applicable to Aerospike that creates set once somebody writes to this set. 
+*   create/drop schema just cannot be implemented for Aerospike that requires static definition of namespaces using `aerospike.conf`.
 
 ### Functions
 
