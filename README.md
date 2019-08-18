@@ -16,13 +16,13 @@ From other hand threre are a lot of tools that help to visualize data stored in 
 
 ## Key Features
 
-* Use either a single all-in-one JAR or define dependency (TBD)
-* Use standard SQL to insert, update, retrieve and delete data to/from Aerospike DB
-* Compliant with JDBC JDBC 4.0.
-* Codeless integration with popular BI, reporting, and ETL tools.
-* Use standard JDBC API from any JVM compatible language
+*  Use either a single all-in-one JAR or define dependency (TBD)
+*  Use standard SQL to insert, update, retrieve and delete data to/from Aerospike DB
+*  Compliant with JDBC JDBC 4.0.
+*  Codeless integration with popular BI, reporting, and ETL tools.
+*  Use standard JDBC API from any JVM compatible language
 
-##  Quick start
+## Quick start
 
 The driver is being developed now and is not available in any public repository. One can however build and publish it to a private repository. Once it is done refer to it using definition like the following:
 
@@ -42,25 +42,24 @@ compile group: 'com.nosqldriver', name: 'aerospike-jdbc-driver', version: '1.0-S
 
 It is very easy to build the project. The only prerequisite is JDK 8 or higher. Clone git repository and run
 
-```
+```sh
 ./gradlew build -x test
 ```
 
 This command will compile and project and  package jar that can be found under ./build/lib
 If  you  want to run unit test you want to run unit tests please [install and run aerospike database](https://www.aerospike.com/docs/operations/install/) on machine that runs the tests. Once this is done run 
 
-```
+```sh
 ./gradlew build
 ```
 This command will compile the code, run all unit and integration tests and create jar file. 
 
 Aerospike JDBC driver depends on SQL parser and [Aerospke Java client](https://www.aerospike.com/docs/client/java/). If you want to use the driver with 3rd party tool it is very convenient to build single fat jar that contains all dependencies. To get it run the following command:
 
-```
+```sh
 ./gradlew fatJar
 ```
 Fat  JAR `aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar` can be added to 3rd party tool like [SQuirreL](http://squirrel-sql.sourceforge.net/) or [DB viewer](https://dbeaver.io/)
-
 
 ### Coding with the driver
 
@@ -75,26 +74,26 @@ while (rs.next()) {
 }
 ```
 
-##  SQL compliance
+## SQL compliance
 
 ### Supported statements
 
-* insert, update, delete, select
-* Complex where clause can be used with update, delete and select. Use special field "PK" to refere to the primary key. Syntanctically there is no difference between referencing to primary key or any data column. Select statement does its best effort to use secondary indexes if defined. 
-* Nested selects are supported. 
-* Select can be used with distinct, group by, order by.
+*  insert, update, delete, select
+*  Complex where clause can be used with update, delete and select. Use special field "PK" to refere to the primary key. Syntanctically there is no difference between referencing to primary key or any data column. Select statement does its best effort to use secondary indexes if defined. 
+*  Nested selects are supported. 
+*  Select can be used with distinct, group by, order by.
 
 ### Statements that will be supported in future
 
-* create/drop index
-* drop table
-* describe
-* show schemas/tables/indexes
+*  create/drop index
+*  drop table
+*  describe
+*  show schemas/tables/indexes
 
 ### Statements that will not be supported
 
-* create table. This operation is meaningless applicable to Aerospike that creates set once somebody writes to this set. 
-* create/drop schema just cannot be implemented for Aerospike that requires static definition of namespaces using `aerospike.conf`.
+*  create table. This operation is meaningless applicable to Aerospike that creates set once somebody writes to this set. 
+*  create/drop schema just cannot be implemented for Aerospike that requires static definition of namespaces using `aerospike.conf`.
 
 ### Functions
 
