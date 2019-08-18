@@ -20,6 +20,16 @@ class ByteArrayComparatorTest {
     }
 
     @Test
+    void nullVsEmpty() {
+        assertEquals(-1, comparator.compare(null, new byte[0]));
+    }
+
+    @Test
+    void emptyVsNull() {
+        assertEquals(1, comparator.compare(new byte[0], null));
+    }
+
+    @Test
     void oneEqByte() {
         assertEquals(0, comparator.compare(new byte[] {'a'}, new byte[] {'a'}));
     }

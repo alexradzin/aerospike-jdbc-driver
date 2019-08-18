@@ -5,13 +5,16 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.stream.IntStream;
 
+import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PagedCollectionTest {
@@ -31,6 +34,19 @@ class PagedCollectionTest {
 
 
     @Test
+    void unsupportedOperations() {
+        Collection<String> collection =  new PagedCollection<>(Collections.singletonList("hello"), 1, true);
+        assertFalse(collection.isEmpty());
+        assertTrue(collection.contains("hello"));
+        assertThrows(UnsupportedOperationException.class, () -> collection.remove("hello"));
+        assertThrows(UnsupportedOperationException.class, () -> collection.removeAll(singleton("hello")));
+        assertThrows(UnsupportedOperationException.class, () -> collection.retainAll(singleton("hello")));
+        assertThrows(UnsupportedOperationException.class, () -> collection.addAll(singleton("hello")));
+        assertThrows(UnsupportedOperationException.class, collection::clear);
+    }
+
+
+    @Test
     void singleRewrite() {
         Collection<String> collection =  new PagedCollection<>(new ArrayList<>(), 1, true);
         assertEquals(0, collection.size());
@@ -39,11 +55,14 @@ class PagedCollectionTest {
 
         assertFalse(collection.add("hello"));
         assertFalse(collection.isEmpty());
+        assertTrue(collection.contains("hello"));
+        assertFalse(collection.contains("bye"));
         assertTrue(collection.iterator().hasNext());
         assertEquals("hello", collection.iterator().next());
 
         assertFalse(collection.add("bye"));
         assertFalse(collection.isEmpty());
+        assertTrue(collection.contains("bye"));
         assertTrue(collection.iterator().hasNext());
         assertEquals("bye", collection.iterator().next());
     }

@@ -2,9 +2,23 @@ package com.nosqldriver.sql;
 
 import org.junit.jupiter.api.Test;
 
+import javax.sql.rowset.serial.SerialArray;
+import javax.sql.rowset.serial.SerialBlob;
+import javax.sql.rowset.serial.SerialClob;
+import javax.sql.rowset.serial.SerialRef;
+import java.io.ByteArrayInputStream;
+import java.io.Reader;
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.NClob;
+import java.sql.Ref;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.util.Collections;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
@@ -14,6 +28,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ListRecordSetTest {
@@ -82,4 +97,86 @@ class ListRecordSetTest {
         assertFalse(rs.next());
     }
 
+    @Test
+    void updateValue() {
+        ResultSet rs = new ListRecordSet("schema", "table", Collections.emptyList(), Collections.emptyList());
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNull(1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNull("field"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBoolean(1, true));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBoolean("field", true));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateByte(1, (byte)1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateByte("field", (byte)1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateShort(1, (short)1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateShort("field", (short)1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateInt(1, 1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateInt("field", 1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateLong(1, 1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateLong("field", 1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateFloat(1, 1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateFloat("field", 1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateDouble(1, 1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateDouble("field", 1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBigDecimal(1, new BigDecimal(1)));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBigDecimal("field", new BigDecimal(1)));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateString(1, "value"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateString("field", "value"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBytes(1, new byte[0]));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBytes("field", new byte[0]));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateDate(1, new Date(0)));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateDate("field", new Date(0)));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateTime(1, new Time(0)));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateTime("field", new Time(0)));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateTimestamp(1, new Timestamp(0)));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateTimestamp("field", new Timestamp(0)));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateAsciiStream(1, new ByteArrayInputStream(new byte[0])));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateAsciiStream("field", new ByteArrayInputStream(new byte[0])));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBinaryStream(1, new ByteArrayInputStream(new byte[0])));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBinaryStream("field", new ByteArrayInputStream(new byte[0])));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBinaryStream(1, new ByteArrayInputStream(new byte[0])));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBinaryStream("field", new ByteArrayInputStream(new byte[0])));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateObject(1, new Object()));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateObject("field", new Object()));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNull(1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNull("field"));
+        assertThrows(SQLFeatureNotSupportedException.class, rs::insertRow);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::updateRow);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::deleteRow);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::refreshRow);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::cancelRowUpdates);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::moveToInsertRow);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::moveToCurrentRow);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::rowInserted);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::rowUpdated);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::rowDeleted);
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateRef(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateRef("field", null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBlob(1, new SerialBlob(new byte[0])));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBlob("field", new SerialBlob(new byte[0])));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateClob(1, new SerialClob(new char[0])));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateClob("field", new SerialClob(new char[0])));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateArray(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateArray("field", null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateRowId(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateRowId("field", null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNString(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNString("field", null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNClob(1, (NClob)null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNClob("field", (NClob)null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNClob(1, (Reader)null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNClob("field", (Reader)null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateSQLXML(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateSQLXML("field", null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNCharacterStream(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNCharacterStream("field", null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateAsciiStream(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateAsciiStream("field", null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateAsciiStream(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateAsciiStream("field", null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBinaryStream(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBinaryStream("field", null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateCharacterStream(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateCharacterStream("field", null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNCharacterStream(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNCharacterStream("field", null));
+    }
 }
