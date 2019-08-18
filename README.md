@@ -80,10 +80,11 @@ while (rs.next()) {
 *   Complex where clause can be used with update, delete and select. Use special field "PK" to refere to the primary key. Syntanctically there is no difference between referencing to primary key or any data column. Select statement does its best effort to use secondary indexes if defined. 
 *   Nested selects are supported. 
 *   Select can be used with distinct, group by, order by.
+*   create/drop index
+*   use `namespace_name` to change active namespace. Useful for interactive mode or scripts. 
+
 
 ### Statements that will be supported in future
-
-*   create/drop index
 *   drop table
 *   describe
 *   show schemas/tables/indexes
