@@ -979,22 +979,22 @@ class SelectTest {
     @Test
     @DisplayName("select year_of_birth, count(*) from people group by year_of_birth order by count(*) desc, year_of_birth")
     void groupByOrderByCountDesc() throws SQLException {
-        groupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1940, 1942, 1943});
+        assertGroupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1940, 1942, 1943});
     }
 
     @Test
     @DisplayName("select year_of_birth, count(*) from people group by year_of_birth order by count(*) desc, year_of_birth")
     void groupByOrderByCountDescCount() throws SQLException {
-        groupByOrderBy(getDisplayName(), "count(*)", new Object[] {2L, 1L, 1L});
+        assertGroupByOrderBy(getDisplayName(), "count(*)", new Object[] {2L, 1L, 1L});
     }
 
     @Test
     @DisplayName("select year_of_birth, count(*) from people group by year_of_birth order by count(*), year_of_birth")
     void groupByOrderByCount() throws SQLException {
-        groupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1942, 1943, 1940});
+        assertGroupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1942, 1943, 1940});
     }
 
-    private void groupByOrderBy(String query, String column, Object[] expected) throws SQLException {
+    private void assertGroupByOrderBy(String query, String column, Object[] expected) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(query);
         assertArrayEquals(expected, toListOfMaps(rs).stream().map(e -> e.get(column)).toArray());
     }

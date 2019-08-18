@@ -16,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Statement;
@@ -402,12 +403,15 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
 
     @Override
     public void setFetchSize(int rows) throws SQLException {
-
+        //TODO: add support of fetch size
+        if (rows != 1) {
+            throw new SQLFeatureNotSupportedException("This version supports fetch size=1 only");
+        }
     }
 
     @Override
     public int getFetchSize() throws SQLException {
-        return 0;
+        return 1;
     }
 
     @Override

@@ -227,17 +227,17 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public SQLWarning getWarnings() throws SQLException {
-        return null;
+        return rs.getWarnings();
     }
 
     @Override
     public void clearWarnings() throws SQLException {
-
+        rs.clearWarnings();
     }
 
     @Override
     public String getCursorName() throws SQLException {
-        return null;
+        return rs.getCursorName();
     }
 
     @Override

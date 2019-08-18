@@ -50,25 +50,25 @@ class SortedResultSetTest {
     }
 
     @Test
-    void oneColumnOneOrderBySeveralRecords() throws SQLException {
-        oneColumnOneOrderBySeveralRecords(dataColumn, asList(singletonList("a"), singletonList("c"), singletonList("b")), new OrderItem("data"), "data", new String[] {"a", "b", "c"});
+    void assertOneColumnOneOrderBySeveralRecords() throws SQLException {
+        assertOneColumnOneOrderBySeveralRecords(dataColumn, asList(singletonList("a"), singletonList("c"), singletonList("b")), new OrderItem("data"), "data", new String[] {"a", "b", "c"});
     }
 
     @Test
     void oneColumnOneOrderByDescSeveralRecords() throws SQLException {
-        oneColumnOneOrderBySeveralRecords(dataColumn, asList(singletonList("a"), singletonList("c"), singletonList("b")), new OrderItem("data", DESC), "data", new String[] {"c", "b", "a"});
+        assertOneColumnOneOrderBySeveralRecords(dataColumn, asList(singletonList("a"), singletonList("c"), singletonList("b")), new OrderItem("data", DESC), "data", new String[] {"c", "b", "a"});
     }
 
     @Test
     void oneColumnOneOrderBySeveralRecordsDuplicateRecords() throws SQLException {
-        oneColumnOneOrderBySeveralRecords(dataColumn, asList(singletonList("a"), singletonList("c"), singletonList("a"), singletonList("b")), new OrderItem("data"), "data", new String[] {"a", "a", "b", "c"});
+        assertOneColumnOneOrderBySeveralRecords(dataColumn, asList(singletonList("a"), singletonList("c"), singletonList("a"), singletonList("b")), new OrderItem("data"), "data", new String[] {"a", "a", "b", "c"});
     }
 
 
     @Test
     void severalColumnsOrderByOne() throws SQLException {
         List<List<?>> data = Arrays.stream(beatles).map(PojoHelper::fieldValues).collect(toList());
-        oneColumnOneOrderBySeveralRecords(peopleColumns, data, new OrderItem("firstName"), "firstName", new String[] {"George", "John", "Paul", "Ringo"});
+        assertOneColumnOneOrderBySeveralRecords(peopleColumns, data, new OrderItem("firstName"), "firstName", new String[] {"George", "John", "Paul", "Ringo"});
     }
 
     @Test
@@ -87,7 +87,7 @@ class SortedResultSetTest {
         return new ListRecordSet(NAMESPACE, TABLE, columns, data);
     }
 
-    void oneColumnOneOrderBySeveralRecords(List<DataColumn> columns, List<List<?>> data, OrderItem orderBy, String extractColumn, String[] expected) throws SQLException {
+    void assertOneColumnOneOrderBySeveralRecords(List<DataColumn> columns, List<List<?>> data, OrderItem orderBy, String extractColumn, String[] expected) throws SQLException {
         assertEquals(
                 asList(expected),
                 TestDataUtils.toListOfMaps(new SortedResultSet(dataRs(columns, data), singletonList(orderBy))).stream().map(row -> row.get(extractColumn)).collect(toList()));

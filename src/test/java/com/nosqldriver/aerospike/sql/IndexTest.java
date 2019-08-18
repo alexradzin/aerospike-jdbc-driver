@@ -47,17 +47,17 @@ class IndexTest {
 
     @Test
     void createAndDropStringIndex() throws SQLException, IOException {
-        createAndDropIndex("first_name", STRING_INDEX_NAME, "STRING");
+        assertCreateAndDropIndex("first_name", STRING_INDEX_NAME, "STRING");
     }
 
     @Test
     void createAndDropNumericIndex() throws SQLException, IOException {
-        createAndDropIndex("year_of_birth", NUMERIC_INDEX_NAME, "NUMERIC");
+        assertCreateAndDropIndex("year_of_birth", NUMERIC_INDEX_NAME, "NUMERIC");
 
     }
 
 
-    void createAndDropIndex(String column, String indexName, String indexType) throws SQLException, IOException {
+    void assertCreateAndDropIndex(String column, String indexName, String indexType) throws SQLException, IOException {
         TestDataUtils.writeBeatles();
         assertFalse(Info.request(TestDataUtils.client.getNodes()[0], "sindex").contains(indexName));
         testConn.createStatement().execute(format("CREATE %s INDEX %s ON people (%s)", indexType, indexName, column));

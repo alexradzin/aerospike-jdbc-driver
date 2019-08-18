@@ -51,20 +51,20 @@ class PagedCollectionTest {
 
     @Test
     void doubleRewrite2_2() {
-        multipleRewrite(beatles, 2);
+        assertMultipleRewrite(beatles, 2);
     }
 
     @Test
     void doubleRewrite3_1() {
-        multipleRewrite(beatles, 3);
+        assertMultipleRewrite(beatles, 3);
     }
 
 
     @Test
-    void multipleRewrite() {
+    void assertMultipleRewrite() {
         String[] data = IntStream.range(0, 10).boxed().map(i -> "something" + i).toArray(String[]::new);
         for (int pageSize = 1; pageSize <= 10; pageSize++) {
-            multipleRewrite(data, pageSize);
+            assertMultipleRewrite(data, pageSize);
         }
     }
 
@@ -120,7 +120,7 @@ class PagedCollectionTest {
     }
 
 
-    private void multipleRewrite(String[] data, int  pageSize) {
+    private void assertMultipleRewrite(String[] data, int  pageSize) {
         Collection<String> collection =  new PagedCollection<>(new ArrayList<>(), pageSize, true);
         assertEquals(0, collection.size());
         assertTrue(collection.isEmpty());
@@ -137,5 +137,4 @@ class PagedCollectionTest {
             assertEquals(Arrays.asList(data).subList(j, i + 1), Arrays.asList(collection.toArray()));
         }
     }
-
 }
