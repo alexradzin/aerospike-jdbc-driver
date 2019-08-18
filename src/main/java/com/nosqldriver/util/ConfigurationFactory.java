@@ -1,7 +1,6 @@
 package com.nosqldriver.util;
 
 import com.aerospike.client.policy.Policy;
-import com.nosqldriver.VisibleForPackage;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;

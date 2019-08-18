@@ -344,7 +344,7 @@ public class TestDataUtils {
             assertEquals(expectedColumns[i].getTable(), md.getTableName(j));
             assertEquals(expectedColumns[i].getName(), md.getColumnName(j));
             assertEquals(expectedColumns[i].getLabel(), md.getColumnLabel(j));
-            assertEquals(expectedColumns[i].getType(), md.getColumnType(j), String.format("Wrong type of %s.%s.%s", md.getSchemaName(j), md.getTableName(j), md.getColumnLabel(j)));
+            assertEquals(expectedColumns[i].getType(), md.getColumnType(j), format("Wrong type of %s.%s.%s", md.getSchemaName(j), md.getTableName(j), md.getColumnLabel(j)));
         }
 
         return md;

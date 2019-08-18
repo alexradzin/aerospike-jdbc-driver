@@ -138,7 +138,7 @@ public class QueryHolder {
 
 
             if (subQeueries.stream().anyMatch(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation))) { // nested queries
-                List<QueryHolder> all = subQeueries.stream().filter(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation)).collect(Collectors.toList());
+                List<QueryHolder> all = subQeueries.stream().filter(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation)).collect(toList());
                 all.add(0, this);
                 Collections.reverse(all);
                 all.forEach(h -> h.indexByName = true);
