@@ -49,7 +49,7 @@ import java.util.Calendar;
 import java.util.List;
 
 /**
- * Perpose of this class is to transform Aerospike exception into SQLExceptions and perform some validation
+ * Purpose of this class is to transform Aerospike exception into SQLExceptions and perform some validation
  * necessary for relational DBs and not performed by Aerospike.
  */
 public class AerospikeSqlClient implements IAerospikeClient {

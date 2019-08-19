@@ -577,12 +577,12 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public String getNString(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getString(columnIndex);
     }
 
     @Override
     public String getNString(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getString(columnLabel);
     }
 
     @Override
