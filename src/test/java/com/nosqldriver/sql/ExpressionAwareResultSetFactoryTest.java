@@ -76,9 +76,20 @@ class ExpressionAwareResultSetFactoryTest {
 
     @Test
     void functionCall() {
-        assertVariableNames(asList("len(x)", "LEN(x)"), singletonList("x"));
+        assertVariableNames(asList("len(x)", "LEN(x)", "epoch('1969-07-21 02:56:00', x)"), singletonList("x"));
     }
 
+    @Test
+    void functionCallWithConstant() {
+        assertVariableNames(asList(
+                "len('x')",
+                "concat('x', 'y')",
+                "len('a b')",
+                "epoch('1969-07-21 02:56:00')",
+                "epoch('1969-07-21 02:56:00 UTC', 'yyyy-MM-dd HH:mm:ss z')"
+                ),
+                emptyList());
+    }
 
     private void assertVariableNames(Collection<String> exprs, List<String> expectedVariables) {
         exprs.forEach(expr -> assertVariableNames(expr, expectedVariables));

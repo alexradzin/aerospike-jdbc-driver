@@ -59,6 +59,18 @@ function now() {
     return new Date().getTime();
 }
 
-function year() {
-    return new Date().getYear() + 1900;
+function year(date) {
+    return (date || new Date()).getYear() + 1900;
+}
+
+function date(epoch) {
+    return typeof epoch === 'undefined' ? new Date() : new Date(epoch);
+}
+
+function epoch(str, fmt) {
+    return new java.text.SimpleDateFormat(fmt || "yyyy-MM-dd HH:mm:ss").parse(str).getTime();
+}
+
+function millis(date) {
+    return date.getTime();
 }

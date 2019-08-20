@@ -3,8 +3,14 @@ package com.nosqldriver.aerospike.sql;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.concurrent.Callable;
@@ -21,6 +27,7 @@ import static java.sql.Types.VARCHAR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 class TypesTest {
     private static final String TYPE_TEST_TABLE = "types_test";
@@ -56,6 +63,66 @@ class TypesTest {
         assertValue(now, () -> rs.getDate(3, calendar).getTime(), () -> rs.getDate("bigint", calendar).getTime(), () -> rs.getTime(3, calendar).getTime(), () -> rs.getTime("bigint", calendar).getTime(), () -> rs.getTimestamp(3, calendar).getTime(), () -> rs.getTimestamp("bigint", calendar).getTime());
         Calendar utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         assertValue(now, () -> rs.getDate(3, utcCalendar).getTime(), () -> rs.getDate("bigint", utcCalendar).getTime(), () -> rs.getTime(3, utcCalendar).getTime(), () -> rs.getTime("bigint", utcCalendar).getTime(), () -> rs.getTimestamp(3, utcCalendar).getTime(), () -> rs.getTimestamp("bigint", utcCalendar).getTime());
+        assertFalse(rs.next());
+    }
+
+    @Test
+    void now() throws SQLException {
+        long before = currentTimeMillis();
+        ResultSet rs = testConn.createStatement().executeQuery("select now()");
+        assertTrue(rs.next());
+        long actual = rs.getLong(1);
+        long after = currentTimeMillis();
+        assertFalse(rs.next());
+        assertTrue(actual >= before && actual <= after);
+    }
+
+    @Test
+    void epochDefaultDateFormat() throws SQLException, ParseException {
+        String date = "1969-07-21 02:56:00";
+        epoch(date, "yyyy-MM-dd HH:mm:ss", String.format("select epoch('%s')", date));
+    }
+
+    @Test
+    void epochDateFormatWithTimeZone() throws SQLException, ParseException {
+        String date = "1969-07-21 02:56:00 UTC";
+        String format = "yyyy-MM-dd HH:mm:ss z";
+        epoch(date, format, format("select epoch('%s', '%s')", date, format));
+    }
+
+    private void epoch(String date, String format, String query) throws SQLException, ParseException {
+        long expected = new SimpleDateFormat(format).parse(date).getTime();
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        assertTrue(rs.next());
+        long actual = rs.getLong(1);
+        assertFalse(rs.next());
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    void date() throws SQLException, ParseException {
+        DateFormat sqlDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS"); // used by SQL
+        long before = currentTimeMillis();
+        ResultSet rs = testConn.createStatement().executeQuery("select date(now())");
+        assertTrue(rs.next());
+        long actual = sqlDateFormat.parse(rs.getString(1)).getTime();
+        long after = currentTimeMillis();
+        assertFalse(rs.next());
+        assertTrue(actual >= before && actual <= after);
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year()",
+            "select year(date())",
+            "select year(date(now()))",
+    })
+    void year(String sql) throws SQLException {
+        Calendar c = Calendar.getInstance();
+        int year = c.get(Calendar.YEAR);
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertEquals(year, rs.getInt(1));
         assertFalse(rs.next());
     }
 

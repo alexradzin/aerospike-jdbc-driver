@@ -19,6 +19,7 @@ public class ExpressionAwareResultSetFactory {
 
     private static final Pattern EXPRESSION_DELIMITERS = Pattern.compile("[\\s()[],;.*+-/=><?:%^&!]]");
     private static final Pattern NUMBER = Pattern.compile("\\b[+-]?\\d+(:?\\.\\d+)?(:?e[+-]?\\d+)?\\b");
+    private static final Pattern QUOTES = Pattern.compile("'[^']*'");
 
     public ExpressionAwareResultSetFactory() {
         try {
@@ -35,7 +36,7 @@ public class ExpressionAwareResultSetFactory {
     }
 
     public Collection<String> getVariableNames(String expr) {
-        return Arrays.stream(EXPRESSION_DELIMITERS.split(NUMBER.matcher(expr).replaceAll(" ")))
+        return Arrays.stream(EXPRESSION_DELIMITERS.split(NUMBER.matcher(QUOTES.matcher(expr).replaceAll("")).replaceAll(" ")))
                 .filter(w -> !NUMBER.matcher(w).matches())
                 .filter(w -> !((w.startsWith("\"") && w.endsWith("\"")) || (w.startsWith("'") && w.endsWith("'"))))
                 .filter(w -> !functionNames.contains(w))
