@@ -5,6 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.sql.ResultSet;
+import java.util.Calendar;
+import java.util.TimeZone;
 import java.util.concurrent.Callable;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
@@ -49,6 +51,11 @@ class TypesTest {
         assertValue(3.1415926, () -> rs.getDouble(4), () -> rs.getDouble("decimal"));
         assertValue(true, () -> rs.getBoolean(5), () -> rs.getBoolean("true_flag"));
         assertValue(false, () -> rs.getBoolean(6), () -> rs.getBoolean("false_flag"));
+        assertValue(now, () -> rs.getDate(3).getTime(), () -> rs.getDate("bigint").getTime(), () -> rs.getTime(3).getTime(), () -> rs.getTime("bigint").getTime(), () -> rs.getTimestamp(3).getTime(), () -> rs.getTimestamp("bigint").getTime());
+        Calendar calendar = Calendar.getInstance();
+        assertValue(now, () -> rs.getDate(3, calendar).getTime(), () -> rs.getDate("bigint", calendar).getTime(), () -> rs.getTime(3, calendar).getTime(), () -> rs.getTime("bigint", calendar).getTime(), () -> rs.getTimestamp(3, calendar).getTime(), () -> rs.getTimestamp("bigint", calendar).getTime());
+        Calendar utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        assertValue(now, () -> rs.getDate(3, utcCalendar).getTime(), () -> rs.getDate("bigint", utcCalendar).getTime(), () -> rs.getTime(3, utcCalendar).getTime(), () -> rs.getTime("bigint", utcCalendar).getTime(), () -> rs.getTimestamp(3, utcCalendar).getTime(), () -> rs.getTimestamp("bigint", utcCalendar).getTime());
         assertFalse(rs.next());
     }
 
