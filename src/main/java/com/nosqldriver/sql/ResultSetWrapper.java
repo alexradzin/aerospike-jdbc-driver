@@ -63,83 +63,179 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public String getString(int columnIndex) throws SQLException {
-        return indexByName ? rs.getString(getLabel(columnIndex)) : rs.getString(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getString(label);
+            }
+        }
+        return rs.getString(columnIndex);
     }
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        return indexByName ? rs.getBoolean(getLabel(columnIndex)) : rs.getBoolean(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getBoolean(label);
+            }
+        }
+        return rs.getBoolean(columnIndex);
     }
 
     @Override
     public byte getByte(int columnIndex) throws SQLException {
-        return indexByName ? rs.getByte(getLabel(columnIndex)) : rs.getByte(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getByte(label);
+            }
+        }
+        return rs.getByte(columnIndex);
     }
 
     @Override
     public short getShort(int columnIndex) throws SQLException {
-        return indexByName ? rs.getShort(getLabel(columnIndex)) : rs.getShort(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getShort(label);
+            }
+        }
+        return rs.getShort(columnIndex);
     }
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        return indexByName ? rs.getInt(getLabel(columnIndex)) : rs.getInt(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getInt(label);
+            }
+        }
+        return rs.getInt(columnIndex);
     }
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        return indexByName ? rs.getLong(getLabel(columnIndex)) : rs.getLong(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getLong(label);
+            }
+        }
+        return rs.getLong(columnIndex);
     }
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        return indexByName ? rs.getFloat(getLabel(columnIndex)) : rs.getFloat(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getFloat(label);
+            }
+        }
+        return rs.getFloat(columnIndex);
     }
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        return indexByName ? rs.getDouble(getLabel(columnIndex)) : rs.getDouble(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getDouble(label);
+            }
+        }
+        return rs.getDouble(columnIndex);
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        return indexByName ? rs.getBigDecimal(getLabel(columnIndex)) : rs.getBigDecimal(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getBigDecimal(label);
+            }
+        }
+        return rs.getBigDecimal(columnIndex);
     }
 
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
-        return indexByName ? rs.getBytes(getLabel(columnIndex)) : rs.getBytes(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getBytes(label);
+            }
+        }
+        return rs.getBytes(columnIndex);
     }
 
     @Override
     public Date getDate(int columnIndex) throws SQLException {
-        return indexByName ? rs.getDate(getLabel(columnIndex)) : rs.getDate(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getDate(label);
+            }
+        }
+        return rs.getDate(columnIndex);
     }
 
     @Override
     public Time getTime(int columnIndex) throws SQLException {
-        return indexByName ? rs.getTime(getLabel(columnIndex)) : rs.getTime(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getTime(label);
+            }
+        }
+        return rs.getTime(columnIndex);
     }
 
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        return indexByName ? rs.getTimestamp(getLabel(columnIndex)) : rs.getTimestamp(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getTimestamp(label);
+            }
+        }
+        return rs.getTimestamp(columnIndex);
     }
 
     @Override
     public InputStream getAsciiStream(int columnIndex) throws SQLException {
-        return indexByName ? rs.getAsciiStream(getLabel(columnIndex)) : rs.getAsciiStream(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getAsciiStream(label);
+            }
+        }
+        return rs.getAsciiStream(columnIndex);
     }
 
     @Override
     @Deprecated
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
-        return indexByName ? rs.getUnicodeStream(getLabel(columnIndex)) : rs.getUnicodeStream(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getUnicodeStream(label);
+            }
+        }
+        return rs.getUnicodeStream(columnIndex);
     }
 
     @Override
     public InputStream getBinaryStream(int columnIndex) throws SQLException {
-        return indexByName ? rs.getBinaryStream(getLabel(columnIndex)) : rs.getBinaryStream(columnIndex);
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getBinaryStream(label);
+            }
+        }
+        return rs.getBinaryStream(columnIndex);
     }
 
     @Override
@@ -252,7 +348,13 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        return rs.getObject(getLabel(columnIndex));
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getObject(label);
+            }
+        }
+        return rs.getObject(columnIndex);
     }
 
     @Override
@@ -267,7 +369,13 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public Reader getCharacterStream(int columnIndex) throws SQLException {
-        return rs.getCharacterStream(getLabel(columnIndex));
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getCharacterStream(label);
+            }
+        }
+        return rs.getCharacterStream(columnIndex);
     }
 
     @Override
@@ -277,7 +385,13 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
-        return rs.getBigDecimal(getLabel(columnIndex));
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getBigDecimal(label);
+            }
+        }
+        return rs.getBigDecimal(columnIndex);
     }
 
     @Override
@@ -623,27 +737,57 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getObject(label, map);
+            }
+        }
         return rs.getObject(columnIndex, map);
     }
 
     @Override
     public Ref getRef(int columnIndex) throws SQLException {
-        return rs.getRef(getLabel(columnIndex));
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getRef(label);
+            }
+        }
+        return rs.getRef(columnIndex);
     }
 
     @Override
     public Blob getBlob(int columnIndex) throws SQLException {
-        return rs.getBlob(getLabel(columnIndex));
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getBlob(label);
+            }
+        }
+        return rs.getBlob(columnIndex);
     }
 
     @Override
     public Clob getClob(int columnIndex) throws SQLException {
-        return rs.getClob(getLabel(columnIndex));
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getClob(label);
+            }
+        }
+        return rs.getClob(columnIndex);
     }
 
     @Override
     public Array getArray(int columnIndex) throws SQLException {
-        return rs.getArray(getLabel(columnIndex));
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getArray(label);
+            }
+        }
+        return rs.getArray(columnIndex);
     }
 
     @Override
@@ -683,6 +827,12 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public Time getTime(int columnIndex, Calendar cal) throws SQLException {
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getTime(label, cal);
+            }
+        }
         return rs.getTime(columnIndex, cal);
     }
 
@@ -693,6 +843,12 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getTimestamp(label, cal);
+            }
+        }
         return rs.getTimestamp(columnIndex, cal);
     }
 
@@ -703,7 +859,13 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public URL getURL(int columnIndex) throws SQLException {
-        return rs.getURL(getLabel(columnIndex));
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getURL(label);
+            }
+        }
+        return rs.getURL(columnIndex);
     }
 
     @Override

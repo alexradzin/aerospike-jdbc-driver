@@ -79,7 +79,7 @@ class TypesTest {
 
     @Test
     void epochDefaultDateFormat() throws SQLException, ParseException {
-        String date = "1969-07-21 02:56:00";
+        String date = "1969-07-21 02:56:00.000";
         epoch(date, "yyyy-MM-dd HH:mm:ss", String.format("select epoch('%s')", date));
     }
 
@@ -125,6 +125,77 @@ class TypesTest {
         assertEquals(year, rs.getInt(1));
         assertFalse(rs.next());
     }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year('2019-09-23') as year, month('2019-09-23') as month, dayofmonth('2019-09-23') as day",
+            "select year('2019-09-23 14:49:03') as year, month('2019-09-23 14:49:03') as month, dayofmonth('2019-09-23 14:49:03') as day",
+            "select year('2019-09-23 14:49:03.123') as year, month('2019-09-23 14:49:03.123') as month, dayofmonth('2019-09-23 14:49:03.123') as day",
+            "select year('2019-09-23 14:49:03.123 IST') as year, month('2019-09-23 14:49:03.123 IST') as month, dayofmonth('2019-09-23 14:49:03.123 IST') as day",
+            "select year('2019-09-23 14:49:03 IST') as year, month('2019-09-23 14:49:03 IST') as month, dayofmonth('2019-09-23 14:49:03 IST') as day",
+    })
+    void datePartsWithAliasesFromString(String sql) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertEquals(2019, rs.getInt(1));
+        assertEquals(2019, rs.getInt("year"));
+        assertEquals(9, rs.getInt(2));
+        assertEquals(9, rs.getInt("month"));
+        assertEquals(23, rs.getInt(3));
+        assertEquals(23, rs.getInt("day"));
+        assertFalse(rs.next());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year('2019-09-23'), month('2019-09-23'), dayofmonth('2019-09-23')",
+            "select year('2019-09-23 14:49:03'), month('2019-09-23 14:49:03'), dayofmonth('2019-09-23 14:49:03')",
+            "select year('2019-09-23 14:49:03.123'), month('2019-09-23 14:49:03.123'), dayofmonth('2019-09-23 14:49:03.123')",
+            "select year('2019-09-23 14:49:03.123 IST'), month('2019-09-23 14:49:03.123 IST'), dayofmonth('2019-09-23 14:49:03.123 IST')",
+            "select year('2019-09-23 14:49:03 IST'), month('2019-09-23 14:49:03 IST'), dayofmonth('2019-09-23 14:49:03 IST')",
+    })
+    void datePartsFromString(String sql) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertEquals(2019, rs.getInt(1));
+        assertEquals(9, rs.getInt(2));
+        assertEquals(23, rs.getInt(3));
+        assertFalse(rs.next());
+    }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year('2019-09-23 14:49:03.123'), month('2019-09-23 14:49:03.123'), dayofmonth('2019-09-23 14:49:03.123'), hour('2019-09-23 14:49:03.123'), minute('2019-09-23 14:49:03.123'), second('2019-09-23 14:49:03.123'), millisecond('2019-09-23 14:49:03.123')",
+            "select YEAR('2019-09-23 14:49:03.123'), MONTH('2019-09-23 14:49:03.123'), DAYOFMONTH('2019-09-23 14:49:03.123'), HOUR('2019-09-23 14:49:03.123'), MINUTE('2019-09-23 14:49:03.123'), SECOND('2019-09-23 14:49:03.123'), MILLISECOND('2019-09-23 14:49:03.123')",
+    })
+    void timePartsFromString(String sql) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertEquals(2019, rs.getInt(1));
+        assertEquals(9, rs.getInt(2));
+        assertEquals(23, rs.getInt(3));
+        assertEquals(14, rs.getInt(4));
+        assertEquals(49, rs.getInt(5));
+        assertEquals(3, rs.getInt(6));
+        assertEquals(123, rs.getInt(7));
+        assertFalse(rs.next());
+    }
+
+
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select month('2019-09-23')",
+    })
+    void monthFromString(String sql) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertEquals(9, rs.getInt(1));
+        assertFalse(rs.next());
+    }
+
 
 
     @SafeVarargs
