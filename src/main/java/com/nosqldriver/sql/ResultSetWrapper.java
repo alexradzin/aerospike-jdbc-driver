@@ -995,7 +995,13 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public String getNString(int columnIndex) throws SQLException {
-        return rs.getNString(getLabel(columnIndex));
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getNString(label);
+            }
+        }
+        return rs.getNString(columnIndex);
     }
 
     @Override
@@ -1005,7 +1011,13 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public Reader getNCharacterStream(int columnIndex) throws SQLException {
-        return rs.getNCharacterStream(getLabel(columnIndex));
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return rs.getNCharacterStream(label);
+            }
+        }
+        return rs.getNCharacterStream(columnIndex);
     }
 
     @Override

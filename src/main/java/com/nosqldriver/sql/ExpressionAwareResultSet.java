@@ -47,6 +47,12 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     }
 
     @Override
+    public String getNString(int columnIndex) throws SQLException {
+        String eval = getEval(columnIndex);
+        return eval != null ? cast(eval(eval), String.class) : super.getNString(columnIndex);
+    }
+
+    @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
         String eval = getEval(columnIndex);
         return eval != null ? cast(eval(eval), boolean.class) : super.getBoolean(columnIndex);
@@ -142,6 +148,12 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     public String getString(String columnLabel) throws SQLException {
         String eval = aliasToEval.get(columnLabel);
         return eval != null ? cast(eval(eval), String.class) : super.getString(columnLabel);
+    }
+
+    @Override
+    public String getNString(String columnLabel) throws SQLException {
+        String eval = aliasToEval.get(columnLabel);
+        return eval != null ? cast(eval(eval), String.class) : super.getNString(columnLabel);
     }
 
     @Override

@@ -196,6 +196,46 @@ class TypesTest {
         assertFalse(rs.next());
     }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select 'JOHN LENNON' as name",
+            "select concat('JOHN LENNON') as name",
+            "select concat('JOHN', ' ', 'LENNON') as name",
+            "select upper(concat('John', ' ', 'Lennon')) as name",
+            "select concat(upper('John'), ' ', upper('Lennon')) as name",
+            "select concat_ws(' ', 'JOHN', 'LENNON') as name",
+    })
+    void stringFunctionsWithAlias(String sql) throws SQLException {
+        String expected = "JOHN LENNON";
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertEquals(expected, rs.getString(1));
+        assertEquals(expected, rs.getString("name"));
+        assertEquals(expected, rs.getNString(1));
+        assertEquals(expected, rs.getNString("name"));
+        assertEquals(expected, rs.getObject(1));
+        assertEquals(expected, rs.getObject("name"));
+        assertFalse(rs.next());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select 'JOHN LENNON'",
+            "select concat('JOHN LENNON')",
+            "select concat('JOHN', ' ', 'LENNON')",
+            "select upper(concat('John', ' ', 'Lennon'))",
+            "select concat(upper('John'), ' ', upper('Lennon'))",
+            "select concat_ws(' ', 'JOHN', 'LENNON')",
+    })
+    void stringFunctionsWithoutAlias(String sql) throws SQLException {
+        String expected = "JOHN LENNON";
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertEquals(expected, rs.getString(1));
+        assertEquals(expected, rs.getNString(1));
+        assertEquals(expected, rs.getObject(1));
+        assertFalse(rs.next());
+    }
 
 
     @SafeVarargs

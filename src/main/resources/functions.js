@@ -46,6 +46,17 @@ function space(n) {
     return s;
 }
 
+function concat() {
+    return Array.prototype.slice.call(arguments).join("");
+}
+
+function concat_ws(separator) {
+    var allArgs = Array.prototype.slice.call(arguments);
+    var separator = allArgs[0];
+    var elements = allArgs.slice(1);
+    return elements.join(separator)
+}
+
 function reverse(str) {
     var res = "";
     for (var i = str.length - 1; i >= 0; i--) {
@@ -54,7 +65,9 @@ function reverse(str) {
     return res;
 }
 
-
+///////////////////////////////////////////////////////////
+// Date and Time functions
+///////////////////////////////////////////////////////////
 function now() {
     return new Date().getTime();
 }
