@@ -55,8 +55,21 @@ public class TestDataUtils {
         try {
             testConn = DriverManager.getConnection("jdbc:aerospike:localhost/test");
             assertNotNull(testConn);
+
+            // Just to be polite. Open connected should be closed. The testConn however is static and shared among all tests,
+            // so we cannot close it in "@After" or "@AfterAll" of any test case. So, we do our best and close it at least here.
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        testConn.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
         } catch (SQLException e) {
-            throw new  IllegalStateException("Cannot create connection to DB", e);
+            throw new IllegalStateException("Cannot create connection to DB", e);
         }
     }
 

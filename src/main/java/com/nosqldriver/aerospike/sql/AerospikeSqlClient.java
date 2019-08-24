@@ -47,6 +47,7 @@ import com.nosqldriver.VisibleForPackage;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Purpose of this class is to transform Aerospike exception into SQLExceptions and perform some validation
@@ -54,6 +55,10 @@ import java.util.List;
  */
 public class AerospikeSqlClient implements IAerospikeClient {
     private final IAerospikeClient client;
+
+    AerospikeSqlClient(Supplier<IAerospikeClient> clientSupplier) {
+        this(new ExceptionAwareSupplier<>(clientSupplier).get());
+    }
 
     @VisibleForPackage
     AerospikeSqlClient(IAerospikeClient client) {
@@ -797,12 +802,12 @@ public class AerospikeSqlClient implements IAerospikeClient {
         throw (E) e;
     }
 
-    private SQLException sqlException(AerospikeException ae) {
+    private static SQLException sqlException(AerospikeException ae) {
         //TODO: implement sqlState (the second argument). see javadoc, https://stackoverflow.com/questions/14404866/how-to-detect-the-sql-error-state-of-sqlexception and http://www.contrib.andrew.cmu.edu/~shadow/sql/sql1992.txt for reference
         return new SQLException(ae.getMessage(), "", ae.getResultCode(), ae);
     }
 
-    private void throwSqlException(AerospikeException ae) {
+    private static void throwSqlException(AerospikeException ae) {
         sneakyThrow(sqlException(ae));
     }
 
@@ -817,4 +822,21 @@ public class AerospikeSqlClient implements IAerospikeClient {
         return statement;
     }
 
+    static class ExceptionAwareSupplier<T> implements Supplier<T> {
+        private final Supplier<T> supplier;
+
+        ExceptionAwareSupplier(Supplier<T> supplier) {
+            this.supplier = supplier;
+        }
+
+        @Override
+        public T get() {
+            try {
+                return supplier.get();
+            } catch (AerospikeException ae) {
+                throwSqlException(ae);
+                return null;
+            }
+        }
+    }
 }

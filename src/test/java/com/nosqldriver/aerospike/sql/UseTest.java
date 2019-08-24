@@ -15,18 +15,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class UseTest {
+class UseTest {
+    private Connection rootConn;
+
     @BeforeEach
-    @AfterEach
-    void dropAll() {
+    void setUp() throws SQLException {
+        rootConn = DriverManager.getConnection("jdbc:aerospike:localhost");
         TestDataUtils.deleteAllRecords(NAMESPACE, PEOPLE);
     }
 
+    @AfterEach
+    void tearDown() throws SQLException {
+        rootConn.close();
+        TestDataUtils.deleteAllRecords(NAMESPACE, PEOPLE);
+    }
 
     @Test
     void useStatementValidator() throws SQLException {
-        Connection rootConn = DriverManager.getConnection("jdbc:aerospike:localhost");
-
         assertThrows(SQLException.class, () -> rootConn.createStatement().executeUpdate("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2)"));
         assertThrows(SQLException.class, () -> rootConn.createStatement().executeQuery("select count(*) from people"));
         assertThrows(SQLException.class, () -> rootConn.createStatement().executeQuery("select first_name from people"));
