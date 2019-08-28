@@ -6,6 +6,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -92,6 +93,29 @@ class InsertTest {
         assertEquals("Paul", client.get(null, new Key("test", "people", 2)).getString("first_name"));
     }
 
+
+
+    @Test
+    void insertOneRowUsingPreparedStatement() throws SQLException {
+        PreparedStatement ps = testConn.prepareStatement("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (?, ?, ?, ?, ?, ?)");
+        ps.setInt(1, 1);
+        ps.setInt(2, 1);
+        ps.setString(3, "John");
+        ps.setString(4, "Lennon");
+        ps.setInt(5, 1940);
+        ps.setInt(6, 2);
+        int rowCount = ps.executeUpdate();
+        assertEquals(1, rowCount);
+        Record record = client.get(null, new Key("test", "people", 1));
+        assertNotNull(record);
+        Map<String, Object> expectedData = new HashMap<>();
+        expectedData.put("id", 1L);
+        expectedData.put("first_name", "John");
+        expectedData.put("last_name", "Lennon");
+        expectedData.put("year_of_birth", 1940L);
+        expectedData.put("kids_count", 2L);
+        assertEquals(expectedData, record.bins);
+    }
 
 
     private void insert(String sql, int expectedRowCount) throws SQLException {

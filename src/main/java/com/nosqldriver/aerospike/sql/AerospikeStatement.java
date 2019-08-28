@@ -43,7 +43,7 @@ public class AerospikeStatement implements java.sql.Statement {
     private ResultSet resultSet;
     private int updateCount;
 
-    private enum StatementType implements Predicate<String> {
+    protected enum StatementType implements Predicate<String> {
         SELECT {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
@@ -65,7 +65,7 @@ public class AerospikeStatement implements java.sql.Statement {
                 Function<IAerospikeClient, ResultSet> insert = aqf.createQueryPlan(sql).getQuery();
                 insert.apply(statement.client);
                 statement.set = aqf.getSet();
-                statement.setUpdateCount(AerospikeInsertQuery.updatedRecordsCount.get());
+                statement.setUpdateCount(Optional.ofNullable(AerospikeInsertQuery.updatedRecordsCount.get()).orElse(0));
 
                 return statement.getUpdateCount();
             }
