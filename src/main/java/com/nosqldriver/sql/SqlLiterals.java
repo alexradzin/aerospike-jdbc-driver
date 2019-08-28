@@ -1,10 +1,13 @@
 package com.nosqldriver.sql;
 
 import com.aerospike.client.query.PredExp;
+import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
 
 import java.sql.Types;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Supplier;
 
@@ -75,9 +78,13 @@ public class SqlLiterals {
             predExpOperators.put(operatorKey(type, "OR"), () -> PredExp.or(2));
         }
 
+        // null is for prepared statment when type of value is unknonw during parsing of expression.
+        Arrays.asList("=", "<>", "!=", "<", "<=", ">", ">=", "LIKE").forEach(op -> predExpOperators.put(operatorKey(null, op), () -> new OperatorRefPredExp(op)));
+        predExpOperators.put(operatorKey(null, "AND"), () -> PredExp.and(2));
+        predExpOperators.put(operatorKey(null, "OR"), () -> PredExp.or(2));
     }
 
     public static String operatorKey(Class<?> type, String operand) {
-        return type.getName() + operand;
+        return Optional.ofNullable(type).map(Class::getName).orElse(null) + operand;
     }
 }

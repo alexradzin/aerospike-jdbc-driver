@@ -595,6 +595,18 @@ class SelectTest {
 
 
     @Test
+    @DisplayName("select * from people where PK=?")
+    void selectOneRecordByPrimaryKeyUsingPreparedStatement() throws SQLException {
+        PreparedStatement ps = testConn.prepareStatement("select * from people where PK=?");
+        ps.setInt(1, 1);
+        ResultSet rs = ps.executeQuery();
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertPeople(rs, beatles, 1);
+    }
+
+
+
+    @Test
     @DisplayName("year_of_birth=1940 and last_name='Lennon'-> [John]")
     void selectOneRecordByOneNumericEqAndOneStringFieldAllNotIndexed() throws SQLException {
         assertSelect("select * from people where year_of_birth=1940 and last_name='Lennon'", 1);

@@ -1,6 +1,7 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
+import com.nosqldriver.aerospike.sql.query.QueryContainer;
 import com.nosqldriver.sql.SimpleParameterMetaData;
 
 import java.io.InputStream;
@@ -25,6 +26,7 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -33,13 +35,15 @@ import static java.lang.String.format;
 public class AerospikePreparedStatement extends AerospikeStatement implements PreparedStatement {
     private  final String sql;
     private Object[] parameterValues;
+    private final QueryContainer<ResultSet> queryPlan;
 
-    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql) {
+    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql) throws SQLException {
         super(client, connection, schema, policyProvider);
         this.sql = sql;
         int n = parametersCount(sql);
         parameterValues = new Object[n];
         Arrays.fill(parameterValues, Optional.empty());
+        queryPlan = new AerospikeQueryFactory(schema.get(), policyProvider, indexes).createQueryPlan(sql);
     }
 
     private int parametersCount(String sql) {
@@ -56,38 +60,14 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
         return count;
     }
 
-    private String fillValues(String sql, Object[] values) {
-        StringBuilder result = new StringBuilder();
-        int i = 0;
-        boolean intoConstant = false;
-        for (char c : sql.toCharArray()) {
-            if (c == '\'') {
-                intoConstant = !intoConstant;
-            }
-            if (!intoConstant && c == '?') {
-                Object value = values[i];
-                if (Optional.empty().equals(value)) {
-                    throw new IllegalStateException(format("Parameter #%d was not initialized", i));
-                }
-                String replacement = "" + value;
-                result.append(replacement);
-                i++;
-            } else {
-                result.append(c);
-            }
-        }
-        return result.toString();
-    }
-
-
     @Override
     public ResultSet executeQuery() throws SQLException {
-        return executeQuery(fillValues(sql, parameterValues));
+        return executeQuery(sql);
     }
 
     @Override
     public int executeUpdate() throws SQLException {
-        return executeUpdate(fillValues(sql, parameterValues));
+        return executeUpdate(sql);
     }
 
     @Override
@@ -137,7 +117,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public void setString(int parameterIndex, String x) throws SQLException {
-        setObject(parameterIndex, "'" + x + "'");
+        setObject(parameterIndex, x);
     }
 
     @Override
@@ -197,12 +177,12 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public boolean execute() throws SQLException {
-        return execute(fillValues(sql, parameterValues));
+        return execute(sql);
     }
 
     @Override
     public void addBatch() throws SQLException {
-        addBatch(fillValues(sql, parameterValues));
+        super.addBatch(sql);
     }
 
     @Override
@@ -359,4 +339,16 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
     public void setNClob(int parameterIndex, Reader reader) throws SQLException {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    protected AerospikeQueryFactory createQueryFactory() {
+        return new AerospikeQueryFactory(schema.get(), policyProvider, indexes) {
+            @Override  QueryContainer<ResultSet> createQueryPlan(String sql) throws SQLException {
+                QueryContainer<ResultSet> qc = Objects.equals(AerospikePreparedStatement.this.sql, sql) ? AerospikePreparedStatement.this.queryPlan : super.createQueryPlan(sql);
+                qc.setParameters(parameterValues);
+                return qc;
+            }
+        };
+    }
+
 }

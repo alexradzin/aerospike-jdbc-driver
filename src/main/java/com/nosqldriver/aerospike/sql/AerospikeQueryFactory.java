@@ -11,6 +11,8 @@ import com.nosqldriver.aerospike.sql.query.BinaryOperation;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation.Operator;
 import com.nosqldriver.aerospike.sql.query.ColumnRefPredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
+import com.nosqldriver.aerospike.sql.query.PredExpValuePlaceholder;
+import com.nosqldriver.aerospike.sql.query.QueryContainer;
 import com.nosqldriver.aerospike.sql.query.QueryHolder;
 import com.nosqldriver.aerospike.sql.query.QueryHolder.ChainOperation;
 import com.nosqldriver.aerospike.sql.query.ValueRefPredExp;
@@ -25,6 +27,7 @@ import net.sf.jsqlparser.expression.DateValue;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.ExpressionVisitorAdapter;
+import net.sf.jsqlparser.expression.JdbcParameter;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -108,7 +111,7 @@ public class AerospikeQueryFactory {
     }
 
     @VisibleForPackage
-    Function<IAerospikeClient, ResultSet> createQuery(String sql) throws SQLException {
+    QueryContainer<ResultSet> createQueryPlan(String sql) throws SQLException {
         try {
             QueryHolder queries = new QueryHolder(schema, indexes, policyProvider);
             parserManager.parse(new StringReader(sql)).accept(new StatementVisitorAdapter() {
@@ -211,17 +214,19 @@ public class AerospikeQueryFactory {
                     createIndex.getIndex().getColumnsNames();
                     String columnName = createIndex.getIndex().getColumnsNames().get(0); // todo : assert if length is not  1
                     set = createIndex.getTable().getName();
-                    indexes.add(createIndex.getIndex().getType() + ":" + createIndex.getIndex().getName() + ":" + columnName);
+                    String fullIndexName = format("%s.%s.%s.%s.%s", createIndex.getIndex().getType(), schema, set, columnName, createIndex.getIndex().getName());
+                    indexes.add(fullIndexName);
                 }
 
                 @Override
                 public void visit(Drop drop) {
                     set = drop.getName().getSchemaName();
-                    indexes.add(drop.getName().getName());
+                    String fullIndexName = format("%s.%s.%s", schema, set, drop.getName().getName());
+                    indexes.add(fullIndexName);
                 }
             });
 
-            return queries.getQuery();
+            return queries;
         } catch (JSQLParserException e) {
             throw new SQLException(e);
         }
@@ -474,6 +479,14 @@ public class AerospikeQueryFactory {
                         }
 
                         @Override
+                        public void visit(JdbcParameter parameter) {
+                            System.out.println("visit(JdbcParameter parameter): " + parameter);
+                            queries.queries(operation.getTable()).addPredExp(new ColumnRefPredExp(set, operation.getColumn()));
+                            queries.queries(operation.getTable()).addPredExp(new PredExpValuePlaceholder(parameter.getIndex()));
+                        }
+
+
+                        @Override
                         public void visit(DateValue value) {
                             visit(new LongValue(value.getValue().getTime()));
                         }
@@ -527,11 +540,16 @@ public class AerospikeQueryFactory {
     }
 
 
-
-        @VisibleForPackage
+    @VisibleForPackage
     Function<IAerospikeClient, Integer> createUpdate(String sql) throws SQLException {
-        try {
+        return createUpdatePlan(sql).getQuery();
+    }
 
+
+
+    @VisibleForPackage
+    QueryContainer<Integer> createUpdatePlan(String sql) throws SQLException {
+        try {
             AtomicInteger limit = new AtomicInteger(0);
             AtomicReference<String> tableName = new AtomicReference<>(null);
             AtomicReference<String> schema = new AtomicReference<>(AerospikeQueryFactory.this.schema);
@@ -710,16 +728,27 @@ public class AerospikeQueryFactory {
                 recordPredicate.set(r -> false);
             }
 
-            return client -> {
-                AtomicInteger count = new AtomicInteger(0);
-                client.scanAll(policyProvider.getScanPolicy(), schema.get(), tableName.get(),
-                        (key, record) -> {
-                            if (keyPredicate.get().test(key) || recordPredicate.get().test(record)) {
-                                worker.get().apply(client, singletonMap(key, record).entrySet().iterator().next());
-                                count.incrementAndGet();
-                            }
-                        });
-                return count.get();
+
+            return new QueryContainer<Integer>() {
+                @Override
+                public Function<IAerospikeClient, Integer> getQuery() {
+                    return client -> {
+                        AtomicInteger count = new AtomicInteger(0);
+                        client.scanAll(policyProvider.getScanPolicy(), schema.get(), tableName.get(),
+                                (key, record) -> {
+                                    if (keyPredicate.get().test(key) || recordPredicate.get().test(record)) {
+                                        worker.get().apply(client, singletonMap(key, record).entrySet().iterator().next());
+                                        count.incrementAndGet();
+                                    }
+                                });
+                        return count.get();
+                    };
+                }
+
+                @Override
+                public void setParameters(Object... parameters) {
+                    //TODO: update parameter values in keyPredicate and recordPredicate
+                }
             };
         } catch (JSQLParserException e) {
             throw new SQLException(e);
@@ -730,11 +759,6 @@ public class AerospikeQueryFactory {
     private Bin[] bins(Record record, Map<String, Function<Record, Object>> columnValueSuppliers) {
         return columnValueSuppliers.entrySet().stream().map(e -> new Bin(e.getKey(), e.getValue().apply(record))).toArray(Bin[]::new);
     }
-
-//    public static String operatorKey(Class<?> type, String operand) {
-//        return type.getName() + operand;
-//    }
-
 
     private static class WhereVisitor extends ExpressionVisitorAdapter {
         private final String tableName;
@@ -812,25 +836,25 @@ public class AerospikeQueryFactory {
     }
 
 
-    public CCJSqlParserManager getParserManager() {
-        return parserManager;
-    }
-
+//    public CCJSqlParserManager getParserManager() {
+//        return parserManager;
+//    }
+//
     public String getSchema() {
         return schema;
     }
-
-    public AerospikePolicyProvider getPolicyProvider() {
-        return policyProvider;
-    }
+//
+//    public AerospikePolicyProvider getPolicyProvider() {
+//        return policyProvider;
+//    }
 
     public Collection<String> getIndexes() {
         return indexes;
     }
 
-    public static Map<String, Supplier<PredExp>> getPredExpOperators() {
-        return predExpOperators;
-    }
+//    public static Map<String, Supplier<PredExp>> getPredExpOperators() {
+//        return predExpOperators;
+//    }
 
     public String getSet() {
         return set;

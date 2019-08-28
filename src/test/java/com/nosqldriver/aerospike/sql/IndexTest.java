@@ -22,12 +22,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class IndexTest {
     private static final String STRING_INDEX_NAME = "PEOPLE_FIRST_NAME_INDEX";
-        private static final String NUMERIC_INDEX_NAME = "PEOPLE_YOB_INDEX";
+    private static final String NUMERIC_INDEX_NAME = "PEOPLE_YOB_INDEX";
 
     @BeforeAll
     @AfterAll
     static void dropAll() {
         TestDataUtils.deleteAllRecords(NAMESPACE, PEOPLE);
+        TestDataUtils.dropIndexSafely(STRING_INDEX_NAME);
+        TestDataUtils.dropIndexSafely(NUMERIC_INDEX_NAME);
+
     }
 
 
@@ -36,6 +39,13 @@ class IndexTest {
     void clean() {
         try {
             TestDataUtils.client.dropIndex(null, NAMESPACE, PEOPLE, STRING_INDEX_NAME).waitTillComplete();
+        } catch (AerospikeException e) {
+            if (e.getResultCode() != 201) {
+                throw e;
+            }
+        }
+        try {
+            TestDataUtils.client.dropIndex(null, NAMESPACE, PEOPLE, NUMERIC_INDEX_NAME).waitTillComplete();
         } catch (AerospikeException e) {
             if (e.getResultCode() != 201) {
                 throw e;
@@ -53,7 +63,6 @@ class IndexTest {
     @Test
     void createAndDropNumericIndex() throws SQLException, IOException {
         assertCreateAndDropIndex("year_of_birth", NUMERIC_INDEX_NAME, "NUMERIC");
-
     }
 
 

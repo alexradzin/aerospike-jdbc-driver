@@ -3,7 +3,13 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.Host;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
+import java.util.HashSet;
+
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectionParametersParserTest {
     @Test
@@ -76,4 +82,27 @@ class ConnectionParametersParserTest {
                 new Host[] {new Host("myhost", 3210)},
                 new ConnectionParametersParser().hosts("jdbc:aerospike:myhost:3210/test?timeout=4321"));
     }
-}
+
+    @Test
+    void parseNoIndexes() {
+        Collection<String> indexes = new ConnectionParametersParser().indexesParser("");
+        assertTrue(indexes.isEmpty());
+    }
+
+    @Test
+    void parseOneIndex() {
+        Collection<String> indexes = new ConnectionParametersParser().indexesParser("ns=test:set=people:indexname=PEOPLE_YOB_INDEX:bin=year_of_birth:type=NUMERIC:indextype=NONE:path=year_of_birth:state=RW;");
+        assertEquals(1, indexes.size());
+        assertEquals("NUMERIC.test.people.year_of_birth.PEOPLE_YOB_INDEX", indexes.iterator().next());
+    }
+
+    @Test
+    void parseTwoIndex() {
+        Collection<String> indexes = new HashSet<>(new ConnectionParametersParser().indexesParser(
+                "ns=test:set=people:indexname=PEOPLE_YOB_INDEX:bin=year_of_birth:type=NUMERIC:indextype=NONE:path=year_of_birth:state=RW;ns=test:set=people:indexname=PEOPLE_FIRST_NAME_INDEX:bin=first_name:type=STRING:indextype=NONE:path=first_name:state=RW;"
+        ));
+        assertEquals(2, indexes.size());
+        assertEquals(new HashSet<>(asList("NUMERIC.test.people.year_of_birth.PEOPLE_YOB_INDEX", "STRING.test.people.first_name.PEOPLE_FIRST_NAME_INDEX")), indexes);
+    }
+
+ }

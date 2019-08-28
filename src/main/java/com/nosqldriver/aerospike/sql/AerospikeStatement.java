@@ -38,8 +38,8 @@ public class AerospikeStatement implements java.sql.Statement {
     private int maxRows = Integer.MAX_VALUE;
     private int queryTimeout = 0;
     private volatile SQLWarning sqlWarning;
-    private final AerospikePolicyProvider policyProvider;
-    private final Collection<String> indexes;
+    protected final AerospikePolicyProvider policyProvider;
+    protected final Collection<String> indexes;
     private ResultSet resultSet;
     private int updateCount;
 
@@ -47,8 +47,8 @@ public class AerospikeStatement implements java.sql.Statement {
         SELECT {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, statement.indexes);
-                Function<IAerospikeClient, ResultSet> query = aqf.createQuery(sql);
+                AerospikeQueryFactory aqf = statement.createQueryFactory();
+                Function<IAerospikeClient, ResultSet> query = aqf.createQueryPlan(sql).getQuery();
                 statement.set = aqf.getSet();
                 return query.apply(statement.client);
             }
@@ -61,8 +61,8 @@ public class AerospikeStatement implements java.sql.Statement {
         },
         INSERT {
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, statement.indexes);
-                Function<IAerospikeClient, ResultSet> insert = aqf.createQuery(sql);
+                AerospikeQueryFactory aqf = statement.createQueryFactory();
+                Function<IAerospikeClient, ResultSet> insert = aqf.createQueryPlan(sql).getQuery();
                 insert.apply(statement.client);
                 statement.set = aqf.getSet();
                 statement.setUpdateCount(AerospikeInsertQuery.updatedRecordsCount.get());
@@ -81,7 +81,7 @@ public class AerospikeStatement implements java.sql.Statement {
             }
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, statement.indexes);
+                AerospikeQueryFactory aqf = statement.createQueryFactory();
                 Function<IAerospikeClient, Integer> update = aqf.createUpdate(sql);
                 statement.set = aqf.getSet();
                 int count = update.apply(statement.client);
@@ -110,8 +110,8 @@ public class AerospikeStatement implements java.sql.Statement {
 
             @Override
             boolean execute(AerospikeStatement statement, String sql) throws SQLException {
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, statement.indexes);
-                aqf.createQuery(sql);
+                AerospikeQueryFactory aqf = statement.createQueryFactory();
+                aqf.createQueryPlan(sql);
                 statement.schema.set(aqf.getSchema());
                 return statement.schema.get() != null;
             }
@@ -131,9 +131,9 @@ public class AerospikeStatement implements java.sql.Statement {
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
                 List<String> indexes = new ArrayList<>();
                 AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, indexes);
-                aqf.createQuery(sql);
-                String[] index = aqf.getIndexes().iterator().next().split(":");
-                statement.client.createIndex(null, aqf.getSchema(), aqf.getSet(), index[1], index[2], IndexType.valueOf(index[0].toUpperCase()));
+                aqf.createQueryPlan(sql);
+                String[] index = aqf.getIndexes().iterator().next().split("\\.");
+                statement.client.createIndex(null, aqf.getSchema(), aqf.getSet(), index[4], index[3], IndexType.valueOf(index[0].toUpperCase()));
                 return 1;
             }
 
@@ -157,8 +157,8 @@ public class AerospikeStatement implements java.sql.Statement {
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
                 List<String> indexes = new ArrayList<>();
                 AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, indexes);
-                aqf.createQuery(sql);
-                String indexName = aqf.getIndexes().iterator().next();
+                aqf.createQueryPlan(sql);
+                String indexName = aqf.getIndexes().iterator().next().split("\\.")[2];
                 statement.client.dropIndex(null, aqf.getSchema(), aqf.getSet(), indexName);
                 return 1;
             }
@@ -443,7 +443,7 @@ public class AerospikeStatement implements java.sql.Statement {
     }
 
 
-    private static StatementType getStatementType(String sql) throws SQLException {
+    protected static StatementType getStatementType(String sql) throws SQLException {
         String sqlUp = sql.trim().toUpperCase();
         Optional<StatementType> type = Arrays.stream(StatementType.values()).filter(t -> t.test(sqlUp)).findFirst();
 
@@ -451,5 +451,10 @@ public class AerospikeStatement implements java.sql.Statement {
             throw new SQLSyntaxErrorException(format("SQL statement %s is not supported. SQL should start with one of: %s", sql, Arrays.toString(Arrays.stream(StatementType.values()).map(Enum::name).map(name -> name.replace("_", " ")).toArray())));
         }
         return type.get();
+    }
+
+
+    protected AerospikeQueryFactory createQueryFactory() {
+        return new AerospikeQueryFactory(schema.get(), policyProvider, indexes);
     }
 }

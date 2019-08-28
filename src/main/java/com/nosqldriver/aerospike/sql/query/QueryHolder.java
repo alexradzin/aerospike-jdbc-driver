@@ -33,6 +33,7 @@ import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 
+import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -44,8 +45,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -66,7 +69,7 @@ import static java.lang.String.join;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 
-public class QueryHolder {
+public class QueryHolder implements QueryContainer {
     public static final String BIN_NAME_DOES_NOT_EXIST = "NSDOESNOTEXIST";
     private String schema;
     private final Collection<String> indexes;
@@ -169,6 +172,81 @@ public class QueryHolder {
         }
 
         return wrap(createSecondaryIndexQuery());
+    }
+
+    @Override
+    public void setParameters(Object[] parameters) {
+        NavigableSet<Integer> indexesToRemove = new TreeSet<>();
+        Class type = null;
+        for (int i = 0; i < predExps.size(); i++) {
+            PredExp predExp = predExps.get(i);
+            if(predExp instanceof PredExpValuePlaceholder) {
+                PredExpValuePlaceholder placeholder = ((PredExpValuePlaceholder)predExp);
+                Object parameter = parameters[placeholder.getIndex() - 1];
+                predExps.set(i, placeholder.createPredExp(parameter));
+                type = parameter == null ? String.class : parameter.getClass();
+                if (predExps.get(i - 1) instanceof ColumnRefPredExp) {
+                    String binName = ((ColumnRefPredExp)predExps.get(i - 1)).getName();
+                    if ("PK".equals(binName)) {
+                        final Key key = createKey(parameter, this);
+                        createPkQuery(key);
+                        indexesToRemove.addAll(Arrays.asList(i - 1, i, i +1 ));
+                    }
+                    PredExp binExp = createBinPredExp(binName, type);
+                    predExps.set(i - 1, binExp);
+                }
+            }
+            if(predExp instanceof OperatorRefPredExp) {
+                if (type == null) {
+                    throw new IllegalStateException("Cannot retrieve type of parameter of prepared statement");
+                }
+                predExps.set(i, predExpOperators.get(operatorKey(type, ((OperatorRefPredExp)predExp).getOp())).get());
+            }
+
+        }
+
+        for (int i : indexesToRemove.descendingSet()) {
+            predExps.remove(i);
+        }
+    }
+
+
+    private Key createKey(Object value, QueryHolder queries) {
+        final Key key;
+        final String schema = queries.getSchema();
+        if (value instanceof Long) {
+            key = new Key(schema, queries.getSetName(), (Long) value);
+        } else if (value instanceof Integer) {
+            key = new Key(schema, queries.getSetName(), (Integer) value);
+        } else if (value instanceof Number) {
+            key = new Key(schema, queries.getSetName(), ((Number) value).intValue());
+        } else if (value instanceof String) {
+            key = new Key(schema, queries.getSetName(), (String) value);
+        } else {
+            throw new IllegalArgumentException(format("Filter by %s is not supported right now. Use either number or string", value == null ? null : value.getClass()));
+        }
+        return key;
+    }
+
+
+    private static final Collection<Class> intTypes = new HashSet<>(Arrays.asList(Byte.class, Short.class, Integer.class, Long.class, byte.class, short.class, int.class, long.class));
+    private PredExp createBinPredExp(String name, Class<?> type) {
+        if(intTypes.contains(type)) {
+            return PredExp.integerBin(name);
+        }
+        if(String.class.equals(type)) {
+            return PredExp.stringBin(name);
+        }
+        if(Array.class.equals(type) || type.isArray() || Collection.class.isAssignableFrom(type)) {
+            return PredExp.listBin(name);
+        }
+        if(Map.class.isAssignableFrom(type)) {
+            return PredExp.mapBin(name);
+        }
+
+        // TODO: add GeoJson
+
+        throw new  IllegalArgumentException(format("Cannot create where clause using type %s", type));
     }
 
     @SafeVarargs
@@ -574,27 +652,27 @@ public class QueryHolder {
         }
 
 
-        private PredExp preparePredicate(ResultSet rs, PredExp definedPredExp) {
-            if (!(definedPredExp instanceof ColumnRefPredExp)) {
-                return definedPredExp;
-            }
-
-            ColumnRefPredExp ref = (ColumnRefPredExp)definedPredExp;
-            final Object value;
-            try {
-                value = rs.getObject(ref.getName());
-            } catch (SQLException e) {
-                throw new IllegalStateException(e);
-            }
-
-            if (value instanceof String) {
-                return PredExp.stringValue((String)value);
-            }
-            if (value instanceof Number) {
-                return PredExp.integerValue(((Number)value).longValue());
-            }
-            throw new IllegalStateException(value.getClass().getName());
-        }
+//        private PredExp preparePredicate(ResultSet rs, PredExp definedPredExp) {
+//            if (!(definedPredExp instanceof ColumnRefPredExp)) {
+//                return definedPredExp;
+//            }
+//
+//            ColumnRefPredExp ref = (ColumnRefPredExp)definedPredExp;
+//            final Object value;
+//            try {
+//                value = rs.getObject(ref.getName());
+//            } catch (SQLException e) {
+//                throw new IllegalStateException(e);
+//            }
+//
+//            if (value instanceof String) {
+//                return PredExp.stringValue((String)value);
+//            }
+//            if (value instanceof Number) {
+//                return PredExp.integerValue(((Number)value).longValue());
+//            }
+//            throw new IllegalStateException(value.getClass().getName());
+//        }
 
 
     }

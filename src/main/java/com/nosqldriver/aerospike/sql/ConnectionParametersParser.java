@@ -15,6 +15,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static java.lang.String.join;
+
 @VisibleForPackage
 class ConnectionParametersParser {
     private static final Pattern AS_JDBC_URL = Pattern.compile("^jdbc:aerospike:([^/?]+)");
@@ -84,7 +86,10 @@ class ConnectionParametersParser {
 
     @VisibleForPackage
     Collection<String> indexesParser(String infos) {
-        return Arrays.stream(infos.split(";")).map(info -> new StringReader(info.replace(":", "\n"))).map(r -> {
+        return Arrays.stream(infos.split(";"))
+                .filter(info -> !info.isEmpty())
+                .map(info -> new StringReader(info.replace(":", "\n")))
+                .map(r -> {
             Properties props = new Properties();
             try {
                 props.load(r);
@@ -92,12 +97,6 @@ class ConnectionParametersParser {
                 throw new IllegalStateException(e);
             }
             return props;
-        }).map(p -> indexKey(p.getProperty("ns"), p.getProperty("set"), p.getProperty("bin"))).collect(Collectors.toSet());
-
-
-    }
-
-    private String indexKey(String namespace, String set, String bin) {
-        return String.join(".", namespace, set, bin);
+        }).map(p -> join(".", p.getProperty("type"), p.getProperty("ns"), p.getProperty("set"), p.getProperty("bin"), p.getProperty("indexname"))).collect(Collectors.toSet());
     }
 }

@@ -14,10 +14,6 @@ function charIndex(subStr, str, start) {
     return str.indexOf(subStr, start);
 }
 
-function concat() {
-    return arguments.join("");
-}
-
 function left(str, n) {
     return str.substring(0, n);
 }

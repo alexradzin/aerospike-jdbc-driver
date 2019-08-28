@@ -43,12 +43,14 @@ public class BinaryOperation {
         EQ("=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                Object value = operation.values.get(0);
-                if ("PK".equals(operation.column)) {
-                    final Key key = createKey(value, queries);
-                    queries.createPkQuery(key);
-                } else {
-                    queries.setFilter(createEqFilter(value, operation.column), operation.column);
+                if (!operation.values.isEmpty()) {
+                    Object value = operation.values.get(0);
+                    if ("PK".equals(operation.column)) {
+                        final Key key = createKey(value, queries);
+                        queries.createPkQuery(key);
+                    } else {
+                        queries.setFilter(createEqFilter(value, operation.column), operation.column);
+                    }
                 }
                 return queries;
             }
