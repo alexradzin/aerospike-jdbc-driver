@@ -4,7 +4,7 @@ import com.aerospike.client.query.PredExp;
 
 import java.util.Calendar;
 
-public class PredExpValuePlaceholder extends PredExp {
+public class PredExpValuePlaceholder extends FakePredExp {
     private final int index;
 
     public PredExpValuePlaceholder(int index) {
@@ -26,15 +26,5 @@ public class PredExpValuePlaceholder extends PredExp {
 
     public int getIndex() {
         return index;
-    }
-
-    @Override
-    public int estimateSize() {
-        throw new IllegalStateException();
-    }
-
-    @Override
-    public int write(byte[] buf, int offset) {
-        throw new IllegalStateException();
     }
 }
