@@ -136,7 +136,7 @@ public class AerospikeQueryFactory {
                     // Trick to support both single and multi expression list.
                     // The row data is accumulated in values. queries.addData() copies collection of values to other list
                     // After each row of multiple list the values list is cleaned. After this block queries.addData() is called
-                    // again for single data list only if valules is not empty. This prevents calling queries.addData() one more time
+                    // again for single data list only if values is not empty. This prevents calling queries.addData() one more time
                     // for multiple data list.
                     List<Object> values = new ArrayList<>();
                     insert.getItemsList().accept(new ItemsListVisitorAdapter() {
@@ -153,6 +153,10 @@ public class AerospikeQueryFactory {
                         @Override
                         public void visit(ExpressionList expressionList) {
                             expressionList.accept(new ExpressionVisitorAdapter() {
+                                @Override
+                                public void visit(JdbcParameter parameter) {
+                                    values.add(new PredExpValuePlaceholder(parameter.getIndex()));
+                                }
                                 @Override
                                 public void visit(NullValue value) {
                                     values.add(null);

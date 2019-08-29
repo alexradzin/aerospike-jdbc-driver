@@ -175,13 +175,24 @@ public class QueryHolder implements QueryContainer {
 
     @Override
     public void setParameters(Object[] parameters) {
+        int dataIndex = 0;
+        for (List<Object> list : data) {
+            for (int i = 0; i < list.size(); i++) {
+                Object d = list.get(i);
+                if (d instanceof PredExpValuePlaceholder) {
+                    list.set(i, parameters[dataIndex]);
+                    dataIndex++;
+                }
+            }
+        }
+
         NavigableSet<Integer> indexesToRemove = new TreeSet<>();
         Class type = null;
         for (int i = 0; i < predExps.size(); i++) {
             PredExp predExp = predExps.get(i);
             if(predExp instanceof PredExpValuePlaceholder) {
                 PredExpValuePlaceholder placeholder = ((PredExpValuePlaceholder)predExp);
-                Object parameter = parameters[placeholder.getIndex() - 1];
+                Object parameter = parameters[dataIndex + placeholder.getIndex() - 1];
                 predExps.set(i, placeholder.createPredExp(parameter));
                 type = parameter == null ? String.class : parameter.getClass();
                 if (predExps.get(i - 1) instanceof ColumnRefPredExp) {

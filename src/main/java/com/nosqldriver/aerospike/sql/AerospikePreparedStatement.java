@@ -2,7 +2,6 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
 import com.nosqldriver.aerospike.sql.query.QueryContainer;
-import com.nosqldriver.aerospike.sql.query.QueryHolder;
 import com.nosqldriver.sql.SimpleParameterMetaData;
 
 import java.io.InputStream;
@@ -346,22 +345,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
         return new AerospikeQueryFactory(schema.get(), policyProvider, indexes) {
             @Override  QueryContainer<ResultSet> createQueryPlan(String sql) throws SQLException {
                 QueryContainer<ResultSet> qc = Objects.equals(AerospikePreparedStatement.this.sql, sql) ? AerospikePreparedStatement.this.queryPlan : super.createQueryPlan(sql);
-                StatementType statementType = getStatementType(sql);
-
-                //TODO: refactor this code: switch is evil; addData and setParameters should operate the same type (either array of list); avoid casting
-                switch (statementType) {
-                    case SELECT:
-                        qc.setParameters(parameterValues);
-                        break;
-                    case INSERT:
-                        ((QueryHolder) qc).addData(Arrays.asList(parameterValues));
-                        break;
-                    default:
-                        throw new IllegalArgumentException(String.format("%s is unexpected here", statementType));
-
-                }
-
-
+                qc.setParameters(parameterValues);
                 return qc;
             }
         };
