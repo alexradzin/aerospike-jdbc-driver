@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
 
+import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
 import static java.lang.String.format;
 
 public class NameCheckResultSetWrapper extends ResultSetWrapper {
@@ -21,13 +22,8 @@ public class NameCheckResultSetWrapper extends ResultSetWrapper {
     private String validate(String alias) throws SQLException {
         List<DataColumn> columns = ((DataColumnBasedResultSetMetaData)getMetaData()).getColumns();
         if (!columns.isEmpty() && columns.stream().noneMatch(c -> Objects.equals(alias, c.getLabel()) || (c.getLabel() == null && Objects.equals(alias, c.getName())))) {
-            throwAny(new SQLException(format("Column '%s' not found", alias)));
+            sneakyThrow(new SQLException(format("Column '%s' not found", alias)));
         }
         return alias;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> void throwAny(Throwable e) throws E {
-        throw (E)e;
     }
 }

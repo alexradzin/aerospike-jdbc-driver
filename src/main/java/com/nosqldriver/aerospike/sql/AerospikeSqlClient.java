@@ -49,6 +49,8 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
+
 /**
  * Purpose of this class is to transform Aerospike exception into SQLExceptions and perform some validation
  * necessary for relational DBs and not performed by Aerospike.
@@ -795,11 +797,6 @@ public class AerospikeSqlClient implements IAerospikeClient {
             throwSqlException(e);
             return null; // just to satisfy compiler. The exception is thrown in the previous line.
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> void sneakyThrow(Throwable e) throws E {
-        throw (E) e;
     }
 
     private static SQLException sqlException(AerospikeException ae) {

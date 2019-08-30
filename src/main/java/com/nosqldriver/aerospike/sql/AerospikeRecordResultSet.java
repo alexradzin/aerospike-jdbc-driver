@@ -38,12 +38,12 @@ abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> 
 
     @Override
     protected byte getByte(Record record, String label) {
-        return record.getByte(label);
+        return ((Number)record.getValue(label)).byteValue();
     }
 
     @Override
     protected short getShort(Record record, String label) {
-        return record.getShort(label);
+        return ((Number) record.getValue(label)).shortValue(); // using getValue instead of getShort as a workaround over the bug in AS client.
     }
 
     @Override

@@ -23,6 +23,8 @@ public class SqlLiterals {
         sqlTypes.put(String.class, Types.VARCHAR);
         sqlTypes.put(byte[].class, Types.BLOB);
         sqlTypes.put(java.sql.Date.class, Types.DATE);
+        sqlTypes.put(java.sql.Time.class, Types.TIME);
+        sqlTypes.put(java.sql.Timestamp.class, Types.TIMESTAMP);
     }
 
     public static final Map<Integer, String> sqlTypeNames = new HashMap<>();
@@ -36,6 +38,8 @@ public class SqlLiterals {
         sqlTypeNames.put(Types.VARCHAR, "varchar");
         sqlTypeNames.put(Types.BLOB, "blob");
         sqlTypeNames.put(Types.DATE, "date");
+        sqlTypeNames.put(Types.TIME, "time");
+        sqlTypeNames.put(Types.TIMESTAMP, "timestamp");
     }
 
     public static final Map<Integer, Class> sqlToJavaTypes = new HashMap<>();

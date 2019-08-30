@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
+import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
 import static java.util.Collections.emptyList;
 
 public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>, WritePolicy, Object> {
@@ -91,11 +92,4 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
         return bins;
     }
-
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> void sneakyThrow(Throwable e) throws E {
-        throw (E) e;
-    }
-
-
 }

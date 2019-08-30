@@ -23,10 +23,12 @@ import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -37,6 +39,7 @@ import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
+import static java.sql.Types.JAVA_OBJECT;
 import static java.util.Optional.ofNullable;
 
 public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSetAdaptor {
@@ -285,15 +288,14 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
             return md;
         }
 
-//        if (columns.isEmpty()) {
-//            return new DataColumnBasedResultSetMetaData(data.entrySet().stream().map(e -> DATA.create(schema, table, e.getKey(), e.getKey()).withType(e.getValue() != null ? sqlTypes.get(e.getValue().getClass()) : 0)).collect(Collectors.toList()));
-//        }
-
-        columns.stream().filter(c -> c.getType() == 0).filter(c -> data.containsKey(c.getName())).forEach(c ->  c.withType(sqlTypes.get(data.get(c.getName()).getClass())));
+        columns.stream().filter(c -> c.getType() == 0).filter(c -> data.containsKey(c.getName())).forEach(c ->  Optional.ofNullable(sqlTypes.getOrDefault(getClassOf(data.get(c.getName())), JAVA_OBJECT)).map(c::withType));
         return new DataColumnBasedResultSetMetaData(columns);
     }
 
 
+    private Class<?> getClassOf(Object obj) {
+        return obj == null ? null : obj.getClass();
+    }
 
 
     @Override
@@ -447,12 +449,12 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Blob getBlob(int columnIndex) throws SQLException {
-        return null;
+        return new ByteArrayBlob(getBytes(columnIndex));
     }
 
     @Override
     public Clob getClob(int columnIndex) throws SQLException {
-        return null;
+        return new StringClob(getString(columnIndex));
     }
 
     @Override
@@ -472,12 +474,12 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
-        return null;
+        return new ByteArrayBlob(getBytes(columnLabel));
     }
 
     @Override
     public Clob getClob(String columnLabel) throws SQLException {
-        return null;
+        return new StringClob(getString(columnLabel));
     }
 
     @Override

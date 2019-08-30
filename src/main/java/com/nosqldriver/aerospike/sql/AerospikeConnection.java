@@ -6,6 +6,8 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Language;
 import com.aerospike.client.policy.Policy;
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.sql.ByteArrayBlob;
+import com.nosqldriver.sql.StringClob;
 
 import java.sql.Array;
 import java.sql.Blob;
@@ -279,17 +281,17 @@ class AerospikeConnection implements Connection {
 
     @Override
     public Clob createClob() throws SQLException {
-        throw new SQLFeatureNotSupportedException("Clobs are not supported");
+        return new StringClob();
     }
 
     @Override
     public Blob createBlob() throws SQLException {
-        throw new SQLFeatureNotSupportedException("Blobs are not supported");
+        return new ByteArrayBlob();
     }
 
     @Override
     public NClob createNClob() throws SQLException {
-        throw new SQLFeatureNotSupportedException("NClobs are not supported");
+        return new StringClob();
     }
 
     @Override

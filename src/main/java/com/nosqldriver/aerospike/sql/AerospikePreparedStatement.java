@@ -2,9 +2,16 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
 import com.nosqldriver.aerospike.sql.query.QueryContainer;
+import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.SimpleParameterMetaData;
+import com.nosqldriver.sql.StringClob;
+import com.nosqldriver.util.IOUtils;
 
+import java.io.DataInputStream;
+import java.io.EOFException;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.net.URL;
@@ -21,6 +28,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLXML;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -77,7 +85,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public void setBoolean(int parameterIndex, boolean x) throws SQLException {
-        setObject(parameterIndex, x);
+        setObject(parameterIndex, x ? 1 : 0);
     }
 
     @Override
@@ -162,7 +170,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public void setObject(int parameterIndex, Object x, int targetSqlType) throws SQLException {
-        throw new UnsupportedOperationException();
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -187,52 +195,52 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader, int length) throws SQLException {
-        throw new UnsupportedOperationException();
+        setClob(parameterIndex, reader, length);
     }
 
     @Override
     public void setRef(int parameterIndex, Ref x) throws SQLException {
-        throw new UnsupportedOperationException();
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
-    public void setBlob(int parameterIndex, Blob x) throws SQLException {
-        throw new UnsupportedOperationException();
+    public void setBlob(int parameterIndex, Blob blob) throws SQLException {
+        setBytes(parameterIndex, blob.getBytes(1, (int)blob.length()));
     }
 
     @Override
-    public void setClob(int parameterIndex, Clob x) throws SQLException {
-        throw new UnsupportedOperationException();
+    public void setClob(int parameterIndex, Clob clob) throws SQLException {
+        setString(parameterIndex, clob.getSubString(1, (int)clob.length()));
     }
 
     @Override
     public void setArray(int parameterIndex, Array x) throws SQLException {
-        throw new UnsupportedOperationException();
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        throw new UnsupportedOperationException(); // TODO: think how to support this: extract metadata without code duplication and query execution.
+        throw new SQLFeatureNotSupportedException(); // TODO: think how to support this: extract metadata without code duplication and query execution.
     }
 
     @Override
     public void setDate(int parameterIndex, Date x, Calendar cal) throws SQLException {
-        throw new UnsupportedOperationException();
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void setTime(int parameterIndex, Time x, Calendar cal) throws SQLException {
-        throw new UnsupportedOperationException();
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
-        throw new UnsupportedOperationException();
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
-        throw new UnsupportedOperationException();
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -247,97 +255,124 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public void setRowId(int parameterIndex, RowId x) throws SQLException {
-        throw new UnsupportedOperationException();
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void setNString(int parameterIndex, String value) throws SQLException {
-        throw new UnsupportedOperationException();
+        setString(parameterIndex, value);
     }
 
     @Override
     public void setNCharacterStream(int parameterIndex, Reader value, long length) throws SQLException {
-        throw new UnsupportedOperationException();
+        setCharacterStream(parameterIndex, value, length);
     }
 
     @Override
-    public void setNClob(int parameterIndex, NClob value) throws SQLException {
-        throw new UnsupportedOperationException();
+    public void setNClob(int parameterIndex, NClob clob) throws SQLException {
+        setString(parameterIndex, clob.getSubString(1, (int)clob.length()));
     }
 
     @Override
     public void setClob(int parameterIndex, Reader reader, long length) throws SQLException {
-        throw new UnsupportedOperationException();
+        try {
+            String result = IOUtils.toString(reader);
+            if (result.length() != length) {
+                throw new SQLException(format("Unexpected data length: expected %s but was %d", length, result.length()));
+            }
+            setObject(parameterIndex, result);
+        } catch (IOException e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
-        throw new UnsupportedOperationException();
+        byte[] bytes = new byte[(int) length];
+        DataInputStream dis = new DataInputStream(inputStream);
+        try {
+            dis.readFully(bytes);
+            if (inputStream.read() !=-1) {
+                throw new SQLException(format("Source contains more bytes than required %d", length));
+            }
+        } catch (EOFException e) {
+            throw new SQLException(format("Source contains less bytes than required %d", length));
+        } catch (IOException e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public void setNClob(int parameterIndex, Reader reader, long length) throws SQLException {
-        throw new UnsupportedOperationException();
+        setClob(parameterIndex, reader, length);
     }
 
     @Override
     public void setSQLXML(int parameterIndex, SQLXML xmlObject) throws SQLException {
-        throw new UnsupportedOperationException();
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void setObject(int parameterIndex, Object x, int targetSqlType, int scaleOrLength) throws SQLException {
-        throw new UnsupportedOperationException();
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x, long length) throws SQLException {
-        throw new UnsupportedOperationException();
+        setClob(parameterIndex, new InputStreamReader(x), length);
     }
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x, long length) throws SQLException {
-        throw new UnsupportedOperationException();
+        setBlob(parameterIndex, x, length);
     }
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
-        throw new UnsupportedOperationException();
+        setClob(parameterIndex, reader, length);
     }
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x) throws SQLException {
-        throw new UnsupportedOperationException();
+        setClob(parameterIndex, new InputStreamReader(x));
     }
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x) throws SQLException {
-        throw new UnsupportedOperationException();
+        setBlob(parameterIndex, x);
     }
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
-        throw new UnsupportedOperationException();
+        setClob(parameterIndex, reader);
     }
 
     @Override
     public void setNCharacterStream(int parameterIndex, Reader value) throws SQLException {
-        throw new UnsupportedOperationException();
+        setNClob(parameterIndex, value);
     }
 
     @Override
     public void setClob(int parameterIndex, Reader reader) throws SQLException {
-        throw new UnsupportedOperationException();
+        try {
+            setClob(parameterIndex, new StringClob(IOUtils.toString(reader)));
+        } catch (IOException e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
-        throw new UnsupportedOperationException();
+        try {
+            setBlob(parameterIndex, new ByteArrayBlob(IOUtils.toByteArray(inputStream)));
+        } catch (IOException e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public void setNClob(int parameterIndex, Reader reader) throws SQLException {
-        throw new UnsupportedOperationException();
+        setClob(parameterIndex, reader);
     }
 
     @Override
@@ -350,5 +385,4 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
             }
         };
     }
-
 }

@@ -8,8 +8,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Stream;
 
+import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
 import static java.lang.String.format;
 
 public class DateParser {
@@ -40,10 +40,4 @@ public class DateParser {
             return null;
         }
     }
-
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> void sneakyThrow(Throwable e) throws E {
-        throw (E) e;
-    }
-
 }
