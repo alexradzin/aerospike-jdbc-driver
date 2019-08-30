@@ -48,7 +48,8 @@ public class ByteArrayBlob implements Blob {
 
     @Override
     public long position(byte[] pattern, long start) throws SQLException {
-        return indexOf(data, 0, data.length, pattern, 0, pattern.length, (int)start);
+        int index = indexOf(data, (int)start - 1, data.length, pattern, 0, pattern.length, 0);
+        return index >= 0 ? index + 1 : index;
     }
 
     @Override
@@ -61,9 +62,7 @@ public class ByteArrayBlob implements Blob {
         if (pos > Integer.MAX_VALUE || pos < 1) {
             throw new SQLException(format("Position must be between 1 and %d but was %d", Integer.MAX_VALUE, pos));
         }
-        int from = (int)pos - 1;
-        data = Arrays.copyOfRange(bytes, from, bytes.length);
-        return data.length;
+        return setBytes(pos, bytes, 0, bytes.length);
     }
 
     @Override
@@ -72,11 +71,10 @@ public class ByteArrayBlob implements Blob {
             throw new SQLException(format("Offset cannot be negative but was %d", offset));
         }
         int blobOffset = (int)pos - 1;
-        byte[] slice = Arrays.copyOfRange(bytes, offset, bytes.length);
         int n = blobOffset + bytes.length - offset;
         byte[] newData = new byte[n];
         System.arraycopy(data, 0, newData, 0, blobOffset);
-        System.arraycopy(data, blobOffset, slice, 0, slice.length);
+        System.arraycopy(bytes, offset, newData, blobOffset, bytes.length - offset);
         data = newData;
         return n;
     }
@@ -98,7 +96,7 @@ public class ByteArrayBlob implements Blob {
 
     @Override
     public void truncate(long len) throws SQLException {
-        if (len > Integer.MAX_VALUE || len < 0) {
+        if (len > Integer.MAX_VALUE || len < 1) {
             throw new SQLException(format("Length must be between 0 and %d but was %d", Integer.MAX_VALUE, len));
         }
         @SuppressWarnings("UnnecessaryLocalVariable") // otherwise the assignement is not atomic.
