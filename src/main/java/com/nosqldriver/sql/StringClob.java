@@ -1,7 +1,5 @@
 package com.nosqldriver.sql;
 
-import com.nosqldriver.util.SneakyThrower;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -70,12 +68,7 @@ public class StringClob implements NClob {
 
     @Override
     public int setString(long pos, String str) throws SQLException {
-        if (pos > Integer.MAX_VALUE || pos < 1) {
-            throw new SQLException(format("Position must be between 1 and %d but was %d", Integer.MAX_VALUE, pos));
-        }
-        int till = (int)pos;
-        data = (data.length() >= till ? data.substring(0, till) : data) + str;
-        return data.length();
+        return setString(pos, str, 0, str.length());
     }
 
     @Override
@@ -84,7 +77,7 @@ public class StringClob implements NClob {
             throw new SQLException(format("Offset cannot be negative but was %d", offset));
         }
         int till = (int)pos;
-        data = (data.length() >= till ? data.substring(0, till) : data) + str.substring(offset, len);
+        data = (data.length() >= till ? data.substring(0, till) : data) + str.substring(offset, offset + len);
         return len - offset;
     }
 
