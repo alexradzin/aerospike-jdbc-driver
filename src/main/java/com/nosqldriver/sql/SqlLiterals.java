@@ -7,9 +7,11 @@ import java.sql.Types;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class SqlLiterals {
     public static final Map<Class, Integer> sqlTypes = new HashMap<>();
@@ -41,6 +43,7 @@ public class SqlLiterals {
         sqlTypeNames.put(Types.TIME, "time");
         sqlTypeNames.put(Types.TIMESTAMP, "timestamp");
     }
+    public static final Map<String, Integer> sqlTypeByName = sqlTypeNames.entrySet().stream().collect(Collectors.toMap(Entry::getValue, Entry::getKey));
 
     public static final Map<Integer, Class> sqlToJavaTypes = new HashMap<>();
     static {

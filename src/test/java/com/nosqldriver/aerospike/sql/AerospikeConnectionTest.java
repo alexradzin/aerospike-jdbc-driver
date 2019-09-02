@@ -140,7 +140,6 @@ class AerospikeConnectionTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.prepareStatement("insert into mytest (id) values (?)", new String[] {"id"}));
 
         assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.createSQLXML());
-        assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.createArrayOf("string", new Object[0]));
         assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.createStruct("person", new Object[0]));
 
         assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.setNetworkTimeout(command -> {}, 123));

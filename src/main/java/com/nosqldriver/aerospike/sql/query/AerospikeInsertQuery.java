@@ -8,12 +8,20 @@ import com.aerospike.client.policy.WritePolicy;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ListRecordSet;
 
+import java.sql.Array;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
@@ -23,6 +31,40 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
     private final int indexOfPK;
     private final boolean skipDuplicates;
     public final static ThreadLocal<Integer> updatedRecordsCount = new ThreadLocal<>();
+
+    private final static Map<Predicate<Object>, Function<Object, Object>> valueTransformer = new LinkedHashMap<>();
+    static {
+        valueTransformer.put(o -> o instanceof Blob, blob -> {
+            try {
+                return ((Blob)blob).getBytes(1, (int)((Blob)blob).length());
+            } catch (SQLException e) {
+                sneakyThrow(e);
+                return null;
+            }
+        });
+        valueTransformer.put(o -> o instanceof byte[], bytes -> bytes);
+        valueTransformer.put(o -> o instanceof Clob, clob -> {
+            try {
+                return ((Clob)clob).getSubString(1, (int)((Clob)clob).length());
+            } catch (SQLException e) {
+                sneakyThrow(e);
+                return null;
+            }
+        });
+
+
+        valueTransformer.put(o -> o instanceof Array, arr -> {
+            try {
+                return Arrays.asList((Object[])((Array)arr).getArray());
+            } catch (SQLException e) {
+                sneakyThrow(e);
+                return null;
+            }
+        });
+
+        valueTransformer.put(o -> o instanceof Collection<?>, collection -> collection instanceof List ? collection : new LinkedList<Object>((Collection)collection));
+        valueTransformer.put(o -> o.getClass().isArray(), Arrays::asList);
+    }
 
 
     public AerospikeInsertQuery(String schema, String set, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
@@ -85,11 +127,21 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
         Bin[] bins = new Bin[columns.size() - 1];
         for (int i = 0, j = 0; i < columns.size(); i++) {
             if (i != indexOfPK) {
-                bins[j] = new Bin(columns.get(i).getName(), row.get(i));
+                bins[j] = new Bin(columns.get(i).getName(), binValue(row.get(i)));
                 j++;
             }
         }
 
         return bins;
     }
+
+    private Object binValue(Object o) {
+        for(Map.Entry<Predicate<Object>, Function<Object, Object>> e : valueTransformer.entrySet()) {
+            if (e.getKey().test(o)) {
+                return e.getValue().apply(o);
+            }
+        }
+        return o;
+    }
+
 }

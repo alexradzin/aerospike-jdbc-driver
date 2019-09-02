@@ -215,7 +215,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public void setArray(int parameterIndex, Array x) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        setObject(parameterIndex, x);
     }
 
     @Override

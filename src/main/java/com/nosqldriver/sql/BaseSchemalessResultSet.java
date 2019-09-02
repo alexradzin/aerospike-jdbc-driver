@@ -25,10 +25,13 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -36,6 +39,7 @@ import java.util.stream.IntStream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
+import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
@@ -484,7 +488,24 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Array getArray(String columnLabel) throws SQLException {
-        return null;
+        Object obj = getObject(columnLabel);
+        if (obj == null) {
+            return null;
+        }
+        if (obj.getClass().isArray()) {
+            return new BasicArray(schema, sqlTypeNames.get(sqlTypes.get(obj.getClass().getComponentType())), (Object[])obj);
+        }
+
+        if (obj instanceof Collection) {
+            Class type = getComponentType(((Collection<Object>)obj));
+            return new BasicArray(schema, sqlTypeNames.get(sqlTypes.get(type)), ((Collection)obj).toArray());
+        }
+        throw new ClassCastException(format("Cannot cast value of column %s to array", columnLabel));
+    }
+
+    private Class<?> getComponentType(Collection<Object> it) {
+        Set<Class> types = it.stream().filter(Objects::nonNull).map(Object::getClass).collect(Collectors.toSet());
+        return types.size() == 1 ? types.iterator().next() : Object.class; //TODO discover the nearest common parent if size > 1
     }
 
     @Override

@@ -6,6 +6,7 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Language;
 import com.aerospike.client.policy.Policy;
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.sql.BasicArray;
 import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.StringClob;
 
@@ -326,7 +327,7 @@ class AerospikeConnection implements Connection {
 
     @Override
     public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
-        throw new SQLFeatureNotSupportedException(); // TODO: implement in the next phase
+        return new BasicArray(schema.get(), typeName, elements);
     }
 
     @Override
