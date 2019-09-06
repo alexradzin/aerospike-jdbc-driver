@@ -31,7 +31,7 @@ import java.util.Optional;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 
-public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
+public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapper {
     private final ResultSet resultSet;
     private final List<JoinHolder> joinHolders;
     private final List<ResultSet> resultSets = new ArrayList<>();
@@ -40,6 +40,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
     private DataColumnBasedResultSetMetaData metadata;
 
     private boolean wasNull = false;
+    private int row = 0;
 
 
     public JoinedResultSet(ResultSet resultSet, List<JoinHolder> joinHolders) {
@@ -64,6 +65,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
                 }
                 moveMainResultSet = false;
                 hasMore = true;
+                row++;
                 return true;
             }
             moveMainResultSet = false;
@@ -83,7 +85,11 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
                 }
             }
             moveMainResultSet = allDone;
-            return !moveMainResultSet || next();
+            if (!moveMainResultSet) {
+                row++;
+                return true;
+            }
+            return next();
         } else {
             return false;
         }
@@ -373,7 +379,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
 
     @Override
     public int getRow() throws SQLException {
-        return 0;
+        return row;
     }
 
     @Override
@@ -393,12 +399,14 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
 
     @Override
     public void setFetchDirection(int direction) throws SQLException {
-
+        if (direction != ResultSet.FETCH_FORWARD) {
+            throw new SQLFeatureNotSupportedException("This version supports fetch forward direction only");
+        }
     }
 
     @Override
     public int getFetchDirection() throws SQLException {
-        return 0;
+        return ResultSet.FETCH_FORWARD;
     }
 
     @Override
@@ -416,12 +424,12 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
 
     @Override
     public int getType() throws SQLException {
-        return 0;
+        return ResultSet.TYPE_FORWARD_ONLY;
     }
 
     @Override
     public int getConcurrency() throws SQLException {
-        return 0;
+        return ResultSet.CONCUR_READ_ONLY;
     }
 
     @Override
@@ -441,17 +449,17 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
 
     @Override
     public Blob getBlob(int columnIndex) throws SQLException {
-        return null;
+        return getBlob(getColumnLabel(columnIndex));
     }
 
     @Override
     public Clob getClob(int columnIndex) throws SQLException {
-        return null;
+        return getClob(getColumnLabel(columnIndex));
     }
 
     @Override
     public Array getArray(int columnIndex) throws SQLException {
-        return null;
+        return getArray(getColumnLabel(columnIndex));
     }
 
     @Override
@@ -466,17 +474,17 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
 
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
-        return null;
+        return get(columnLabel, Blob.class).orElse(null);
     }
 
     @Override
     public Clob getClob(String columnLabel) throws SQLException {
-        return null;
+        return get(columnLabel, Clob.class).orElse(null);
     }
 
     @Override
     public Array getArray(String columnLabel) throws SQLException {
-        return null;
+        return get(columnLabel, Array.class).orElse(null);
     }
 
     @Override
@@ -511,12 +519,12 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
 
     @Override
     public URL getURL(int columnIndex) throws SQLException {
-        return null;
+        return getURL(getColumnLabel(columnIndex));
     }
 
     @Override
     public URL getURL(String columnLabel) throws SQLException {
-        return null;
+        return get(columnLabel, URL.class).orElse(null);
     }
 
     @Override
@@ -531,7 +539,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
 
     @Override
     public int getHoldability() throws SQLException {
-        return 0;
+        return resultSet.getHoldability();
     }
 
     @Override
@@ -541,63 +549,54 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
 
     @Override
     public NClob getNClob(int columnIndex) throws SQLException {
-        return null;
+        return getNClob(getColumnLabel(columnIndex));
     }
 
     @Override
     public NClob getNClob(String columnLabel) throws SQLException {
-        return null;
+        return get(columnLabel, NClob.class).orElse(null);
     }
 
     @Override
     public SQLXML getSQLXML(int columnIndex) throws SQLException {
-        return null;
+        return getSQLXML(getColumnLabel(columnIndex));
     }
 
     @Override
     public SQLXML getSQLXML(String columnLabel) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public String getNString(int columnIndex) throws SQLException {
-        return null;
+        return getNString(getColumnLabel(columnIndex));
     }
 
     @Override
     public String getNString(String columnLabel) throws SQLException {
-        return null;
+        return getString(columnLabel);
     }
 
     @Override
     public Reader getNCharacterStream(int columnIndex) throws SQLException {
-        return null;
+        return getNCharacterStream(getColumnLabel(columnIndex));
     }
 
     @Override
     public Reader getNCharacterStream(String columnLabel) throws SQLException {
-        return null;
+        return get(columnLabel, Reader.class).orElse(null);
     }
 
 
     @Override
     public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
-        return null;
+        return getObject(getColumnLabel(columnIndex), type);
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
-        return null;
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> iface) throws SQLException {
-        return null;
-    }
-
-    @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return false;
+        return (T)getObject(columnLabel);
     }
 
     private String getColumnLabel(int columnIndex) throws SQLException {
@@ -611,15 +610,20 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor {
             // joined tables. So, we have to perform null check and try to retrieve the data from other result sets
             // if it is null here.
             if (value != null) {
-                return Optional.ofNullable(cast(value, type));
+                Optional<T> res = Optional.ofNullable(cast(value, type));
+                wasNull = !res.isPresent();
+                return res;
             }
         }
 
         for (ResultSet rs : resultSets) {
             if (columnTags(rs.getMetaData()).contains(alias)) {
-                return Optional.ofNullable(cast(rs.getObject(alias), type));
+                Optional<T> res = Optional.ofNullable(cast(rs.getObject(alias), type));
+                wasNull = !res.isPresent();
+                return res;
             }
         }
+        wasNull = true;
         return Optional.empty();
 
     }

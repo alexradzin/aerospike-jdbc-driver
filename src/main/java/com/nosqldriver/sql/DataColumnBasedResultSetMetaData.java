@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
 
-public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
+public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, SimpleWrapper {
     private final String schema;
     private final String table;
     private final List<DataColumn> columns;
@@ -201,16 +201,6 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData {
     @Override
     public String getColumnClassName(int column) throws SQLException {
         return SqlLiterals.sqlToJavaTypes.get(getColumnType(column)).getName();
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> iface) {
-        return null;
-    }
-
-    @Override
-    public boolean isWrapperFor(Class<?> iface) {
-        return false;
     }
 
     private String toEmpty(String s) {

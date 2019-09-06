@@ -4,7 +4,7 @@ import java.sql.ParameterMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 
-public class SimpleParameterMetaData implements ParameterMetaData {
+public class SimpleParameterMetaData implements ParameterMetaData, SimpleWrapper {
     private final int count;
 
     public SimpleParameterMetaData(int count) {
@@ -54,15 +54,5 @@ public class SimpleParameterMetaData implements ParameterMetaData {
     @Override
     public int getParameterMode(int param) throws SQLException {
         return ParameterMetaData.parameterModeIn;
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> iface) throws SQLException {
-        return null;
-    }
-
-    @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return false;
     }
 }

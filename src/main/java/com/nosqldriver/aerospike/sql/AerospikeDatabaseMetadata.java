@@ -6,6 +6,7 @@ import com.aerospike.client.policy.InfoPolicy;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.ListRecordSet;
+import com.nosqldriver.sql.SimpleWrapper;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,7 +50,7 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
-public class AerospikeDatabaseMetadata implements DatabaseMetaData {
+public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrapper {
     private final static ConnectionParametersParser parser = new ConnectionParametersParser();
     private final String url;
     private final Properties clientInfo;
@@ -1142,24 +1143,6 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData {
     @Override
     public boolean generatedKeyAlwaysReturned() throws SQLException {
         return false;
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> iface) throws SQLException {
-        // The implementation is taken from MySQL driver
-        try {
-            // This works for classes that aren't actually wrapping anything
-            return iface.cast(this);
-        } catch (ClassCastException cce) {
-            throw new SQLException("Common.UnableToUnwrap " + iface.toString());
-        }
-    }
-
-    @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        // The implementation is taken from MySQL driver
-        // This works for classes that aren't actually wrapping anything
-        return iface.isInstance(this);
     }
 
     private Optional<Manifest> manifest() {

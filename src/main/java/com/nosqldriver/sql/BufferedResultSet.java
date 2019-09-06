@@ -11,7 +11,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class BufferedResultSet implements ResultSet, DelegatingResultSet, ResultSetAdaptor {
+public class BufferedResultSet implements ResultSet, DelegatingResultSet, ResultSetAdaptor, SimpleWrapper {
     private final ResultSet rs;
     private final Collection<Map<String, Object>> buffer;
     private Iterator<Map<String, Object>> it;
@@ -238,19 +238,5 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
     @Override
     public String getCursorName() throws SQLException {
         return rs.getCursorName();
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> iface) throws SQLException {
-        try {
-            return iface.cast(this);
-        } catch (ClassCastException e) {
-            throw new SQLException("Cannot unwrap " + iface, e);
-        }
-    }
-
-    @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return iface.isInstance(this);
     }
 }

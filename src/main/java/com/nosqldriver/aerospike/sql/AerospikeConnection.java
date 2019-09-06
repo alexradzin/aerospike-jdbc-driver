@@ -8,6 +8,7 @@ import com.aerospike.client.policy.Policy;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.sql.BasicArray;
 import com.nosqldriver.sql.ByteArrayBlob;
+import com.nosqldriver.sql.SimpleWrapper;
 import com.nosqldriver.sql.StringClob;
 
 import java.sql.Array;
@@ -41,7 +42,7 @@ import static java.sql.Statement.NO_GENERATED_KEYS;
 import static java.util.Arrays.stream;
 
 @VisibleForPackage
-class AerospikeConnection implements Connection {
+class AerospikeConnection implements Connection, SimpleWrapper {
     private final String url;
     private final Properties props;
     private static final ConnectionParametersParser parser = new ConnectionParametersParser();
@@ -364,16 +365,6 @@ class AerospikeConnection implements Connection {
     @Override
     public int getNetworkTimeout() throws SQLException {
         return client.getQueryPolicyDefault().totalTimeout;
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> iface) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Wrapping is not supported");
-    }
-
-    @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Wrapping is not supported");
     }
 
     private void validateResultSetParameters(int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {

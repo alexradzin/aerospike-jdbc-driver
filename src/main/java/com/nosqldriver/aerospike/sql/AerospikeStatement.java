@@ -5,6 +5,7 @@ import com.aerospike.client.Info;
 import com.aerospike.client.query.IndexType;
 import com.nosqldriver.aerospike.sql.query.AerospikeInsertQuery;
 import com.nosqldriver.sql.ListRecordSet;
+import com.nosqldriver.sql.SimpleWrapper;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -30,7 +31,7 @@ import static java.sql.ResultSet.FETCH_FORWARD;
 import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static java.util.Collections.emptyList;
 
-public class AerospikeStatement implements java.sql.Statement {
+public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
     private final IAerospikeClient client;
     private final Connection connection;
     protected final AtomicReference<String> schema;
@@ -431,17 +432,6 @@ public class AerospikeStatement implements java.sql.Statement {
     public boolean isCloseOnCompletion() throws SQLException {
         return false;
     }
-
-    @Override
-    public <T> T unwrap(Class<T> iface) throws SQLException {
-        throw new SQLException("Unsupported feature");
-    }
-
-    @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return false;
-    }
-
 
     protected static StatementType getStatementType(String sql) throws SQLException {
         String sqlUp = sql.trim().toUpperCase();

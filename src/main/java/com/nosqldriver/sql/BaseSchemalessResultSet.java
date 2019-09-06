@@ -47,7 +47,7 @@ import static java.lang.String.format;
 import static java.sql.Types.JAVA_OBJECT;
 import static java.util.Optional.ofNullable;
 
-public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSetAdaptor {
+public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSetAdaptor, SimpleWrapper {
     protected final String schema;
     protected final String table;
     protected final List<DataColumn> columns;
@@ -64,12 +64,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     private static final Map<Class, Function<Object[], Object[]>> collectionTransformers = new HashMap<>();
     static {
-        collectionTransformers.put(byte[].class, new Function<Object[], Object[]>() {
-            @Override
-            public Object[] apply(Object[] values) {
-                return Arrays.stream(values).map(e -> new ByteArrayBlob((byte[])e)).toArray();
-            }
-        });
+        collectionTransformers.put(byte[].class, values -> Arrays.stream(values).map(e -> new ByteArrayBlob((byte[])e)).toArray());
     }
 
 
@@ -651,16 +646,6 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
         }
 
         return cast(value, type);
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> iface) throws SQLException {
-        throw new SQLException("Unsupported feature");
-    }
-
-    @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return false;
     }
 
     private String getName(int index) throws SQLException {
