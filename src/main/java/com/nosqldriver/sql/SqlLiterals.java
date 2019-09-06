@@ -4,6 +4,7 @@ import com.aerospike.client.query.PredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
 
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +28,7 @@ public class SqlLiterals {
         sqlTypes.put(java.sql.Date.class, Types.DATE);
         sqlTypes.put(java.sql.Time.class, Types.TIME);
         sqlTypes.put(java.sql.Timestamp.class, Types.TIMESTAMP);
+        sqlTypes.put(ArrayList.class, Types.ARRAY);
     }
 
     public static final Map<Integer, String> sqlTypeNames = new HashMap<>();
@@ -42,8 +44,9 @@ public class SqlLiterals {
         sqlTypeNames.put(Types.DATE, "date");
         sqlTypeNames.put(Types.TIME, "time");
         sqlTypeNames.put(Types.TIMESTAMP, "timestamp");
+        sqlTypeNames.put(Types.ARRAY, "list");
     }
-    public static final Map<String, Integer> sqlTypeByName = sqlTypeNames.entrySet().stream().collect(Collectors.toMap(Entry::getValue, Entry::getKey));
+    public static final Map<String, Integer> sqlTypeByName = sqlTypeNames.entrySet().stream().collect(Collectors.toMap(Entry::getValue, Entry::getKey, (v1, v2) -> v1, TreeMap::new));
 
     public static final Map<Integer, Class> sqlToJavaTypes = new HashMap<>();
     static {

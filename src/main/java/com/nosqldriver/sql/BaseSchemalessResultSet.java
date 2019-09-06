@@ -23,10 +23,11 @@ import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.sql.Types;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -60,6 +61,16 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     private boolean beforeFirst = true;
     private boolean afterLast = false;
+
+    private static final Map<Class, Function<Object[], Object[]>> collectionTransformers = new HashMap<>();
+    static {
+        collectionTransformers.put(byte[].class, new Function<Object[], Object[]>() {
+            @Override
+            public Object[] apply(Object[] values) {
+                return Arrays.stream(values).map(e -> new ByteArrayBlob((byte[])e)).toArray();
+            }
+        });
+    }
 
 
 
@@ -498,7 +509,9 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
         if (obj instanceof Collection) {
             Class type = getComponentType(((Collection<Object>)obj));
-            return new BasicArray(schema, sqlTypeNames.get(sqlTypes.get(type)), ((Collection)obj).toArray());
+            Object[] rawValues = ((Collection)obj).toArray();
+            Object[] values = collectionTransformers.getOrDefault(type, a -> a).apply(rawValues);
+            return new BasicArray(schema, sqlTypeNames.get(sqlTypes.get(type)), values);
         }
         throw new ClassCastException(format("Cannot cast value of column %s to array", columnLabel));
     }
