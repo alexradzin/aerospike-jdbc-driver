@@ -88,7 +88,7 @@ public class SqlLiterals {
             predExpOperators.put(operatorKey(type, "OR"), () -> PredExp.or(2));
         }
 
-        // null is for prepared statment when type of value is unknonw during parsing of expression.
+        // null is for prepared statement when type of value is unknonw during parsing of expression.
         Arrays.asList("=", "<>", "!=", "<", "<=", ">", ">=", "LIKE").forEach(op -> predExpOperators.put(operatorKey(null, op), () -> new OperatorRefPredExp(op)));
         predExpOperators.put(operatorKey(null, "AND"), () -> PredExp.and(2));
         predExpOperators.put(operatorKey(null, "OR"), () -> PredExp.or(2));

@@ -68,6 +68,21 @@ public class BinaryOperation {
                 return filter;
             }
         },
+        NE("!=") {
+            @Override
+            public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
+                if ("PK".equals(operation.column)) {
+                    throw new UnsupportedOperationException("Cannot use PK with != operator");
+                }
+                return queries;
+            }
+        },
+        NEQ("<>") {
+            @Override
+            public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
+                return NE.update(queries, operation);
+            }
+        },
         GT(">") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {

@@ -19,6 +19,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -239,6 +240,28 @@ class SelectTest {
         ResultSet rs = testConn.createStatement().executeQuery(query);
         assertArrayEquals(expected, toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).toArray(String[]::new));
     }
+
+
+
+    @VisibleForPackage // visible for tests
+    @SuppressWarnings("unused") // referenced from annotation VariableSource
+    private static Stream<Arguments> notEqual = Stream.of(
+            Arguments.of("select * from people where first_name != 'John'", new String[] {"George", "Paul", "Ringo"}),
+            Arguments.of("select * from people where first_name <> 'John'", new String[] {"George", "Paul", "Ringo"}),
+            Arguments.of("select * from people where id!=1", new String[] {"George", "Paul", "Ringo"}),
+            Arguments.of("select * from people where id<>1", new String[] {"George", "Paul", "Ringo"})
+            //TODO: implement Not equal for PK
+            //Arguments.of("select * from people where PK!=1", new String[] {"George", "Paul", "Ringo"}),
+            //Arguments.of("select * from people where PK<>1", new String[] {"George", "Paul", "Ringo"})
+    );
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @VariableSource("notEqual")
+    void selectNoEqual(String query, String[] expected) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        assertEquals(new HashSet<>(Arrays.asList(expected)), toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
+    }
+
+
 
 
 
