@@ -2,8 +2,11 @@ package com.nosqldriver.sql;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -13,6 +16,52 @@ import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
 
 public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, SimpleWrapper {
+    private static final int MAX_BLOCK_SIZE = 128 * 1024;
+    private static final int MAX_DATE_SIZE = "2019.09.10 22:18:39.000 IDT".length();
+    private static final Map<Integer, Integer> precisionByType = new HashMap<>();
+    static {
+        precisionByType.put(Types.BIT, 8);
+        precisionByType.put(Types.TINYINT, 8);
+        precisionByType.put(Types.SMALLINT, 8);
+        precisionByType.put(Types.INTEGER, 8);
+        precisionByType.put(Types.BIGINT, 8);
+        precisionByType.put(Types.FLOAT, 8);
+        precisionByType.put(Types.REAL, 8);
+        precisionByType.put(Types.DOUBLE, 8);
+        precisionByType.put(Types.NUMERIC, 8);
+        precisionByType.put(Types.DECIMAL, 8);
+        precisionByType.put(Types.CHAR, 2);
+        precisionByType.put(Types.VARCHAR, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.LONGVARCHAR, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.DATE, MAX_DATE_SIZE);
+        precisionByType.put(Types.TIME, MAX_DATE_SIZE);
+        precisionByType.put(Types.TIMESTAMP, MAX_DATE_SIZE);
+        precisionByType.put(Types.BINARY, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.VARBINARY, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.LONGVARBINARY, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.NULL, 0);
+        precisionByType.put(Types.OTHER, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.JAVA_OBJECT, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.DISTINCT, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.STRUCT, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.ARRAY, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.BLOB, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.CLOB, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.REF, 0); //??
+        precisionByType.put(Types.DATALINK, 0); //??
+        precisionByType.put(Types.BOOLEAN, 8); // boolean is stored as a number, e.g. long, i.e. occupies 8 bytes
+        precisionByType.put(Types.ROWID, 0); //??
+        precisionByType.put(Types.NCHAR, 2);
+        precisionByType.put(Types.NVARCHAR, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.LONGNVARCHAR, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.NCLOB, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.SQLXML, MAX_BLOCK_SIZE);
+        precisionByType.put(Types.REF_CURSOR, 0); // ??
+        precisionByType.put(Types.TIME_WITH_TIMEZONE, MAX_DATE_SIZE);
+        precisionByType.put(Types.TIMESTAMP_WITH_TIMEZONE, MAX_DATE_SIZE);
+    }
+
+
     private final String schema;
     private final String table;
     private final List<DataColumn> columns;
@@ -106,7 +155,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
 
     @Override
     public boolean isSearchable(int column) {
-        return false; //TODO: if indexed
+        return true; // All fields in Aerospike are searchable either using secondary index or predicate
     }
 
     @Override
@@ -126,7 +175,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
 
     @Override
     public int getColumnDisplaySize(int column) {
-        return 0;
+        return 32; // just to return something that > 0. It is difficult to estimate real display size
     }
 
     @Override
@@ -148,8 +197,8 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
     }
 
     @Override
-    public int getPrecision(int column) {
-        return 0;
+    public int getPrecision(int column) throws SQLException {
+        return precisionByType.getOrDefault(getColumnType(column), 0);
     }
 
     @Override

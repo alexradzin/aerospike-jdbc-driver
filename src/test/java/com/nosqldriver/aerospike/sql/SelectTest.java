@@ -46,6 +46,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQueryPreparedSt
 import static com.nosqldriver.aerospike.sql.TestDataUtils.toListOfMaps;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.lang.String.format;
+import static java.sql.ResultSetMetaData.columnNullable;
 import static java.sql.Types.BIGINT;
 import static java.sql.Types.DOUBLE;
 import static java.sql.Types.INTEGER;
@@ -99,6 +100,34 @@ class SelectTest {
     void selectAll(String sql) throws SQLException {
         selectAll(sql, executeQuery);
     }
+
+    @Test
+    void checkMetadata() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery("select first_name, year_of_birth from people limit 1");
+        assertTrue(rs.next());
+        ResultSetMetaData md = rs.getMetaData();
+        int n = md.getColumnCount();
+        assertEquals(2, n);
+        for (int i = 1; i <= n; i++) {
+            assertFalse(md.isAutoIncrement(i));
+            assertTrue(md.isCaseSensitive(i));
+            assertTrue(md.isSearchable(i));
+            assertTrue(md.isSearchable(i));
+            assertFalse(md.isCurrency(i));
+            assertEquals(columnNullable, md.isNullable(i));
+            assertFalse(md.isSigned(i));
+            assertFalse(md.isSigned(i));
+            assertTrue(md.getColumnDisplaySize(i) > 0);
+            assertFalse(md.isReadOnly(i));
+            assertTrue(md.isWritable(i));
+            assertTrue(md.isDefinitelyWritable(i));
+        }
+
+        assertEquals(String.class.getName(), md.getColumnClassName(1));
+        assertEquals(Long.class.getName(), md.getColumnClassName(2));
+    }
+
+
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {SELECT_ALL, "select * from people as p"})
