@@ -262,6 +262,23 @@ class SelectTest {
     }
 
 
+    @VisibleForPackage // visible for tests
+    @SuppressWarnings("unused") // referenced from annotation VariableSource
+    private static Stream<Arguments> like = Stream.of(
+            Arguments.of("select * from people where first_name like 'John'", new String[] {"John"}),
+            Arguments.of("select * from people where id like '1'", new String[] {"John"}),
+            Arguments.of("select * from people where first_name like '%John'", new String[] {"John"}),
+            Arguments.of("select * from people where first_name like 'John%'", new String[] {"John"}),
+            Arguments.of("select * from people where first_name like 'Ri%'", new String[] {"Ringo"}),
+            Arguments.of("select * from people where first_name like '%aul%'", new String[] {"Paul"}),
+            Arguments.of("select * from people where last_name like '%ris%'", new String[] {"George"})
+    );
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @VariableSource("like")
+    void selectWhereFieldLikeValue(String query, String[] expected) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        assertEquals(new HashSet<>(Arrays.asList(expected)), toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
+    }
 
 
 

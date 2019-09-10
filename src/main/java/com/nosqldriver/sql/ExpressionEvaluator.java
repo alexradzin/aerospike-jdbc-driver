@@ -9,6 +9,7 @@ import javax.script.ScriptException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -16,17 +17,23 @@ import java.util.function.Predicate;
 public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T, Object> {
     private final String expr;
     private final ScriptEngine engine;
+    private final String fixedExpr;
 
     public ExpressionEvaluator(String expr) {
         this.expr = expr;
         engine = new JavascriptEngineFactory().getEngine();
+        // TODO: this replacement is pretty naive. It might corrupt strings that contain equal sign and words "and" and "or"
+        fixedExpr = expr.replaceAll("(?<![<>])=", "==").replaceAll("(?i) AND ", " && ").replaceAll("(?i) OR ", " || ").replace("<>", "!=")
+                .replaceAll("(?i) like\\s+'%(.*?)%'", ".match(/.*$1.*/)!=null")
+                .replaceAll("(?i) like\\s+'%(.*?)'", ".match(/.*$1/)!=null")
+                .replaceAll("(?i) like\\s+'(.*?)%'", ".match(/$1.*/)!=null")
+                .replaceAll("(?i)like ", "==");
     }
 
 
     @Override
     public boolean test(T record) {
-        // TODO: this replacement is pretty naive. It might corrupt strings that contain equal sign and words "and" and "or"
-        return (Boolean)eval(record, expr.replaceAll("(?<![<>])=", "==").replaceAll("(?i) AND ", " && ").replaceAll("(?i) OR ", " || ").replace("<>", "!="));
+        return Optional.ofNullable((Boolean)eval(record, fixedExpr)).orElse(false);
     }
 
     @Override
@@ -45,7 +52,7 @@ public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T
                 String key = e.getKey();
                 String trimmedKey = key.replace(" ", "");
                 String varName = key;
-                if (!trimmedKey.matches("[a-zA-Z0-9_]+") && trimmedExpr.contains(trimmedKey)) { //TODO use better pattern instead of contains to be sure that subset of expressin is not replaced by mistake
+                if (!trimmedKey.matches("[a-zA-Z0-9_]+") && trimmedExpr.contains(trimmedKey)) { //TODO use better pattern instead of contains to be sure that subset of expression is not replaced by mistake
                     String newVarName = "var" + replacementCount;
                     trimmedExpr = trimmedExpr.replace(varName, newVarName);
                     varName = newVarName;
