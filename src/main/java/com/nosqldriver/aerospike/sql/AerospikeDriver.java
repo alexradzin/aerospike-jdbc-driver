@@ -64,7 +64,7 @@ public class AerospikeDriver implements Driver {
     }
 
     @Override
-    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+    public Logger getParentLogger() {
         return Logger.getLogger(getClass().getName());
     }
 }
