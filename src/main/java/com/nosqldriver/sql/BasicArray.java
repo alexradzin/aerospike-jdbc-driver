@@ -5,6 +5,7 @@ import javax.sql.rowset.serial.SerialException;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -23,12 +24,12 @@ public class BasicArray extends SerialArray {
 
     public BasicArray(Array array, Map<String, Class<?>> map) throws SQLException {
         super(array, map);
-        columns = asList(DATA.create(schema, null, "NUM", "NUM"), DATA.create(schema, null, "VALUE", "VALUE"));
+        columns = columns(array.getBaseType());
     }
 
     public BasicArray(Array array) throws SQLException {
         super(array);
-        columns = asList(DATA.create(schema, null, "NUM", "NUM"), DATA.create(schema, null, "VALUE", "VALUE"));
+        columns = columns(array.getBaseType());
     }
 
     public BasicArray(String schema, String baseTypeName, Object[] elements) throws SQLException {
@@ -37,62 +38,67 @@ public class BasicArray extends SerialArray {
                     .orElseThrow(() -> new IllegalArgumentException(format("Unsupported array type %s", baseTypeName)));
 
             @Override
-            public String getBaseTypeName() throws SQLException {
+            public String getBaseTypeName() {
                 return baseTypeName;
             }
 
             @Override
-            public int getBaseType() throws SQLException {
+            public int getBaseType() {
                 return baseType;
             }
 
             @Override
-            public Object getArray() throws SQLException {
+            public Object getArray() {
                 return elements;
             }
 
             @Override
-            public Object getArray(Map<String, Class<?>> map) throws SQLException {
+            public Object getArray(Map<String, Class<?>> map) {
                 return elements;
             }
 
             @Override
-            public Object getArray(long index, int count) throws SQLException {
+            public Object getArray(long index, int count) {
                 return elements;
             }
 
             @Override
-            public Object getArray(long index, int count, Map<String, Class<?>> map) throws SQLException {
+            public Object getArray(long index, int count, Map<String, Class<?>> map) {
                 return elements;
             }
 
             @Override
-            public ResultSet getResultSet() throws SQLException {
+            public ResultSet getResultSet() {
                 throw new IllegalStateException();
             }
 
             @Override
-            public ResultSet getResultSet(Map<String, Class<?>> map) throws SQLException {
+            public ResultSet getResultSet(Map<String, Class<?>> map) {
                 throw new IllegalStateException();
             }
 
             @Override
-            public ResultSet getResultSet(long index, int count) throws SQLException {
+            public ResultSet getResultSet(long index, int count) {
                 throw new IllegalStateException();
             }
 
             @Override
-            public ResultSet getResultSet(long index, int count, Map<String, Class<?>> map) throws SQLException {
+            public ResultSet getResultSet(long index, int count, Map<String, Class<?>> map) {
                 throw new IllegalStateException();
             }
 
             @Override
-            public void free() throws SQLException {
+            public void free() {
                 throw new IllegalStateException();
             }
         });
         this.schema = schema;
-        columns = asList(DATA.create(schema, null, "NUM", "NUM"), DATA.create(schema, null, "VALUE", "VALUE"));
+        //columns = asList(DATA.create(schema, null, "INDEX", "INDEX").withType(Types.INTEGER), DATA.create(schema, null, "VALUE", "VALUE").withType(getBaseType()));
+        columns = columns(getBaseType());
+    }
+
+    private List<DataColumn> columns(int baseType) {
+        return asList(DATA.create(schema, null, "INDEX", "INDEX").withType(Types.INTEGER), DATA.create(schema, null, "VALUE", "VALUE").withType(baseType));
     }
 
     @Override
@@ -102,18 +108,21 @@ public class BasicArray extends SerialArray {
 
     @Override
     public ResultSet getResultSet(Map<String, Class<?>> map) throws SerialException {
-        return getResultSet(1, Integer.MAX_VALUE, map);
+        return getResultSet(0, Integer.MAX_VALUE, map);
     }
 
     @Override
     public ResultSet getResultSet() throws SerialException {
-        return getResultSet(1, Integer.MAX_VALUE, Collections.emptyMap());
+        return getResultSet(0, Integer.MAX_VALUE, Collections.emptyMap());
     }
 
     @Override
     public ResultSet getResultSet(long index, int count, Map<String, Class<?>> map) throws SerialException {
-        AtomicInteger counter = new AtomicInteger(0);
-        Iterable<List<?>> data = Arrays.stream(((Object[]) getArray())).map(e -> asList(counter.incrementAndGet(), e)).collect(Collectors.toList());
+        AtomicInteger counter = new AtomicInteger((int)index);
+        Iterable<List<?>> data = Arrays.stream(((Object[]) getArray()))
+                .skip(index)
+                .map(e -> asList(counter.incrementAndGet(), e))
+                .collect(Collectors.toList());
         return new ListRecordSet(schema, null, columns, data);
     }
 }
