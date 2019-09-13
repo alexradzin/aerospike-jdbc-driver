@@ -80,17 +80,17 @@ class TypesTest {
     @Test
     void epochDefaultDateFormat() throws SQLException, ParseException {
         String date = "1969-07-21 02:56:00.000";
-        epoch(date, "yyyy-MM-dd HH:mm:ss", String.format("select epoch('%s')", date));
+        assertEpoch(date, "yyyy-MM-dd HH:mm:ss", format("select epoch('%s')", date));
     }
 
     @Test
     void epochDateFormatWithTimeZone() throws SQLException, ParseException {
         String date = "1969-07-21 02:56:00 UTC";
         String format = "yyyy-MM-dd HH:mm:ss z";
-        epoch(date, format, format("select epoch('%s', '%s')", date, format));
+        assertEpoch(date, format, format("select epoch('%s', '%s')", date, format));
     }
 
-    private void epoch(String date, String format, String query) throws SQLException, ParseException {
+    private void assertEpoch(String date, String format, String query) throws SQLException, ParseException {
         long expected = new SimpleDateFormat(format).parse(date).getTime();
         ResultSet rs = testConn.createStatement().executeQuery(query);
         assertTrue(rs.next());

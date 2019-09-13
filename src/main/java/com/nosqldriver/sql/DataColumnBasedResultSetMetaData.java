@@ -14,6 +14,8 @@ import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
+import static java.util.Collections.emptyList;
+import static java.util.Optional.ofNullable;
 
 public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, SimpleWrapper {
     private static final int MAX_BLOCK_SIZE = 128 * 1024;
@@ -68,7 +70,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
     private boolean discovered;
 
     public DataColumnBasedResultSetMetaData(String schema, String table) {
-        this(schema, table, Collections.emptyList());
+        this(schema, table, emptyList());
     }
 
     public DataColumnBasedResultSetMetaData(List<DataColumn> columns) {
@@ -180,7 +182,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
 
     @Override
     public String getColumnLabel(int column) throws SQLException {
-        return getVisibleColumn(column, c -> Optional.ofNullable(c.getLabel()).orElseGet(c::getName));
+        return getVisibleColumn(column, c -> ofNullable(c.getLabel()).orElseGet(c::getName));
     }
 
     @Override

@@ -8,27 +8,28 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ExpressionAwarePropertyGetterTest {
     @Test
     void noProperty() {
-        test(Collections.emptyMap(), "something", null);
+        assertExpression(Collections.emptyMap(), "something", null);
     }
 
     @Test
     void simpleProperty() {
-        test(Collections.singletonMap("something", "nothing"), "something", "nothing");
+        assertExpression(singletonMap("something", "nothing"), "something", "nothing");
     }
 
     @Test
     void validMathExpressionWithoutVariables() {
-        test(Collections.emptyMap(), "3 + 5", 8);
+        assertExpression(Collections.emptyMap(), "3 + 5", 8);
     }
 
     @Test
     void validMathExpressionWithVariableInMap() {
-        test(Collections.singletonMap("five", 5), "five - 2", 3.0);
+        assertExpression(singletonMap("five", 5), "five - 2", 3.0);
     }
 
     @Test
@@ -47,7 +48,7 @@ class ExpressionAwarePropertyGetterTest {
     }
 
 
-    private void test(Map<String, Object> props, String name, Object expectedResult) {
+    private void assertExpression(Map<String, Object> props, String name, Object expectedResult) {
         assertEquals(expectedResult, new ExpressionAwarePropertyGetter<Map<String, Object>>(Map::get, Map::keySet).apply(props, name));
     }
 

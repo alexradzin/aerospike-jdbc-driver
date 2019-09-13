@@ -10,9 +10,10 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Date;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
+import static java.util.Optional.ofNullable;
 
 public class ResultSetHashExtractor implements Function<ResultSet, byte[]> {
     private final Predicate<String> columnNameFilter;
@@ -57,9 +58,9 @@ public class ResultSetHashExtractor implements Function<ResultSet, byte[]> {
                 case Types.FLOAT: daos.writeFloat(rs.getFloat(i)); break;
                 case Types.DOUBLE: daos.writeDouble(rs.getDouble(i)); break;
                 case Types.VARCHAR: daos.writeChars(rs.getString(i)); break;
-                case Types.DATE: daos.writeLong(Optional.ofNullable(rs.getDate(i)).map(Date::getTime).orElse(0L)); break;
-                case Types.TIME: daos.writeLong(Optional.ofNullable(rs.getTime(i)).map(Date::getTime).orElse(0L)); break;
-                case Types.TIMESTAMP: daos.writeLong(Optional.ofNullable(rs.getTimestamp(i)).map(Date::getTime).orElse(0L)); break;
+                case Types.DATE: daos.writeLong(ofNullable(rs.getDate(i)).map(Date::getTime).orElse(0L)); break;
+                case Types.TIME: daos.writeLong(ofNullable(rs.getTime(i)).map(Date::getTime).orElse(0L)); break;
+                case Types.TIMESTAMP: daos.writeLong(ofNullable(rs.getTimestamp(i)).map(Date::getTime).orElse(0L)); break;
                 default: throw new IllegalArgumentException("Unsupported type " + type);
             }
         }

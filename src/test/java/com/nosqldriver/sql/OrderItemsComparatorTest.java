@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.OrderItem.Direction.ASC;
 import static com.nosqldriver.sql.OrderItem.Direction.DESC;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -160,17 +161,17 @@ class OrderItemsComparatorTest {
 
     @Test
     void mapsAscOrderByStringField() {
-        assertEquals(Arrays.asList("George", "John", "Paul", "Ringo"), maps(new OrderItem("firstName")));
+        assertEquals(asList("George", "John", "Paul", "Ringo"), maps(new OrderItem("firstName")));
     }
 
     @Test
     void mapsOrderByYearOfBirthAndKidsCount() {
-        assertEquals(Arrays.asList("John", "Ringo", "Paul", "George"), maps(new OrderItem("yearOfBirth"), new OrderItem("kidsCount")));
+        assertEquals(asList("John", "Ringo", "Paul", "George"), maps(new OrderItem("yearOfBirth"), new OrderItem("kidsCount")));
     }
 
     @Test
     void mapsOrderByYearOfBirthAscAndKidsCountDesc() {
-        assertEquals(Arrays.asList("Ringo", "John", "Paul", "George"), maps(new OrderItem("yearOfBirth"), new OrderItem("kidsCount", DESC)));
+        assertEquals(asList("Ringo", "John", "Paul", "George"), maps(new OrderItem("yearOfBirth"), new OrderItem("kidsCount", DESC)));
     }
 
 
@@ -183,6 +184,6 @@ class OrderItemsComparatorTest {
     }
 
     private List<String> maps(OrderItem ... orderItems) {
-        return peopleMap.stream().sorted(new OrderItemsComparator<>(Arrays.asList(orderItems), Map::get)).map(p -> (String)p.get("firstName")).collect(Collectors.toList());
+        return peopleMap.stream().sorted(new OrderItemsComparator<>(asList(orderItems), Map::get)).map(p -> (String)p.get("firstName")).collect(Collectors.toList());
     }
 }

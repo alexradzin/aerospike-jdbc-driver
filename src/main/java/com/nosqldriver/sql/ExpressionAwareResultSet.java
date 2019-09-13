@@ -19,11 +19,11 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.System.currentTimeMillis;
+import static java.util.Optional.ofNullable;
 
 @VisibleForPackage
 class ExpressionAwareResultSet extends ResultSetWrapper {
@@ -340,6 +340,6 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     }
 
     private String getEval(int index) {
-        return index <= columns.size() ? Optional.ofNullable(columns.get(index - 1)).map(DataColumn::getExpression).orElse(null) : null;
+        return index <= columns.size() ? ofNullable(columns.get(index - 1)).map(DataColumn::getExpression).orElse(null) : null;
     }
 }

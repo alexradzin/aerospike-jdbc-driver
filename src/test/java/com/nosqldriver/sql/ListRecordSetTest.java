@@ -19,8 +19,6 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
@@ -105,7 +103,7 @@ class ListRecordSetTest {
     @Test
     void discoverTypes() {
         long now = currentTimeMillis();
-        List<Object> data = Arrays.asList(
+        List<Object> data = asList(
                 (short)123, 12345, now, true, 3.14f, 3.14, "test", new byte[0],
                 new java.sql.Date(currentTimeMillis()), new java.sql.Time(currentTimeMillis()),  new java.sql.Timestamp(currentTimeMillis()),
                 new ArrayList<>());
@@ -133,15 +131,15 @@ class ListRecordSetTest {
 
     @Test
     void updateValueListRecordSet() {
-        updateValue(new ListRecordSet("schema", "table", Collections.emptyList(), Collections.emptyList()));
+        assertUpdateValue(new ListRecordSet("schema", "table", emptyList(), emptyList()));
     }
 
     @Test
     void updateValueResultSetWrapper() {
-        updateValue(new ResultSetWrapper(new ListRecordSet("schema", "table", Collections.emptyList(), Collections.emptyList()), Collections.emptyList(), true));
+        assertUpdateValue(new ResultSetWrapper(new ListRecordSet("schema", "table", emptyList(), emptyList()), emptyList(), true));
     }
 
-    private void updateValue(ResultSet rs) {
+    private void assertUpdateValue(ResultSet rs) {
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNull(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNull("field"));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBoolean(1, true));

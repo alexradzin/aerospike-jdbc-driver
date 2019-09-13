@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.function.Function;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
@@ -20,6 +19,7 @@ import static java.sql.Types.TIME;
 import static java.sql.Types.TIMESTAMP;
 import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -86,7 +86,7 @@ class ResultSetHashExtractorTest {
                         column("t", TIME),
                         column("ts", TIMESTAMP)
                 ),
-                Collections.singletonList(asList(true, 1, 1234356, 3.14, 2.71828, "hello", new java.sql.Date(now), new java.sql.Time(now), new java.sql.Timestamp(now)))
+                singletonList(asList(true, 1, 1234356, 3.14, 2.71828, "hello", new java.sql.Date(now), new java.sql.Time(now), new java.sql.Timestamp(now)))
         );
     }
 }

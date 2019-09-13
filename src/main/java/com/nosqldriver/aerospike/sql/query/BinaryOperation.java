@@ -24,6 +24,7 @@ import static com.aerospike.client.query.PredExp.stringValue;
 import static com.nosqldriver.aerospike.sql.query.QueryHolder.BIN_NAME_DOES_NOT_EXIST;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Optional.ofNullable;
 
 public class BinaryOperation {
     private String table;
@@ -190,7 +191,7 @@ public class BinaryOperation {
 
         public abstract QueryHolder update(QueryHolder queries, BinaryOperation operation);
         public static Optional<Operator> find(String op) {
-            return Optional.ofNullable(operators.get(op));
+            return ofNullable(operators.get(op));
         }
 
         public boolean doesRequireColumn() {

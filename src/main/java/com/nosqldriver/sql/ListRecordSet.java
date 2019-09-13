@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
+import static java.lang.String.format;
 
 public class ListRecordSet extends ValueTypedResultSet<List<?>> {
     private final Iterator<List<?>> it;
@@ -74,7 +75,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
                     continue;
                 }
                 if (type != rowType) {
-                    throw new IllegalArgumentException(String.format("Type of value [%d,%d] %s does not match already discovered type %s", rowIndex, i, rowType, type));
+                    throw new IllegalArgumentException(format("Type of value [%d,%d] %s does not match already discovered type %s", rowIndex, i, rowType, type));
                 }
             }
             rowIndex++;

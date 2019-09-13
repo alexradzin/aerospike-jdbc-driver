@@ -4,7 +4,6 @@ import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.AerospikeException;
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
@@ -12,21 +11,22 @@ import java.sql.SQLException;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AerospikeSqlClientTest {
     @Test
     void successfulInit() {
-        new AerospikeSqlClient(() -> TestDataUtils.client);
+        assertTrue(new AerospikeSqlClient(() -> TestDataUtils.client).isConnected());
     }
 
     @Test
     void unsuccessfulInitWrongHost() {
-        Assertions.assertThrows(SQLException.class, () -> new AerospikeSqlClient(() -> new AerospikeClient("wronghost", 3000)));
+        assertThrows(SQLException.class, () -> new AerospikeSqlClient(() -> new AerospikeClient("wronghost", 3000)));
     }
 
     @Test
     void unsuccessfulInitWrongPort() {
-        Assertions.assertThrows(SQLException.class, () -> new AerospikeSqlClient(() -> new AerospikeClient("localhost", 3456)));
+        assertThrows(SQLException.class, () -> new AerospikeSqlClient(() -> new AerospikeClient("localhost", 3456)));
     }
 
     @Test
@@ -61,12 +61,12 @@ class AerospikeSqlClientTest {
     void callOnClosedClient() {
         IAerospikeClient realClient = new AerospikeClient("localhost", 3000); // This test closes client, so it needs its own instance to avoid failures of other tests
         IAerospikeClient wrapperClient = new AerospikeSqlClient(() -> realClient);
-        callOnClosedClient(realClient, AerospikeException.class);
-        callOnClosedClient(wrapperClient, SQLException.class);
+        assertCallOnClosedClient(realClient, AerospikeException.class);
+        assertCallOnClosedClient(wrapperClient, SQLException.class);
     }
 
 
-    private <T extends Throwable> void callOnClosedClient(IAerospikeClient client, Class<T> exceptionType) {
+    private <T extends Throwable> void assertCallOnClosedClient(IAerospikeClient client, Class<T> exceptionType) {
         client.close();
         client.getNodeNames(); // No validation here because this method returns empty list on build machine and non empty list on my computer. I do not know why.
         Key notExistingKey = new Key("test", "people", "does not exist");

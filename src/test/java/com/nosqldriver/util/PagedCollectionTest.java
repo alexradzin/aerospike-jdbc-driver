@@ -3,14 +3,14 @@ package com.nosqldriver.util;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.stream.IntStream;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -35,7 +35,7 @@ class PagedCollectionTest {
 
     @Test
     void unsupportedOperations() {
-        Collection<String> collection =  new PagedCollection<>(Collections.singletonList("hello"), 1, true);
+        Collection<String> collection =  new PagedCollection<>(singletonList("hello"), 1, true);
         assertFalse(collection.isEmpty());
         assertTrue(collection.contains("hello"));
         assertThrows(UnsupportedOperationException.class, () -> collection.remove("hello"));
@@ -153,7 +153,7 @@ class PagedCollectionTest {
             if (i % pageSize == 0) {
                 j = i;
             }
-            assertEquals(Arrays.asList(data).subList(j, i + 1), Arrays.asList(collection.toArray()));
+            assertEquals(asList(data).subList(j, i + 1), asList(collection.toArray()));
         }
     }
 }

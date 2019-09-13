@@ -65,11 +65,14 @@ import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
 import static java.lang.Math.max;
 import static java.lang.String.format;
 import static java.lang.String.join;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 
 public class QueryHolder implements QueryContainer {
     public static final String BIN_NAME_DOES_NOT_EXIST = "NSDOESNOTEXIST";
+    private static final Collection<Class> intTypes = new HashSet<>(asList(Byte.class, Short.class, Integer.class, Long.class, byte.class, short.class, int.class, long.class));
     private String schema;
     private final Collection<String> indexes;
     private final AerospikePolicyProvider policyProvider;
@@ -200,7 +203,7 @@ public class QueryHolder implements QueryContainer {
                     if ("PK".equals(binName)) {
                         final Key key = createKey(parameter, this);
                         createPkQuery(key);
-                        indexesToRemove.addAll(Arrays.asList(i - 1, i, i +1 ));
+                        indexesToRemove.addAll(asList(i - 1, i, i +1 ));
                     }
                     PredExp binExp = createBinPredExp(binName, type);
                     predExps.set(i - 1, binExp);
@@ -239,7 +242,6 @@ public class QueryHolder implements QueryContainer {
     }
 
 
-    private static final Collection<Class> intTypes = new HashSet<>(Arrays.asList(Byte.class, Short.class, Integer.class, Long.class, byte.class, short.class, int.class, long.class));
     private PredExp createBinPredExp(String name, Class<?> type) {
         if(intTypes.contains(type)) {
             return PredExp.integerBin(name);
@@ -518,7 +520,7 @@ public class QueryHolder implements QueryContainer {
                     if (aggregatedFields == null) { // && !addition.isEmpty()) {
                         aggregatedFields = new HashSet<>();
                     }
-                    List<String> addition = ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(toList())).orElse(Collections.emptyList());
+                    List<String> addition = ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(toList())).orElse(emptyList());
                     aggregatedFields.addAll(addition);
                     columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
                 }

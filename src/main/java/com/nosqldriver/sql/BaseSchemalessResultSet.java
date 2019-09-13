@@ -298,7 +298,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
             return md;
         }
 
-        columns.stream().filter(c -> c.getType() == 0).filter(c -> data.containsKey(c.getName())).forEach(c ->  Optional.ofNullable(sqlTypes.getOrDefault(getClassOf(data.get(c.getName())), JAVA_OBJECT)).map(c::withType));
+        columns.stream().filter(c -> c.getType() == 0).filter(c -> data.containsKey(c.getName())).forEach(c ->  ofNullable(sqlTypes.getOrDefault(getClassOf(data.get(c.getName())), JAVA_OBJECT)).map(c::withType));
         return new DataColumnBasedResultSetMetaData(columns);
     }
 

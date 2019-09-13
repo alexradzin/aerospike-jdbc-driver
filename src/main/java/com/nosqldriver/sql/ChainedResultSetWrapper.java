@@ -2,9 +2,10 @@ package com.nosqldriver.sql;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
+
+import static java.util.Collections.emptyList;
 
 public class ChainedResultSetWrapper extends ResultSetWrapper {
     private final List<ResultSet> resultSets;
@@ -13,14 +14,14 @@ public class ChainedResultSetWrapper extends ResultSetWrapper {
     private boolean afterLast = false;
 
     public ChainedResultSetWrapper(List<ResultSet> resultSets, boolean indexByName) {
-        this(resultSets, Collections.emptyList(), indexByName);
+        this(resultSets, emptyList(), indexByName);
     }
 
     private ChainedResultSetWrapper(List<ResultSet> resultSets, List<DataColumn> columns, boolean indexByName) {
         super(null, columns, indexByName);
         this.resultSets = resultSets;
         lit = resultSets.listIterator();
-        rs = resultSets.isEmpty() ? new ListRecordSet(null, null, Collections.emptyList(), Collections.emptyList()) : lit.next();
+        rs = resultSets.isEmpty() ? new ListRecordSet(null, null, emptyList(), emptyList()) : lit.next();
     }
 
 
@@ -94,7 +95,7 @@ public class ChainedResultSetWrapper extends ResultSetWrapper {
     @Override
     public void beforeFirst() throws SQLException {
         lit = resultSets.listIterator();
-        rs = resultSets.isEmpty() ? new ListRecordSet(null, null, Collections.emptyList(), Collections.emptyList()) : lit.next();
+        rs = resultSets.isEmpty() ? new ListRecordSet(null, null, emptyList(), emptyList()) : lit.next();
     }
 
     @Override

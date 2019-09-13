@@ -1,18 +1,21 @@
 package com.nosqldriver.aerospike.sql;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AerospikeDriverTest {
     @Test
     void init() {
-        new AerospikeDriver(); // enough that it does not fail
+        assertTrue(new AerospikeDriver().getMajorVersion() > -1); // enough that it does not fail
     }
 
     @Test
@@ -27,12 +30,12 @@ class AerospikeDriverTest {
 
     @Test
     void successfulConnect() throws SQLException {
-        new AerospikeDriver().connect("jdbc:aerospike:localhost", new Properties());
+        assertNotNull(new AerospikeDriver().connect("jdbc:aerospike:localhost", new Properties()));
     }
 
     @Test
     void unsuccessfulConnect() {
-        Assertions.assertThrows(SQLException.class, () -> new AerospikeDriver().connect("jdbc:aerospike:otherhost", new Properties()));
+        assertThrows(SQLException.class, () -> new AerospikeDriver().connect("jdbc:aerospike:otherhost", new Properties()));
     }
 
     @Test

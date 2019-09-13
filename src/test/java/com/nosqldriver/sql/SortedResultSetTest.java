@@ -74,26 +74,26 @@ class SortedResultSetTest {
     @Test
     void severalColumnsOrderBySeveral() throws SQLException {
         List<List<?>> data = Arrays.stream(beatles).map(PojoHelper::fieldValues).collect(toList());
-        oneColumnSeveralOrderBySeveralRecords(peopleColumns, data, asList(new OrderItem("yearOfBirth"), new OrderItem("kidsCount")), "firstName", new String[] {"John", "Ringo", "Paul", "George"});
+        assertOneColumnSeveralOrderBySeveralRecords(peopleColumns, data, asList(new OrderItem("yearOfBirth"), new OrderItem("kidsCount")), "firstName", new String[] {"John", "Ringo", "Paul", "George"});
     }
 
     @Test
     void severalColumnsOrderBySeveralAscDesc() throws SQLException {
         List<List<?>> data = Arrays.stream(beatles).map(PojoHelper::fieldValues).collect(toList());
-        oneColumnSeveralOrderBySeveralRecords(peopleColumns, data, asList(new OrderItem("yearOfBirth"), new OrderItem("kidsCount", DESC)), "firstName", new String[] {"Ringo", "John", "Paul", "George"});
+        assertOneColumnSeveralOrderBySeveralRecords(peopleColumns, data, asList(new OrderItem("yearOfBirth"), new OrderItem("kidsCount", DESC)), "firstName", new String[] {"Ringo", "John", "Paul", "George"});
     }
 
     private ResultSet dataRs(List<DataColumn> columns, Iterable<List<?>> data) {
         return new ListRecordSet(NAMESPACE, TABLE, columns, data);
     }
 
-    void assertOneColumnOneOrderBySeveralRecords(List<DataColumn> columns, List<List<?>> data, OrderItem orderBy, String extractColumn, String[] expected) throws SQLException {
+    private void assertOneColumnOneOrderBySeveralRecords(List<DataColumn> columns, List<List<?>> data, OrderItem orderBy, String extractColumn, String[] expected) throws SQLException {
         assertEquals(
                 asList(expected),
                 TestDataUtils.toListOfMaps(new SortedResultSet(dataRs(columns, data), singletonList(orderBy))).stream().map(row -> row.get(extractColumn)).collect(toList()));
     }
 
-    void oneColumnSeveralOrderBySeveralRecords(List<DataColumn> columns, List<List<?>> data, List<OrderItem> orderBy, String extractColumn, String[] expected) throws SQLException {
+    private void assertOneColumnSeveralOrderBySeveralRecords(List<DataColumn> columns, List<List<?>> data, List<OrderItem> orderBy, String extractColumn, String[] expected) throws SQLException {
         assertEquals(
                 asList(expected),
                 TestDataUtils.toListOfMaps(new SortedResultSet(dataRs(columns, data), orderBy)).stream().map(row -> row.get(extractColumn)).collect(toList()));

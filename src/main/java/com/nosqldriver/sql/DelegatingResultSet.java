@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
+import static java.lang.String.format;
 
 public interface DelegatingResultSet extends ResultSet {
     @Override
@@ -194,7 +195,7 @@ public interface DelegatingResultSet extends ResultSet {
                 return i;
             }
         }
-        throw new SQLException(String.format("Column %s is not found", columnLabel));
+        throw new SQLException(format("Column %s is not found", columnLabel));
     }
 
     @Override

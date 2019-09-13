@@ -1,6 +1,7 @@
 package com.nosqldriver.aerospike.sql.query;
 
 import com.aerospike.client.query.PredExp;
+import com.nosqldriver.VisibleForPackage;
 
 import java.util.Calendar;
 
@@ -11,6 +12,7 @@ public class PredExpValuePlaceholder extends FakePredExp {
         this.index = index;
     }
 
+    @VisibleForPackage
     PredExp createPredExp(Object val) {
         if(val instanceof Byte || val instanceof Short || val instanceof Integer || val instanceof Long) {
             return PredExp.integerValue(((Number)val).longValue());

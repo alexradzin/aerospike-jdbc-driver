@@ -19,7 +19,6 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,11 +37,11 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SELECT_ALL;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.beatles;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.createIndex;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.dropIndexSafely;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQueryPreparedStatement;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.toListOfMaps;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.lang.String.format;
@@ -53,6 +52,7 @@ import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
+import static java.util.Collections.singleton;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -287,7 +287,7 @@ class SelectTest {
     @VariableSource("notEqual")
     void selectNoEqual(String query, String[] expected) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(query);
-        assertEquals(new HashSet<>(Arrays.asList(expected)), toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
+        assertEquals(new HashSet<>(asList(expected)), toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
     }
 
 
@@ -306,7 +306,7 @@ class SelectTest {
     @VariableSource("like")
     void selectWhereFieldLikeValue(String query, String[] expected) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(query);
-        assertEquals(new HashSet<>(Arrays.asList(expected)), toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
+        assertEquals(new HashSet<>(asList(expected)), toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
     }
 
 
@@ -1022,7 +1022,7 @@ class SelectTest {
         assertTrue(rs.next());
         years.add(assertCounts(rs));
         assertFalse(rs.next());
-        assertEquals(Collections.singleton(1940), years);
+        assertEquals(singleton(1940), years);
     }
 
 

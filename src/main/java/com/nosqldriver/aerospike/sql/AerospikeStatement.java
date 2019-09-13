@@ -30,6 +30,7 @@ import static java.sql.ResultSet.CONCUR_READ_ONLY;
 import static java.sql.ResultSet.FETCH_FORWARD;
 import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static java.util.Collections.emptyList;
+import static java.util.Optional.ofNullable;
 
 public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
     private final IAerospikeClient client;
@@ -66,7 +67,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
                 Function<IAerospikeClient, ResultSet> insert = aqf.createQueryPlan(sql).getQuery();
                 insert.apply(statement.client);
                 statement.set = aqf.getSet();
-                statement.setUpdateCount(Optional.ofNullable(AerospikeInsertQuery.updatedRecordsCount.get()).orElse(0));
+                statement.setUpdateCount(ofNullable(AerospikeInsertQuery.updatedRecordsCount.get()).orElse(0));
 
                 return statement.getUpdateCount();
             }

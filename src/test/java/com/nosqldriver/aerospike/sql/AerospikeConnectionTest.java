@@ -46,15 +46,20 @@ class AerospikeConnectionTest {
 
     @Test
     void createValidConnectionWithPort() throws SQLException {
-        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost:3000", new Properties());
-        conn.close();
+        assertConnectionIsClosed("jdbc:aerospike:localhost:3000", new Properties());
     }
 
 
     @Test
     void createValidConnectionWithNamespace() throws SQLException {
-        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost/test", new Properties());
+        assertConnectionIsClosed("jdbc:aerospike:localhost/test", new Properties());
+    }
+
+    private void assertConnectionIsClosed(String url, Properties props) throws SQLException {
+        Connection conn = new AerospikeConnection(url, props);
+        assertFalse(conn.isClosed());
         conn.close();
+        assertTrue(conn.isClosed());
     }
 
     @Test

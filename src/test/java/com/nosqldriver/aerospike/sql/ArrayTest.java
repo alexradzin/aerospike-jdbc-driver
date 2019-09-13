@@ -29,6 +29,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,7 +64,7 @@ class ArrayTest {
         expectedData.put("id", 1L);
         expectedData.put("first_name", "John");
         expectedData.put("last_name", "Lennon");
-        expectedData.put("kids", Arrays.asList("Sean", "Julian"));
+        expectedData.put("kids", Arrays.<String>asList("Sean", "Julian"));
         assertEquals(expectedData, record.bins);
 
 
@@ -79,12 +80,12 @@ class ArrayTest {
         assertEquals("Lennon", rs.getString(3));
         assertEquals("Lennon", rs.getString("last_name"));
 
-        List<String> expectedKids = Arrays.asList("Sean", "Julian");
+        List<String> expectedKids = asList("Sean", "Julian");
         assertEquals(expectedKids, rs.getObject(4));
         assertEquals(expectedKids, rs.getObject("kids"));
 
-        assertEquals(expectedKids, Arrays.asList((Object[])rs.getArray(4).getArray()));
-        assertEquals(expectedKids, Arrays.asList((Object[])rs.getArray("kids").getArray()));
+        assertEquals(expectedKids, asList((Object[])rs.getArray(4).getArray()));
+        assertEquals(expectedKids, asList((Object[])rs.getArray("kids").getArray()));
 
 
         ResultSet arrayRs = rs.getArray(4).getResultSet();

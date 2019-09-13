@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
+import static java.util.Optional.ofNullable;
 
 public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapper {
     private final ResultSet resultSet;
@@ -610,7 +611,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
             // joined tables. So, we have to perform null check and try to retrieve the data from other result sets
             // if it is null here.
             if (value != null) {
-                Optional<T> res = Optional.ofNullable(cast(value, type));
+                Optional<T> res = ofNullable(cast(value, type));
                 wasNull = !res.isPresent();
                 return res;
             }
@@ -618,7 +619,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
 
         for (ResultSet rs : resultSets) {
             if (columnTags(rs.getMetaData()).contains(alias)) {
-                Optional<T> res = Optional.ofNullable(cast(rs.getObject(alias), type));
+                Optional<T> res = ofNullable(cast(rs.getObject(alias), type));
                 wasNull = !res.isPresent();
                 return res;
             }

@@ -1,7 +1,6 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.util.IOUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -9,7 +8,9 @@ import java.io.OutputStream;
 import java.sql.Blob;
 import java.sql.SQLException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ByteArrayBlobTest {
     @Test
@@ -108,7 +109,7 @@ class ByteArrayBlobTest {
 
     @Test
     void truncateZero() throws SQLException {
-        Assertions.assertThrows(SQLException.class, () -> new ByteArrayBlob().truncate(0));
+        assertThrows(SQLException.class, () -> new ByteArrayBlob().truncate(0));
     }
 
     @Test

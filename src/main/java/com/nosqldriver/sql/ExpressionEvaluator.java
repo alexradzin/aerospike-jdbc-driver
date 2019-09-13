@@ -9,9 +9,10 @@ import javax.script.ScriptException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
+import static java.util.Optional.ofNullable;
 
 @VisibleForPackage
 public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T, Object> {
@@ -33,7 +34,7 @@ public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T
 
     @Override
     public boolean test(T record) {
-        return Optional.ofNullable((Boolean)eval(record, fixedExpr)).orElse(false);
+        return ofNullable((Boolean)eval(record, fixedExpr)).orElse(false);
     }
 
     @Override
