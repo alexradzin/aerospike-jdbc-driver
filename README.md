@@ -83,7 +83,6 @@ while (rs.next()) {
 *   create/drop index
 *   use `namespace_name` to change active namespace. Useful for interactive mode or scripts. 
 
-
 ### Statements that will be supported in future
 *   drop table
 *   describe
@@ -95,30 +94,30 @@ while (rs.next()) {
 
 ### Functions
 
-| Function                       | Description                                                              |
-| -------------------------------| ------------------------------------------------------------------------ |
-| len(s)                         | length of string                                                         |
-| ascii(s)                       | ASCII code of the first character of the given string                    |
-| char(code)                     | character by its ASCII code                                              |
-| charIndex(subStr, str, start)  | starting position of `subStr` into `str` starting from `start` index     |
-| left(str, n)                   | n-characters sustring of given string from the beginning                 |
-| lower(str, n)                  | converts all characters to loewer case                                   |
-| upper(str, n)                  | converts all characters to upper case                                    |
-| str(n)                         | converts given number to string                                          |
-| substring(str, start, length)  | `length` characters long substring of given string started from `start`  |
-| space(n)                       | generates string that consists of `n` spaces                             |
-| concat(...)                    | concatenate given strings                                                |
-| concat(separator, ...)         | concatenate given strings using separator                                |
-| reverse(str)                   | reverses given string                                                    |
-| now()                          | retrieves current epoch time in milliseconds                             |
-| year([date])                   | retrueves year (*)                                                       |
-| month([date])                  | retrueves month (*)                                                      | 
-| dayofmonth([date])             | retrueves day of month (*)                                               |
-| hour([date])                   | retrueves hour (*)                                                       |
-| minute([date])                 | retrueves minute (*)                                                     |
-| second([date])                 | retrueves second (*)                                                     |
-| millisecond([date])            | retrueves milliesecond (*)                                               |
-| date([date])                   | retrueves date object (*)                                                |
-| epoch(str, fmt)                | parses given string representation of date using given format to epoch   |
+| Function                         | Description                                                              |
+| -------------------------------- | ------------------------------------------------------------------------ |
+| `len(s)`                         | length of string                                                         |
+| `ascii(s)`                       | ASCII code of the first character of the given string                    |
+| `char(code)`                     | character by its ASCII code                                              |
+| `charIndex(subStr, str, start)`  | starting position of `subStr` into `str` starting from `start` index     |
+| `left(str, n)`                   | n-characters sustring of given string from the beginning                 |
+| `lower(str, n)`                  | converts all characters to loewer case                                   |
+| `upper(str, n)`                  | converts all characters to upper case                                    |
+| `str(n)`                         | converts given number to string                                          |
+| `substring(str, start, length)`  | `length` characters long substring of given string started from `start`  |
+| `space(n)`                       | generates string that consists of `n` spaces                             |
+| `concat(...)`                    | concatenate given strings                                                |
+| `concat(separator, ...)`         | concatenate given strings using separator                                |
+| `reverse(str)`                   | reverses given string                                                    |
+| `now()`                          | retrieves current epoch time in milliseconds                             |
+| `year([date])`                   | retrueves year (*)                                                       |
+| `month([date])`                  | retrueves month (*)                                                      | 
+| `dayofmonth([date])`             | retrueves day of month (*)                                               |
+| `hour([date])`                   | retrueves hour (*)                                                       |
+| `minute([date])`                 | retrueves minute (*)                                                     |
+| `second([date])`                 | retrueves second (*)                                                     |
+| `millisecond([date])`            | retrueves milliesecond (*)                                               |
+| `date([date])`                   | retrueves date object (*)                                                |
+| `epoch(str, fmt)`                | parses given string representation of date using given format to epoch   |
 
-(*) [date] is optional argument. If omitted current date is used. Otherwise can be either Date object or epoch or string representation of date parsed using one of the following formats: yyyy-MM-dd HH:mm:ss.SSS z, yyyy-MM-dd HH:mm:ss z, yyyy-MM-dd HH:mm:ss.SSS, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd HH:mm, yyyy-MM-dd
+(*) `[date]` is optional argument. If omitted current date is used. Otherwise can be either Date object or epoch or string representation of date parsed using one of the following formats: yyyy-MM-dd HH:mm:ss.SSS z, yyyy-MM-dd HH:mm:ss z, yyyy-MM-dd HH:mm:ss.SSS, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd HH:mm, yyyy-MM-dd
