@@ -9,7 +9,7 @@ import java.io.Writer;
 import java.sql.Clob;
 import java.sql.SQLException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class StringClobTest {
     private static final String HELLO = "hello";

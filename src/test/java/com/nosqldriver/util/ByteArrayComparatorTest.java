@@ -4,7 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ByteArrayComparatorTest {
     private final Comparator<byte[]> comparator = new ByteArrayComparator();
