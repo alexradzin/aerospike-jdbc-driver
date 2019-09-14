@@ -8,6 +8,7 @@ import com.aerospike.client.policy.WritePolicy;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ListRecordSet;
 
+import java.math.BigDecimal;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.Clob;
@@ -37,6 +38,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
     private final static Map<Predicate<Object>, Function<Object, Object>> valueTransformer = new LinkedHashMap<>();
     static {
+        valueTransformer.put(o -> o != null && BigDecimal.class.equals(o.getClass()), o -> ((BigDecimal)o).doubleValue());
         valueTransformer.put(o -> o instanceof Blob, blob -> {
             try {
                 return ((Blob)blob).getBytes(1, (int)((Blob)blob).length());

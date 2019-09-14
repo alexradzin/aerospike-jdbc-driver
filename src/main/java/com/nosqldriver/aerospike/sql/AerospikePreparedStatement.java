@@ -150,7 +150,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        setObject(parameterIndex, x);
+        setAsciiStream(parameterIndex, x, (long)length);
     }
 
     @Override
@@ -160,7 +160,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        setObject(parameterIndex, x);
+        setBlob(parameterIndex, x, length);
     }
 
     @Override
@@ -295,6 +295,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
             if (inputStream.read() !=-1) {
                 throw new SQLException(format("Source contains more bytes than required %d", length));
             }
+            setBytes(parameterIndex, bytes);
         } catch (EOFException e) {
             throw new SQLException(format("Source contains less bytes than required %d", length));
         } catch (IOException e) {
