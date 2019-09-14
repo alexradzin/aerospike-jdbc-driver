@@ -93,7 +93,6 @@ public class BasicArray extends SerialArray {
             }
         });
         this.schema = schema;
-        //columns = asList(DATA.create(schema, null, "INDEX", "INDEX").withType(Types.INTEGER), DATA.create(schema, null, "VALUE", "VALUE").withType(getBaseType()));
         columns = columns(getBaseType());
     }
 

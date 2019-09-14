@@ -33,6 +33,25 @@ class ByteArrayBlobTest {
     }
 
     @Test
+    void setBytesWrongPos() {
+        Blob blob = new ByteArrayBlob();
+        assertThrows(SQLException.class, () -> blob.setBytes(0, new byte[] {123}));
+        assertThrows(SQLException.class, () -> blob.setBytes(Integer.MAX_VALUE + 1L, new byte[] {123}));
+        assertThrows(SQLException.class, () -> blob.setBytes(0, new byte[] {123}, 0, 1));
+    }
+
+    @Test
+    void getBytesWrongPos() throws SQLException {
+        Blob blob = new ByteArrayBlob();
+        blob.setBytes(1, new byte[] {123});
+        assertArrayEquals(new byte[] {123}, blob.getBytes(1, 1)); // OK
+        assertThrows(SQLException.class, () -> blob.getBytes(0, 1));
+        assertThrows(SQLException.class, () -> blob.getBytes(1, -1));
+        assertThrows(SQLException.class, () -> blob.setBinaryStream(0));
+    }
+
+
+    @Test
     void setSeveralBytes() throws SQLException {
         Blob blob = new ByteArrayBlob();
         blob.setBytes(1, "hello".getBytes());
@@ -108,7 +127,7 @@ class ByteArrayBlobTest {
     }
 
     @Test
-    void truncateZero() throws SQLException {
+    void truncateZero() {
         assertThrows(SQLException.class, () -> new ByteArrayBlob().truncate(0));
     }
 

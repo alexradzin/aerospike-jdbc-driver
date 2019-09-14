@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 
 import static com.nosqldriver.sql.SqlLiterals.sqlTypeByName;
+import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -29,11 +30,22 @@ class BasicArrayTest {
     }
 
     @Test
+    void varcharArrayThatWrapsOtherArrayWithEmptyMap() throws SQLException {
+        assertVarcharArray(new BasicArray(new BasicArray("schema", "varchar", names), emptyMap()));
+    }
+
+    @Test
+    void varcharArrayThatWrapsOtherArrayWithEmptyMapAndRetrievesResultSetWithEmptyMap() throws SQLException {
+        assertVarcharArrayResultSetWithEmptyMap(new BasicArray(new BasicArray("schema", "varchar", names), emptyMap()));
+    }
+
+
+    @Test
     void emptyVarcharArray() throws SQLException {
         Array a = new BasicArray(new BasicArray("schema", "varchar", new String[]{}));
         assertEquals(Types.VARCHAR, a.getBaseType());
         assertThrows(ArrayIndexOutOfBoundsException.class, () -> a.getArray(1, 1));
-        assertFalse(getAndCheckResultSet(a).next());
+        assertFalse(assertResultSet(a.getResultSet(), a.getBaseType()).next());
     }
 
     @Test
@@ -60,8 +72,16 @@ class BasicArrayTest {
         Assertions.assertThrows(IllegalArgumentException.class, () -> assertEquals(0, ((Object[])new BasicArray("schema", "unknown", new Object[0]).getArray()).length));
     }
 
-
     private void assertVarcharArray(Array a) throws SQLException {
+        assertVarcharArray(a, a.getResultSet());
+    }
+
+    private void assertVarcharArrayResultSetWithEmptyMap(Array a) throws SQLException {
+        assertVarcharArray(a, a.getResultSet(emptyMap()));
+    }
+
+
+    private void assertVarcharArray(Array a, ResultSet rs) throws SQLException {
         assertArrayEquals(names, (Object[])a.getArray());
         assertEquals(Types.VARCHAR, a.getBaseType());
         assertArrayEquals(new String[] {"Paul", "George", "Ringo"}, (Object[])a.getArray(1, 3));
@@ -69,7 +89,8 @@ class BasicArrayTest {
         assertThrows(ArrayIndexOutOfBoundsException.class, () -> a.getArray(4, 1)); // left index out of bounds
         assertThrows(ArrayIndexOutOfBoundsException.class, () -> a.getArray(-1, 1)); // left index out of bounds
 
-        ResultSet rs = getAndCheckResultSet(a);
+        //ResultSet rs = assertResultSet(a.getResultSet(), a.getBaseType());
+        assertResultSet(a.getResultSet(), a.getBaseType());
         int i = 0;
         for (; rs.next(); i++) {
             assertEquals(i + 1, rs.getInt(1));
@@ -80,8 +101,7 @@ class BasicArrayTest {
 
 
 
-    private ResultSet getAndCheckResultSet(Array array) throws SQLException {
-        ResultSet rs = array.getResultSet();
+    private ResultSet assertResultSet(ResultSet rs, int baseType) throws SQLException {
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(2, md.getColumnCount());
         assertEquals("INDEX", md.getColumnName(1));
@@ -89,7 +109,7 @@ class BasicArrayTest {
         assertEquals(Types.INTEGER, md.getColumnType(1));
         assertEquals("VALUE", md.getColumnName(2));
         assertEquals("VALUE", md.getColumnLabel(2));
-        assertEquals(array.getBaseType(), md.getColumnType(2));
+        assertEquals(baseType, md.getColumnType(2));
         return rs;
     }
 }

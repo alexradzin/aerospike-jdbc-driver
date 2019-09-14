@@ -67,7 +67,10 @@ public class ByteArrayBlob implements Blob {
 
     @Override
     public int setBytes(long pos, byte[] bytes, int offset, int len) throws SQLException {
-        if (pos > Integer.MAX_VALUE || offset < 0) {
+        if (pos > Integer.MAX_VALUE || pos < 1) {
+            throw new SQLException(format("Position must be between 1 and %d but was %d", Integer.MAX_VALUE, pos));
+        }
+        if (offset < 0) {
             throw new SQLException(format("Offset cannot be negative but was %d", offset));
         }
         int blobOffset = (int)pos - 1;
@@ -81,6 +84,9 @@ public class ByteArrayBlob implements Blob {
 
     @Override
     public OutputStream setBinaryStream(long pos) throws SQLException {
+        if (pos > Integer.MAX_VALUE || pos < 1) {
+            throw new SQLException(format("Position must be between 1 and %d but was %d", Integer.MAX_VALUE, pos));
+        }
         return new ByteArrayOutputStream() {
             @Override
             public void close() throws IOException {
