@@ -12,6 +12,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.NClob;
@@ -19,9 +21,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,6 +36,10 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static java.lang.System.currentTimeMillis;
+import static java.sql.ResultSet.CLOSE_CURSORS_AT_COMMIT;
+import static java.sql.ResultSet.CONCUR_READ_ONLY;
+import static java.sql.ResultSet.FETCH_FORWARD;
+import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -139,15 +148,16 @@ class InsertTest {
     }
 
     @Test
-    void insertOneRowUsingPreparedStatementVariousTypes() throws SQLException {
+    void insertOneRowUsingPreparedStatementVariousTypes() throws SQLException, MalformedURLException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
         assertNull(client.get(null, key1));
         PreparedStatement ps = testConn.prepareStatement(
-                "insert into data (PK, byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "insert into data (PK, byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
         long now = currentTimeMillis();
         String helloWorld = "hello, world!";
+        String google = "http://www.google.com";
         ps.setInt(1, 1);
         ps.setByte(2, (byte)8);
         ps.setShort(3, (short)512);
@@ -176,6 +186,7 @@ class InsertTest {
         ps.setTime(15, new Time(now));
         ps.setTimestamp(16, new Timestamp(now));
         ps.setDate(17, new java.sql.Date(now));
+        ps.setURL(18, new URL(google));
 
 
         assertEquals(1, ps.executeUpdate());
@@ -198,9 +209,10 @@ class InsertTest {
         assertEquals(new Time(now), record1.getValue("t"));
         assertEquals(new Timestamp(now), record1.getValue("ts"));
         assertEquals(new java.sql.Date(now), record1.getValue("d"));
+        assertEquals(google, record1.getString("url"));
 
 
-        PreparedStatement query = testConn.prepareStatement("select byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d from data where PK=?");
+        PreparedStatement query = testConn.prepareStatement("select byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url from data where PK=?");
         query.setInt(1, 1);
 
         ResultSet rs = query.executeQuery();
@@ -233,6 +245,7 @@ class InsertTest {
         assertEquals(Types.TIME, md.getColumnType(14));
         assertEquals(Types.TIMESTAMP, md.getColumnType(15));
         assertEquals(Types.DATE, md.getColumnType(16));
+        assertEquals(Types.VARCHAR, md.getColumnType(17));
 
         assertTrue(rs.first());
 
@@ -283,6 +296,9 @@ class InsertTest {
 
         assertEquals(new java.sql.Date(now), rs.getDate(16));
         assertEquals(new java.sql.Date(now), rs.getDate("d"));
+
+        assertEquals(google, rs.getString(17));
+        assertEquals(google, rs.getString("url"));
 
         assertFalse(rs.next());
     }
@@ -416,14 +432,15 @@ class InsertTest {
     void insertCharacterStreams() throws SQLException, IOException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
         assertNull(client.get(null, key1));
-        PreparedStatement ps = testConn.prepareStatement("insert into data (PK, char_stream, char_stream_i, char_stream_l) values (?, ?, ?, ?)");
+        PreparedStatement ps = testConn.prepareStatement("insert into data (PK, char_stream, char_stream_i, char_stream_l, nchar_stream, nchar_stream_l) values (?, ?, ?, ?, ?, ?)");
 
         String text = "hello, character stream!";
-        byte[] bytes = text.getBytes();
         ps.setInt(1, 1);
         ps.setCharacterStream(2, new StringReader(text));
         ps.setCharacterStream(3, new StringReader(text), text.length());
         ps.setCharacterStream(4, new StringReader(text), (long)text.length());
+        ps.setNCharacterStream(5, new StringReader(text));
+        ps.setNCharacterStream(6, new StringReader(text), text.length());
 
         assertEquals(1, ps.executeUpdate());
 
@@ -432,8 +449,58 @@ class InsertTest {
         assertEquals(text, record1.getString("char_stream"));
         assertEquals(text, record1.getString("char_stream_i"));
         assertEquals(text, record1.getString("char_stream_l"));
+        assertEquals(text, record1.getString("nchar_stream"));
+        assertEquals(text, record1.getString("nchar_stream_l"));
     }
 
+
+    @Test
+    void unsupportedByPreparedStatement() throws SQLException {
+        PreparedStatement ps = testConn.prepareStatement("insert into data (PK, data) values (?, ?)");
+
+        //noinspection deprecation
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setUnicodeStream(1, new ByteArrayInputStream(new byte[0], 0, 0), 0));
+
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setRef(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, ps::addBatch);
+        assertThrows(SQLFeatureNotSupportedException.class, ps::getMetaData);
+        long now = currentTimeMillis();
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setDate(1, new java.sql.Date(now), Calendar.getInstance()));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setTime(1, new java.sql.Time(now), Calendar.getInstance()));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setTimestamp(1, new java.sql.Timestamp(now), Calendar.getInstance()));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setRowId(1, null));
+    }
+
+    @Test
+    void unsupportedByStatement() throws SQLException {
+        Statement statement = testConn.createStatement();
+        String query = "select 1";
+        assertThrows(SQLException.class, () -> statement.addBatch(query)); // spec does not allow SQLFeatureNotSupportedException here
+        assertThrows(SQLFeatureNotSupportedException.class, statement::clearBatch);
+        assertThrows(SQLFeatureNotSupportedException.class, statement::executeBatch);
+        assertThrows(SQLFeatureNotSupportedException.class, () -> statement.executeUpdate(query, 0));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> statement.executeUpdate(query, new int[0]));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> statement.executeUpdate(query, new String[0]));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> statement.execute(query, 0));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> statement.execute(query, new int[0]));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> statement.execute(query, new String[0]));
+
+        assertFalse(statement.isPoolable());
+        statement.setPoolable(false); // OK
+        assertThrows(SQLException.class, () -> statement.setPoolable(true)); // spec does not allow SQLFeatureNotSupportedException here
+        assertFalse(statement.isCloseOnCompletion());
+        assertThrows(SQLException.class, () -> statement.setMaxFieldSize(123)); // spec does not allow SQLFeatureNotSupportedException here
+
+        assertFalse(statement.getGeneratedKeys().next());
+
+        assertEquals(CLOSE_CURSORS_AT_COMMIT, statement.getResultSetHoldability());
+        assertThrows(SQLFeatureNotSupportedException.class, () -> statement.setCursorName("foo"));
+        assertEquals(TYPE_FORWARD_ONLY, statement.getResultSetType());
+        assertEquals(CONCUR_READ_ONLY, statement.getResultSetConcurrency());
+        assertEquals(1, statement.getFetchSize());
+        assertEquals(FETCH_FORWARD, statement.getFetchDirection());
+        assertFalse(statement.isClosed());
+    }
 
     private String getString(Clob clob) throws SQLException {
         return clob.getSubString(1, (int)clob.length());

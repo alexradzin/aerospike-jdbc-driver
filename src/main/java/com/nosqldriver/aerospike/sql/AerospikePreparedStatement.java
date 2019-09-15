@@ -154,8 +154,9 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
     }
 
     @Override
+    @Deprecated
     public void setUnicodeStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        setObject(parameterIndex, x);
+        throw new SQLFeatureNotSupportedException("setUnicodeStream() is deprecated");
     }
 
     @Override
