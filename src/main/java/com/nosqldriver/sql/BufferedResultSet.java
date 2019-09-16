@@ -4,12 +4,15 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import static java.lang.String.format;
 
 public class BufferedResultSet implements ResultSet, DelegatingResultSet, ResultSetAdaptor, SimpleWrapper {
     private final ResultSet rs;
@@ -165,12 +168,14 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public void setFetchSize(int rows) throws SQLException {
-
+        if (rows != buffer.size()) {
+            throw new SQLException(format("Fetch size cannot be changed at runtime. The current fetch size is %d", buffer.size()));
+        }
     }
 
     @Override
     public int getFetchSize() throws SQLException {
-        return 0;
+        return buffer.size();
     }
 
     @Override
@@ -195,12 +200,12 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public RowId getRowId(int columnIndex) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public RowId getRowId(String columnLabel) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
