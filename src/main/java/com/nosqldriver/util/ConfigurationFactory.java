@@ -26,6 +26,7 @@ public class ConfigurationFactory {
         typeTransformers.put(Float.class, Float::parseFloat);
         typeTransformers.put(double.class, Double::parseDouble);
         typeTransformers.put(Double.class, Double::parseDouble);
+        typeTransformers.put(String.class, s -> s);
     }
 
 

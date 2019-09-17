@@ -55,7 +55,8 @@ class ConnectionParametersParser {
 //            * <li>ClientHostname   -       The hostname of the computer the application
     @VisibleForPackage
     Properties clientInfo(String url, Properties info) {
-        Properties all = new Properties(info);
+        Properties all = new Properties();
+        all.putAll(info);
         int questionPos = url.indexOf('?');
         if (questionPos > 0 && questionPos < url.length() - 1) {
             Arrays.stream(url.substring(questionPos + 1).split("&")).forEach(p -> {

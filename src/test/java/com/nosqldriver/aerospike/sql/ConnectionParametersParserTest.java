@@ -1,14 +1,20 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.Host;
+import com.aerospike.client.policy.AuthMode;
+import com.aerospike.client.policy.ClientPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Properties;
 
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectionParametersParserTest {
@@ -84,6 +90,11 @@ class ConnectionParametersParserTest {
     }
 
     @Test
+    void wrongUrl() {
+        assertThrows(IllegalArgumentException.class, () -> new ConnectionParametersParser().hosts("jdbc:mysql:myhost:3210"));
+    }
+
+    @Test
     void parseNoIndexes() {
         Collection<String> indexes = new ConnectionParametersParser().indexesParser("");
         assertTrue(indexes.isEmpty());
@@ -105,4 +116,56 @@ class ConnectionParametersParserTest {
         assertEquals(new HashSet<>(asList("NUMERIC.test.people.year_of_birth.PEOPLE_YOB_INDEX", "STRING.test.people.first_name.PEOPLE_FIRST_NAME_INDEX")), indexes);
     }
 
- }
+    @Test
+    void clientPolicyNoParametersEmptyProperties() {
+        ClientPolicy policy = clientPolicy("jdbc:aerospike:myhost:3210", new Properties());
+        assertNull(policy.user);
+        assertEquals(1000, policy.timeout);
+        assertEquals(AuthMode.INTERNAL, policy.authMode);
+        assertTrue(policy.failIfNotConnected);
+    }
+
+    @Test
+    void clientPolicyWithParametersEmptyProperties() {
+        ClientPolicy policy = clientPolicy("jdbc:aerospike:myhost:3210?user=admin&timeout=2000&authMode=EXTERNAL&failIfNotConnected=false", new Properties());
+        assertEquals("admin", policy.user);
+        assertEquals(2000, policy.timeout);
+        assertEquals(AuthMode.EXTERNAL, policy.authMode);
+        assertFalse(policy.failIfNotConnected);
+    }
+
+    @Test
+    void clientPolicyWithoutParametersWithProperties() {
+        Properties props = new Properties();
+        props.setProperty("user", "admin");
+        props.setProperty("timeout", "2000");
+        props.setProperty("authMode", "EXTERNAL");
+        props.setProperty("failIfNotConnected", "false");
+        ClientPolicy policy = clientPolicy("jdbc:aerospike:myhost:3210", props);
+        assertEquals("admin", policy.user);
+        assertEquals(2000, policy.timeout);
+        assertEquals(AuthMode.EXTERNAL, policy.authMode);
+        assertFalse(policy.failIfNotConnected);
+    }
+
+    /**
+     * Parameters given in URL override those given in properties.
+     */
+    @Test
+    void clientPolicyWithDifferentParametersInUrlAndProperties() {
+        Properties props = new Properties();
+        props.setProperty("user", "root");
+        props.setProperty("timeout", "2121");
+        props.setProperty("authMode", "EXTERNAL");
+        props.setProperty("failIfNotConnected", "false");
+        ClientPolicy policy = clientPolicy("jdbc:aerospike:myhost:3210?user=admin&timeout=2345&authMode=EXTERNAL_INSECURE", props);
+        assertEquals("admin", policy.user);
+        assertEquals(2345, policy.timeout);
+        assertEquals(AuthMode.EXTERNAL_INSECURE, policy.authMode);
+        assertFalse(policy.failIfNotConnected);
+    }
+
+    private ClientPolicy clientPolicy(String url, Properties props) {
+        return new ConnectionParametersParser().policy(url, props);
+    }
+}
