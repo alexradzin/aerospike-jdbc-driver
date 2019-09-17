@@ -1,5 +1,7 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.SneakyThrower;
+
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.Reader;
@@ -46,6 +48,7 @@ import static java.lang.String.format;
 import static java.sql.Types.JAVA_OBJECT;
 import static java.util.Optional.ofNullable;
 
+// TODO: extend this class from DelegatingResultSet, move all type transformations to TypeTransformer and remove getX() method from here.
 public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSetAdaptor, SimpleWrapper {
     protected final String schema;
     protected final String table;
@@ -248,7 +251,14 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public InputStream getBinaryStream(String columnLabel) throws SQLException {
-        return getValue(columnLabel, v -> new ByteArrayInputStream((byte[])v));
+        return getValue(columnLabel, v -> {
+            try {
+                return v instanceof byte[] ? new ByteArrayInputStream((byte[])v) : ((Blob)v).getBinaryStream();
+            } catch (SQLException e) {
+                SneakyThrower.sneakyThrow(new SQLException(e));
+                return null;
+            }
+        });
     }
 
     @Override
@@ -331,7 +341,11 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Reader getCharacterStream(String columnLabel) throws SQLException {
-        return new StringReader(getString(columnLabel));
+        Object value = getValue(getRecord(), columnLabel);
+        if (value instanceof Clob) {
+            return ((Clob)value).getCharacterStream();
+        }
+        return new StringReader((String)value);
     }
 
     @Override
@@ -463,7 +477,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Clob getClob(int columnIndex) throws SQLException {
-        return new StringClob(getString(columnIndex));
+        return getNClob(columnIndex);
     }
 
     @Override
@@ -483,12 +497,20 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
-        return new ByteArrayBlob(getBytes(columnLabel));
+        Object value = getValue(getRecord(), columnLabel);
+        if (value instanceof Blob) {
+            return (Blob)value;
+        }
+        return new ByteArrayBlob((byte[])value);
     }
 
     @Override
     public Clob getClob(String columnLabel) throws SQLException {
-        return new StringClob(getString(columnLabel));
+        Object value = getObject(columnLabel);
+        if (value instanceof Clob) {
+            return (Clob)value;
+        }
+        return new StringClob((String)value);
     }
 
     @Override
@@ -496,6 +518,9 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
         Object obj = getObject(columnLabel);
         if (obj == null) {
             return null;
+        }
+        if (obj instanceof Array) {
+            return (Array)obj;
         }
         if (obj.getClass().isArray()) {
             return new BasicArray(schema, sqlTypeNames.get(sqlTypes.get(obj.getClass().getComponentType())), (Object[])obj);
@@ -587,12 +612,16 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public NClob getNClob(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getNClob(getName(columnIndex));
     }
 
     @Override
     public NClob getNClob(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        Object value = getObject(columnLabel);
+        if (value instanceof NClob) {
+            return (NClob)value;
+        }
+        return new StringClob((String)value);
     }
 
     @Override
@@ -617,12 +646,12 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Reader getNCharacterStream(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getCharacterStream(columnIndex);
     }
 
     @Override
     public Reader getNCharacterStream(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getCharacterStream(columnLabel);
     }
 
     @Override

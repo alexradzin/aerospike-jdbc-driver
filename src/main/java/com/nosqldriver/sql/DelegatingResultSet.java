@@ -240,7 +240,7 @@ public interface DelegatingResultSet extends ResultSet {
 
     @Override
     default Ref getRef(String columnLabel) throws SQLException {
-        return cast(getObject(columnLabel), Ref.class);
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -331,12 +331,12 @@ public interface DelegatingResultSet extends ResultSet {
 
     @Override
     default Reader getNCharacterStream(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getCharacterStream(columnIndex);
     }
 
     @Override
     default Reader getNCharacterStream(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getCharacterStream(columnLabel);
     }
 
     @Override
@@ -351,7 +351,7 @@ public interface DelegatingResultSet extends ResultSet {
 
     @Override
     default Ref getRef(int columnIndex) throws SQLException {
-        return cast(getObject(columnIndex), Ref.class);
+        throw new SQLFeatureNotSupportedException();
     }
 
 }

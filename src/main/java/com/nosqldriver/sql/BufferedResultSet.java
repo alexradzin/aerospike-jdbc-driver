@@ -77,7 +77,7 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
-        Object value =  current.get(columnLabel);
+        Object value = current == null ? null : current.get(columnLabel);
         wasNull = value == null;
         return value;
     }
@@ -195,7 +195,7 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
