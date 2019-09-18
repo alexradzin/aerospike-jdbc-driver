@@ -14,6 +14,10 @@ Simplify access to Aerospike DB.
 
 From other hand threre are a lot of tools that help to visualize data stored in database, create reports based on the data, perform various ETL operations etc. These tools traditionally support SQL. Database that has standards complient JDBC driver can be easilty connected to various tools. Majority of popular no-SQL databased have JDBC drivers. Aerospike did not have one. This was the reason to start this project. 
 
+## Presentation
+
+Slides for presentation can be found [here.](https://docs.google.com/presentation/d/1McxNantOIO51rEwuh-ns_PLupZkAGJjtsS9SDhkpboc/edit?usp=sharing)
+
 ## Key Features
 *   Use either a single all-in-one JAR or define dependency (TBD)
 *   Use standard SQL to insert, update, retrieve and delete data to/from Aerospike DB
