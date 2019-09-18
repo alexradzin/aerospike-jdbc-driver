@@ -1,7 +1,10 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.util.IOUtils;
-import org.junit.jupiter.api.Test;
+import com.nosqldriver.util.VariableSource;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -17,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static java.lang.System.currentTimeMillis;
 import static java.sql.Types.ARRAY;
@@ -43,7 +47,7 @@ class DelegatingResultSetTest {
     private static final String SCHEMA = "schema";
     private static final String TABLE = "table";
 
-    private final List<DataColumn> simpleColumns = Arrays.asList(
+    private static final List<DataColumn> simpleColumns = Arrays.asList(
             column("byte", TINYINT), column("short", SMALLINT), column("int", INTEGER), column("long", BIGINT),
             column("on", BOOLEAN), column("off", BOOLEAN),
             column("float", FLOAT), column("double", DOUBLE),
@@ -52,18 +56,18 @@ class DelegatingResultSetTest {
             column("url", VARCHAR)
     );
 
-    private final long now = currentTimeMillis();
-    private final Object[] simpleRow = new Object[] {(byte)64, (short)123, 123456, now, true, false, 3.14f, 3.1415926, "hello, world!", new java.sql.Date(now), new java.sql.Time(now), new java.sql.Timestamp(now), "http://www.google.com"};
-    private final List<List<?>> simpleData = singletonList(Arrays.asList(simpleRow));
+    private static final long now = currentTimeMillis();
+    private static final Object[] simpleRow = new Object[] {(byte)64, (short)123, 123456, now, true, false, 3.14f, 3.1415926, "hello, world!", new java.sql.Date(now), new java.sql.Time(now), new java.sql.Timestamp(now), "http://www.google.com"};
+    private static final List<List<?>> simpleData = singletonList(Arrays.asList(simpleRow));
 
 
-    private final List<DataColumn> compositeColumns = Arrays.asList(
+    private static final List<DataColumn> compositeColumns = Arrays.asList(
             column("bytes", BLOB), column("array", ARRAY), column("blob", BLOB), column("clob", CLOB), column("nclob", NCLOB)
     );
-    private final Array array;
-    private Blob blob = new ByteArrayBlob();
-    private Clob clob = new StringClob();
-    {
+    private static final Array array;
+    private static Blob blob = new ByteArrayBlob();
+    private static Clob clob = new StringClob();
+    static {
         try {
             array = new BasicArray(SCHEMA, "varchar", new String[] {"hello", "world"});
             blob.setBytes(1, "hello world".getBytes());
@@ -72,34 +76,37 @@ class DelegatingResultSetTest {
             throw new IllegalStateException(e);
         }
     }
-    private final Object[] compositeRow = new Object[] {"hello".getBytes(), array, blob, clob, clob};
-    private final List<List<?>> compositeData = singletonList(Arrays.asList(compositeRow));
+    private static final Object[] compositeRow = new Object[] {"hello".getBytes(), array, blob, clob, clob};
+    private static final List<List<?>> compositeData = singletonList(Arrays.asList(compositeRow));
+
+    @VisibleForPackage // visible for tests
+    @SuppressWarnings("unused") // referenced from annotation VariableSource
+    private static Stream<Arguments> resultSetsForCompositeTypes = Stream.of(
+            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), new ArrayList<>()), "Buffered(Filtered(index-by-name))"),
+            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, false), new ArrayList<>()), "Buffered(Filtered)"),
+            Arguments.of(new FilteredResultSet(new ListRecordSet("schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), "Filtered(index-by-name)"),
+            Arguments.of(new FilteredResultSet(new ListRecordSet("schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, false), "Filtered")
+    );
+
+    @VisibleForPackage // visible for tests
+    @SuppressWarnings("unused") // referenced from annotation VariableSource
+    private static Stream<Arguments> resultSetsForSimpleTypes = Stream.of(
+            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), new ArrayList<>()), "Buffered(Filtered(index-by-name))"),
+            Arguments.of(new FilteredResultSet(new ListRecordSet("schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), "Filtered(index-by-name)"),
+            Arguments.of(new FilteredResultSet(new ListRecordSet("schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, false), "Filtered")
+    );
+
+    @VisibleForPackage // visible for tests
+    @SuppressWarnings("unused") // referenced from annotation VariableSource
+    private static Stream<Arguments> resultSetsForUnsupported = Stream.of(
+            Arguments.of(new FilteredResultSet(new ListRecordSet("schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), "Filtered(index-by-name)"),
+            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), new ArrayList<>()), "Buffered(Filtered(index-by-name))")
+    );
 
 
-    @Test
-    void getAllSimpleTypesFilteredResultSet() throws SQLException, MalformedURLException {
-        getAllSimpleTypes(new FilteredResultSet(new ListRecordSet("schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true));
-    }
-
-    @Test
-    void getAllSimpleTypesBufferedResultSet() throws SQLException, MalformedURLException {
-        getAllSimpleTypes(new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), new ArrayList<>()));
-    }
-
-
-    @Test
-    void getAllCompositeTypesFilteredResultSet() throws SQLException, IOException {
-        getAllCompositeTypes(new FilteredResultSet(new ListRecordSet("schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true));
-    }
-
-    @Test
-    void getAllCompositeTypesBufferedResultSet() throws SQLException, IOException {
-        getAllCompositeTypes(new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), new ArrayList<>()));
-    }
-
-
-
-    void getAllSimpleTypes(ResultSet rs) throws SQLException, MalformedURLException {
+    @ParameterizedTest(name = "{index} {1}")
+    @VariableSource("resultSetsForSimpleTypes")
+    void getAllSimpleTypes(ResultSet rs, String name) throws SQLException, MalformedURLException {
         assertTrue(rs.next());
 
         assertEquals(simpleRow[0], rs.getByte(1));
@@ -143,10 +150,10 @@ class DelegatingResultSetTest {
         assertEquals((double) simpleRow[7], rs.getBigDecimal(8).doubleValue());
         assertEquals((double) simpleRow[7], rs.getBigDecimal("double").doubleValue());
 
-
-
         assertEquals(simpleRow[8], rs.getString(9));
         assertEquals(simpleRow[8], rs.getString("text"));
+        assertEquals(simpleRow[8], rs.getNString(9));
+        assertEquals(simpleRow[8], rs.getNString("text"));
 
         assertEquals(simpleRow[9], rs.getDate(10));
         assertEquals(simpleRow[9], rs.getDate("d"));
@@ -160,6 +167,7 @@ class DelegatingResultSetTest {
         URL expUrl = new URL((String) simpleRow[12]);
         assertEquals(expUrl, rs.getURL(13));
         assertEquals(expUrl, rs.getURL("url"));
+        assertEquals(expUrl, rs.getObject("url", URL.class));
 
         assertFalse(rs.next());
     }
@@ -167,7 +175,9 @@ class DelegatingResultSetTest {
 
 
 
-    void getAllCompositeTypes(ResultSet rs) throws SQLException, IOException {
+    @ParameterizedTest(name = "{1}")
+    @VariableSource("resultSetsForCompositeTypes")
+    void getAllCompositeTypes(ResultSet rs, String name) throws SQLException, IOException {
         assertTrue(rs.next());
 
 
@@ -197,6 +207,8 @@ class DelegatingResultSetTest {
         assertEquals(expClob, IOUtils.toString(rs.getCharacterStream("clob")));
         assertEquals(expClob, IOUtils.toString(rs.getNCharacterStream(4)));
         assertEquals(expClob, IOUtils.toString(rs.getNCharacterStream("clob")));
+        assertEquals(expClob, new String(IOUtils.toByteArray(rs.getAsciiStream(4))));
+        assertEquals(expClob, new String(IOUtils.toByteArray(rs.getAsciiStream("clob"))));
 
         String expNClob = IOUtils.toString(((Clob)compositeRow[4]).getCharacterStream());
         assertEquals(expNClob, IOUtils.toString(rs.getClob(5).getCharacterStream()));
@@ -207,21 +219,33 @@ class DelegatingResultSetTest {
         assertEquals(expNClob, IOUtils.toString(rs.getCharacterStream("nclob")));
         assertEquals(expNClob, IOUtils.toString(rs.getNCharacterStream(5)));
         assertEquals(expNClob, IOUtils.toString(rs.getNCharacterStream("nclob")));
+        assertEquals(expNClob, new String(IOUtils.toByteArray(rs.getAsciiStream(5))));
+        assertEquals(expNClob, new String(IOUtils.toByteArray(rs.getAsciiStream("nclob"))));
 
         assertFalse(rs.next());
     }
 
-    @Test
-    void unsupported() {
-        ResultSet rs = new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), new ArrayList<>());
+
+    @ParameterizedTest(name = "{1}")
+    @VariableSource("resultSetsForUnsupported")
+    void unsupported(ResultSet rs, String name) {
+        //ResultSet rs = new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), new ArrayList<>());
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getObject(1, Collections.emptyMap()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getObject("any", Collections.emptyMap()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRef(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRef("any"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getSQLXML(1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getSQLXML("any"));
+
+        // Deprecated in ResultSet interface
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getBigDecimal(1, 1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getBigDecimal("any", 1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getUnicodeStream(1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getUnicodeStream("any"));
     }
 
 
-    private DataColumn column(String name, int type) {
+    private static DataColumn column(String name, int type) {
         return DataColumn.DataColumnRole.DATA.create(SCHEMA, TABLE, name, name).withType(type);
     }
 }

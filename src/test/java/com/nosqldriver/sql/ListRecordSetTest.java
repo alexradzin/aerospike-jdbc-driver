@@ -139,6 +139,11 @@ class ListRecordSetTest {
         assertUpdateValue(new ResultSetWrapper(new ListRecordSet("schema", "table", emptyList(), emptyList()), emptyList(), true));
     }
 
+    @Test
+    void updateValueBufferedResultSet() {
+        assertUpdateValue(new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", emptyList(), emptyList()), emptyList(), r -> true, true), new ArrayList<>()));
+    }
+
     private void assertUpdateValue(ResultSet rs) {
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNull(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNull("field"));

@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Statement;
@@ -23,6 +24,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
@@ -63,6 +65,7 @@ public class ResultSetWrapper implements ResultSet {
 
     @Override
     public String getString(int columnIndex) throws SQLException {
+        //getValue(columnIndex, label -> rs.getString(label), index -> rs.getString(index))
         if (indexByName) {
             String label = getLabel(columnIndex);
             if (label != null) {
@@ -150,14 +153,9 @@ public class ResultSetWrapper implements ResultSet {
     }
 
     @Override
+    @Deprecated
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        if (indexByName) {
-            String label = getLabel(columnIndex);
-            if (label != null) {
-                return rs.getBigDecimal(label);
-            }
-        }
-        return rs.getBigDecimal(columnIndex);
+        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getBigDecimal(int columnIndex) instead.");
     }
 
     @Override
@@ -218,13 +216,7 @@ public class ResultSetWrapper implements ResultSet {
     @Override
     @Deprecated
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
-        if (indexByName) {
-            String label = getLabel(columnIndex);
-            if (label != null) {
-                return rs.getUnicodeStream(label);
-            }
-        }
-        return rs.getUnicodeStream(columnIndex);
+        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getCharacterStream(int columnIndex) instead.");
     }
 
     @Override
@@ -279,8 +271,9 @@ public class ResultSetWrapper implements ResultSet {
     }
 
     @Override
+    @Deprecated
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        return rs.getBigDecimal(getName(columnLabel));
+        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getBigDecimal(String columnLabel) instead.");
     }
 
     @Override
@@ -311,7 +304,7 @@ public class ResultSetWrapper implements ResultSet {
     @Override
     @Deprecated
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {
-        return rs.getUnicodeStream(getName(columnLabel));
+        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getCharacterStream(String columnLabel) instead.");
     }
 
     @Override
@@ -1188,4 +1181,16 @@ public class ResultSetWrapper implements ResultSet {
     private String getLabel(int index) throws SQLException {
         return getMetaData().getColumnLabel(index);
     }
+
+
+    private <T> T getValue(int columnIndex, Function<String, T> getterByLabel, Function<Integer, T> getterByIndex) throws SQLException {
+        if (indexByName) {
+            String label = getLabel(columnIndex);
+            if (label != null) {
+                return getterByLabel.apply(label);
+            }
+        }
+        return getterByIndex.apply(columnIndex);
+    }
+
 }

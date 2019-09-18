@@ -66,8 +66,9 @@ public interface DelegatingResultSet extends ResultSet {
     }
 
     @Override
+    @Deprecated
     default BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        return BigDecimal.valueOf(cast(getObject(columnIndex), long.class), scale);
+        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getBigDecimal(int columnIndex) instead.");
     }
 
     @Override
@@ -96,8 +97,9 @@ public interface DelegatingResultSet extends ResultSet {
     }
 
     @Override
+    @Deprecated
     default InputStream getUnicodeStream(int columnIndex) throws SQLException {
-        return cast(getObject(columnIndex), InputStream.class);
+        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getCharacterStream(int columnIndex) instead.");
     }
 
     @Override
@@ -146,8 +148,9 @@ public interface DelegatingResultSet extends ResultSet {
     }
 
     @Override
+    @Deprecated
     default BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        return BigDecimal.valueOf(cast(getObject(columnLabel), long.class), scale);
+        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getBigDecimal(String columnLabel) instead.");
     }
 
     @Override
@@ -176,8 +179,9 @@ public interface DelegatingResultSet extends ResultSet {
     }
 
     @Override
+    @Deprecated
     default InputStream getUnicodeStream(String columnLabel) throws SQLException {
-        return cast(getObject(columnLabel), InputStream.class);
+        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getCharacterStream(String columnLabel) instead.");
     }
 
     @Override
@@ -321,12 +325,12 @@ public interface DelegatingResultSet extends ResultSet {
 
     @Override
     default String getNString(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getString(columnIndex);
     }
 
     @Override
     default String getNString(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getString(columnLabel);
     }
 
     @Override

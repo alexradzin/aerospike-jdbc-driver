@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import static java.lang.String.format;
+
 public class TypeTransformer {
     private static final Map<Class<?>, Function<Object, Object>> typeTransformers = new HashMap<>();
     static {
@@ -47,7 +49,20 @@ public class TypeTransformer {
         });
         typeTransformers.put(InputStream.class, o -> {
             try {
-                return o instanceof byte[] ? new ByteArrayInputStream((byte[])o) : ((Blob)o).getBinaryStream();
+                if (o instanceof byte[]) {
+                    return new ByteArrayInputStream((byte[])o);
+                }
+                if (o instanceof String) {
+                    return new ByteArrayInputStream(((String)o).getBytes());
+                }
+                if (o instanceof Blob) {
+                    return ((Blob)o).getBinaryStream();
+                }
+                if (o instanceof Clob) {
+                    return ((Clob)o).getAsciiStream();
+                }
+
+                throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }

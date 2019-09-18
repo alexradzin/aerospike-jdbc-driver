@@ -252,8 +252,21 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     @Override
     public InputStream getBinaryStream(String columnLabel) throws SQLException {
         return getValue(columnLabel, v -> {
+            //TODO: this code is copied from TypeTransformers. Fix code duplication!
             try {
-                return v instanceof byte[] ? new ByteArrayInputStream((byte[])v) : ((Blob)v).getBinaryStream();
+                if (v instanceof byte[]) {
+                    return new ByteArrayInputStream((byte[])v);
+                }
+                if (v instanceof String) {
+                    return new ByteArrayInputStream(((String)v).getBytes());
+                }
+                if (v instanceof Blob) {
+                    return ((Blob)v).getBinaryStream();
+                }
+                if (v instanceof Clob) {
+                    return ((Clob)v).getAsciiStream();
+                }
+                throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", v));
             } catch (SQLException e) {
                 SneakyThrower.sneakyThrow(new SQLException(e));
                 return null;
@@ -273,7 +286,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public String getCursorName() throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -462,17 +475,21 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public Ref getRef(int columnIndex) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public Blob getBlob(int columnIndex) throws SQLException {
-        return new ByteArrayBlob(getBytes(columnIndex));
+        Object value = getValue(getRecord(), getName(columnIndex));
+        if (value instanceof Blob) {
+            return (Blob)value;
+        }
+        return new ByteArrayBlob((byte[])value);
     }
 
     @Override
@@ -482,17 +499,17 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Array getArray(int columnIndex) throws SQLException {
-        return null;
+        return toArray(getObject(columnIndex), columnIndex);
     }
 
     @Override
     public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public Ref getRef(String columnLabel) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -515,7 +532,10 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Array getArray(String columnLabel) throws SQLException {
-        Object obj = getObject(columnLabel);
+        return toArray(getObject(columnLabel), columnLabel);
+    }
+
+    private <T> Array toArray(Object obj, T columnIdentifier) throws SQLException {
         if (obj == null) {
             return null;
         }
@@ -532,8 +552,10 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
             Object[] values = collectionTransformers.getOrDefault(type, a -> a).apply(rawValues);
             return new BasicArray(schema, sqlTypeNames.get(sqlTypes.get(type)), values);
         }
-        throw new ClassCastException(format("Cannot cast value of column %s to array", columnLabel));
+        throw new ClassCastException(format("Cannot cast value of column %s to array", columnIdentifier));
     }
+
+
 
     private Class<?> getComponentType(Collection<Object> it) {
         Set<Class> types = it.stream().filter(Objects::nonNull).map(Object::getClass).collect(Collectors.toSet());
@@ -656,7 +678,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
