@@ -27,7 +27,7 @@ dependencies {
     compile 'com.jason-goodwin:better-monads:0.4.0'
 
     // It is not used right now but will be definitely used in future. 
-    //testCompile group: 'org.mockito', name: 'mockito-core', version: '3.0.0'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '3.0.0'
 
     testCompileOnly(
             'junit:junit:4.12'
