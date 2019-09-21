@@ -96,7 +96,9 @@ class AerospikeConnection implements Connection, SimpleWrapper {
 
     @Override
     public void setAutoCommit(boolean autoCommit) throws SQLException {
-        // do nothing here.
+        if (!autoCommit) {
+            throw new SQLFeatureNotSupportedException("Aerospike does not  support transactions and therefore behaves like autocommit ON");
+        }
     }
 
     @Override
@@ -359,12 +361,19 @@ class AerospikeConnection implements Connection, SimpleWrapper {
 
     @Override
     public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
-        throw new SQLFeatureNotSupportedException("Network timeout cannot be changed");
+        stream(new Policy[] {
+                client.getReadPolicyDefault(),
+                client.getWritePolicyDefault(),
+                client.getScanPolicyDefault(),
+                client.getQueryPolicyDefault(),
+                client.getBatchPolicyDefault()
+        }).forEach(p -> p.totalTimeout = milliseconds);
+        client.getInfoPolicyDefault().timeout = milliseconds;
     }
 
     @Override
     public int getNetworkTimeout() throws SQLException {
-        return client.getQueryPolicyDefault().totalTimeout;
+        return client.getReadPolicyDefault().totalTimeout;
     }
 
     private void validateResultSetParameters(int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {

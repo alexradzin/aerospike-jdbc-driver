@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
@@ -55,6 +57,15 @@ class AerospikeConnectionTest {
         assertConnectionIsClosed("jdbc:aerospike:localhost/test", new Properties());
     }
 
+    @Test
+    void validateNetworkTimeout() throws SQLException {
+        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost", new Properties());
+        int defaultTimeout = conn.getNetworkTimeout();
+        assertEquals(0, defaultTimeout);
+        conn.setNetworkTimeout(null, 12345);
+        assertEquals(12345, conn.getNetworkTimeout());
+    }
+
     private void assertConnectionIsClosed(String url, Properties props) throws SQLException {
         Connection conn = new AerospikeConnection(url, props);
         assertFalse(conn.isClosed());
@@ -63,12 +74,12 @@ class AerospikeConnectionTest {
     }
 
     @Test
-    void createInValidConnectionWrongHost() throws SQLException {
+    void createInValidConnectionWrongHost() {
         assertThrows(SQLException.class, () -> new AerospikeConnection("jdbc:aerospike:someotherhostthatdoesnotexist", new Properties()));
     }
 
     @Test
-    void createInValidConnectionWrongPort() throws SQLException {
+    void createInValidConnectionWrongPort() {
         assertThrows(SQLException.class, () -> new AerospikeConnection("jdbc:aerospike:localhost:4321", new Properties()));
     }
 
@@ -126,6 +137,14 @@ class AerospikeConnectionTest {
         assertEquals(HOLD_CURSORS_OVER_COMMIT, testConn.getHoldability());
     }
 
+    @Test
+    void commit() throws SQLException {
+        assertTrue(testConn.getAutoCommit());
+        testConn.setAutoCommit(true);
+        testConn.commit(); //ignored
+        assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.setAutoCommit(false));
+    }
+
 
     @Test
     void unsupported() throws SQLException {
@@ -147,7 +166,6 @@ class AerospikeConnectionTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.createSQLXML());
         assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.createStruct("person", new Object[0]));
 
-        assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.setNetworkTimeout(command -> {}, 123));
         assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.nativeSQL(query));
 
 
@@ -157,4 +175,54 @@ class AerospikeConnectionTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.setTransactionIsolation(TRANSACTION_READ_UNCOMMITTED));
         assertEquals(TRANSACTION_NONE, testConn.getTransactionIsolation());
    }
+
+
+    @Test
+    void validateClientInfo() throws SQLException {
+        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost", new Properties());
+        assertTrue(conn.getClientInfo().isEmpty());
+        conn.setClientInfo("test1", "value1");
+        Properties info1 = conn.getClientInfo();
+        assertEquals(1, info1.size());
+        assertEquals("value1", info1.getProperty("test1"));
+    }
+
+    @Test
+    void validateTypeMap() throws SQLException {
+        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost", new Properties());
+        assertTrue(conn.getTypeMap().isEmpty());
+        class Athletes {}
+        conn.setTypeMap(Collections.singletonMap("mySchemaName.ATHLETES", Athletes.class));
+
+        Map<String, Class<?>> types = conn.getTypeMap();
+        assertEquals(1, types.size());
+        assertEquals(Athletes.class, types.get("mySchemaName.ATHLETES"));
+    }
+
+    @Test
+    void warnings() throws SQLException {
+        assertNull(testConn.getWarnings());
+        testConn.clearWarnings();
+        assertNull(testConn.getWarnings());
+    }
+
+    @Test
+    void noShema() throws SQLException {
+        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost", new Properties());
+        assertNull(conn.getSchema());
+    }
+
+    @Test
+    void shema() throws SQLException {
+        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost/test", new Properties());
+        assertEquals("test", conn.getSchema());
+    }
+
+    @Test
+    void changeShema() throws SQLException {
+        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost/test", new Properties());
+        assertEquals("test", conn.getSchema());
+        conn.setSchema("test2");
+        assertEquals("test2", conn.getSchema());
+    }
 }
