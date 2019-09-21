@@ -7,6 +7,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Array;
@@ -150,6 +152,11 @@ class DelegatingResultSetTest {
         assertEquals((double) simpleRow[7], rs.getBigDecimal(8).doubleValue());
         assertEquals((double) simpleRow[7], rs.getBigDecimal("double").doubleValue());
 
+        double roundedExpValue = new BigDecimal((double) simpleRow[7]).setScale(2, RoundingMode.FLOOR).doubleValue();
+        assertEquals(roundedExpValue, rs.getBigDecimal(8, 2).doubleValue());
+        assertEquals(roundedExpValue, rs.getBigDecimal("double", 2).doubleValue());
+
+
         assertEquals(simpleRow[8], rs.getString(9));
         assertEquals(simpleRow[8], rs.getString("text"));
         assertEquals(simpleRow[8], rs.getNString(9));
@@ -229,19 +236,12 @@ class DelegatingResultSetTest {
     @ParameterizedTest(name = "{1}")
     @VariableSource("resultSetsForUnsupported")
     void unsupported(ResultSet rs, String name) {
-        //ResultSet rs = new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), new ArrayList<>());
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getObject(1, Collections.emptyMap()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getObject("any", Collections.emptyMap()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRef(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRef("any"));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getSQLXML(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getSQLXML("any"));
-
-        // Deprecated in ResultSet interface
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getBigDecimal(1, 1));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getBigDecimal("any", 1));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getUnicodeStream(1));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getUnicodeStream("any"));
     }
 
 

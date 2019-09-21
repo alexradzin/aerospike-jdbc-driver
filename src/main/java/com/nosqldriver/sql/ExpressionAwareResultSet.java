@@ -8,6 +8,7 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -97,7 +98,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
         String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), BigDecimal.class) : super.getBigDecimal(columnIndex);
+        return eval != null ? cast(eval(eval), BigDecimal.class).setScale(scale, RoundingMode.FLOOR) : super.getBigDecimal(columnIndex, scale);
     }
 
     @Override
@@ -201,7 +202,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     @Override
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
         String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), BigDecimal.class) : super.getBigDecimal(columnLabel);
+        return eval != null ? cast(eval(eval), BigDecimal.class).setScale(scale) : super.getBigDecimal(columnLabel, scale);
     }
 
     @Override

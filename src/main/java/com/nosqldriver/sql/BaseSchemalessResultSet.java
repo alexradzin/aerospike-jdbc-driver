@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Array;
@@ -133,7 +134,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     @Override
     @Deprecated//(since="1.2")
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        return getBigDecimal(getName(columnIndex));
+        return getBigDecimal(getName(columnIndex)).setScale(scale, RoundingMode.FLOOR);
     }
 
     @Override
@@ -215,7 +216,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     @Override
     @Deprecated//(since="1.2")
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        throw new SQLFeatureNotSupportedException("getBigDecimal(String, scale) is deprecated in java.sql API and is not supported here");
+        return getBigDecimal(columnLabel).setScale(scale, RoundingMode.FLOOR);
     }
 
     @Override
@@ -344,7 +345,9 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     public int findColumn(String columnLabel) throws SQLException {
         return IntStream.range(0, columns.size())
                 .filter(i -> columnLabel.equals(columns.get(i).getName()))
-                .findFirst().orElseThrow(() -> new SQLException(format("Column %s does not exist", columnLabel)));
+                .map(i -> i + 1)
+                .findFirst()
+                .orElseThrow(() -> new SQLException(format("Column %s does not exist", columnLabel)));
     }
 
     @Override
@@ -437,7 +440,12 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     @Override
     public void setFetchDirection(int direction) throws SQLException {
         if (direction != FETCH_FORWARD) {
-            sqlWarning.setNextWarning(new SQLWarning(format("Attempt to set unsupported fetch direction %d. Only FETCH_FORWARD=%d is supported. The value is ignored.", direction, FETCH_FORWARD)));
+            SQLWarning warning = new SQLWarning(format("Attempt to set unsupported fetch direction %d. Only FETCH_FORWARD=%d is supported. The value is ignored.", direction, FETCH_FORWARD));
+            if (sqlWarning == null) {
+                sqlWarning = warning;
+            } else {
+                sqlWarning.setNextWarning(warning);
+            }
         }
     }
 
@@ -629,7 +637,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public boolean isClosed() throws SQLException {
-        return false;
+        return closed;
     }
 
     @Override
@@ -721,10 +729,12 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
         if (firstNextWasCalled && index == 1) {
             firstNextWasCalled = false;
             beforeFirst = false;
+            clearWarnings();
             return true;
         }
         boolean result = moveToNext();
         if (result) {
+            clearWarnings();
             index++;
         } else {
             done = true;

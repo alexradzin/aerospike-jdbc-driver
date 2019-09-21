@@ -18,6 +18,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.SQLWarning;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -45,6 +47,10 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.toListOfMaps;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.lang.String.format;
+import static java.sql.ResultSet.CONCUR_READ_ONLY;
+import static java.sql.ResultSet.FETCH_FORWARD;
+import static java.sql.ResultSet.FETCH_REVERSE;
+import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static java.sql.ResultSetMetaData.columnNullable;
 import static java.sql.Types.BIGINT;
 import static java.sql.Types.DOUBLE;
@@ -57,6 +63,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
@@ -105,6 +112,8 @@ class SelectTest {
     void checkMetadata() throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery("select first_name, year_of_birth from people limit 1");
         assertTrue(rs.next());
+        assertEquals(1, rs.findColumn("first_name"));
+        assertEquals(2, rs.findColumn("year_of_birth"));
         ResultSetMetaData md = rs.getMetaData();
         int n = md.getColumnCount();
         assertEquals(2, n);
@@ -139,6 +148,21 @@ class SelectTest {
     private void selectAll(String sql, Function<String, ResultSet> executor) throws SQLException {
         ResultSet rs = executor.apply(sql);
 
+        assertEquals(FETCH_FORWARD, rs.getFetchDirection());
+        assertEquals(1, rs.getFetchSize());
+        rs.setFetchSize(1); //should be OK
+        assertThrows(SQLException.class, () -> rs.setFetchSize(2));
+        assertEquals(TYPE_FORWARD_ONLY, rs.getType());
+        assertEquals(CONCUR_READ_ONLY, rs.getConcurrency());
+        assertThrows(SQLFeatureNotSupportedException.class, rs::getCursorName);
+        assertNull(rs.getWarnings());
+        rs.setFetchDirection(FETCH_REVERSE); // passes but adds warning
+        assertNotNull(rs.getWarnings());
+        SQLWarning warning = rs.getWarnings();
+        assertTrue(warning.getMessage().contains("unsupported fetch direction"));
+
+
+        assertFalse(rs.isClosed());
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(NAMESPACE, md.getSchemaName(1));
 
@@ -164,8 +188,11 @@ class SelectTest {
         assertEquals(expectedTypes, actualTypes);
 
 
+        assertFalse(rs.isClosed());
         Map<Integer, String> selectedPeople = new HashMap<>();
-        while (rs.next()) {
+        for (int row = 1; rs.next(); row++) {
+            assertFalse(rs.isClosed());
+            assertEquals(row, rs.getRow());
             for (int i = 0; i < nColumns; i++) {
                 String name = columnNames.get(i);
                 switch (actualTypes.get(name)) {
@@ -181,6 +208,10 @@ class SelectTest {
         assertEquals("Paul McCartney 1942", selectedPeople.get(2));
         assertEquals("George Harrison 1943", selectedPeople.get(3));
         assertEquals("Ringo Starr 1940", selectedPeople.get(4));
+
+        rs.close();
+        assertTrue(rs.isClosed());
+
     }
 
 

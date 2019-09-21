@@ -4,6 +4,7 @@ import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.StringClob;
+import com.nosqldriver.util.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -148,7 +149,7 @@ class InsertTest {
     }
 
     @Test
-    void insertOneRowUsingPreparedStatementVariousTypes() throws SQLException, MalformedURLException {
+    void insertOneRowUsingPreparedStatementVariousTypes() throws SQLException, IOException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
         assertNull(client.get(null, key1));
         PreparedStatement ps = testConn.prepareStatement(
@@ -272,9 +273,13 @@ class InsertTest {
 
         assertEquals(Math.PI, rs.getBigDecimal(8).doubleValue());
         assertEquals(Math.PI, rs.getBigDecimal("bigdecimal").doubleValue());
+        assertEquals(3.14, rs.getBigDecimal(8, 2).doubleValue());
+        assertEquals(3.14, rs.getBigDecimal("bigdecimal", 2).doubleValue());
 
         assertEquals("hello", rs.getString(9));
         assertEquals("hello", rs.getString("string"));
+        assertEquals("hello", IOUtils.toString(rs.getClob("string").getCharacterStream()));
+        assertEquals("hello", IOUtils.toString(rs.getNClob("string").getCharacterStream()));
 
         assertEquals(helloWorld, rs.getNString(10));
         assertEquals(helloWorld, rs.getNString("nstring"));

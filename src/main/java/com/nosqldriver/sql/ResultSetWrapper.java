@@ -155,7 +155,7 @@ public class ResultSetWrapper implements ResultSet {
     @Override
     @Deprecated
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getBigDecimal(int columnIndex) instead.");
+        return rs.getBigDecimal(columnIndex, scale);
     }
 
     @Override
@@ -216,7 +216,7 @@ public class ResultSetWrapper implements ResultSet {
     @Override
     @Deprecated
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getCharacterStream(int columnIndex) instead.");
+        return rs.getUnicodeStream(columnIndex);
     }
 
     @Override
@@ -273,7 +273,7 @@ public class ResultSetWrapper implements ResultSet {
     @Override
     @Deprecated
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getBigDecimal(String columnLabel) instead.");
+        return rs.getBigDecimal(columnLabel, scale);
     }
 
     @Override
@@ -304,7 +304,7 @@ public class ResultSetWrapper implements ResultSet {
     @Override
     @Deprecated
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getCharacterStream(String columnLabel) instead.");
+        return rs.getUnicodeStream(columnLabel);
     }
 
     @Override

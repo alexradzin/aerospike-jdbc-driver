@@ -3,6 +3,7 @@ package com.nosqldriver.sql;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URL;
 import java.sql.Array;
 import java.sql.Blob;
@@ -68,7 +69,7 @@ public interface DelegatingResultSet extends ResultSet {
     @Override
     @Deprecated
     default BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getBigDecimal(int columnIndex) instead.");
+        return getBigDecimal(columnIndex).setScale(scale, RoundingMode.FLOOR);
     }
 
     @Override
@@ -99,7 +100,7 @@ public interface DelegatingResultSet extends ResultSet {
     @Override
     @Deprecated
     default InputStream getUnicodeStream(int columnIndex) throws SQLException {
-        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getCharacterStream(int columnIndex) instead.");
+        return getBinaryStream(columnIndex);
     }
 
     @Override
@@ -150,7 +151,7 @@ public interface DelegatingResultSet extends ResultSet {
     @Override
     @Deprecated
     default BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getBigDecimal(String columnLabel) instead.");
+        return getBigDecimal(columnLabel).setScale(scale, RoundingMode.FLOOR);
     }
 
     @Override
@@ -181,7 +182,7 @@ public interface DelegatingResultSet extends ResultSet {
     @Override
     @Deprecated
     default InputStream getUnicodeStream(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException("This method is deprecated. Use getCharacterStream(String columnLabel) instead.");
+        return getBinaryStream(columnLabel);
     }
 
     @Override
