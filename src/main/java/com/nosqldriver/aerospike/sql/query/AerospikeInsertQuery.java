@@ -38,6 +38,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
     private final static Map<Predicate<Object>, Function<Object, Object>> valueTransformer = new LinkedHashMap<>();
     static {
+        valueTransformer.put(Objects::isNull, o -> null);
         valueTransformer.put(o -> o != null && BigDecimal.class.equals(o.getClass()), o -> ((BigDecimal)o).doubleValue());
         valueTransformer.put(o -> o instanceof Blob, blob -> {
             try {

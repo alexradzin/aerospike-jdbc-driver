@@ -216,6 +216,9 @@ class DelegatingResultSetTest {
         assertEquals(expClob, IOUtils.toString(rs.getNCharacterStream("clob")));
         assertEquals(expClob, new String(IOUtils.toByteArray(rs.getAsciiStream(4))));
         assertEquals(expClob, new String(IOUtils.toByteArray(rs.getAsciiStream("clob"))));
+        assertEquals(expClob, new String(IOUtils.toByteArray(rs.getUnicodeStream(4))));
+        assertEquals(expClob, new String(IOUtils.toByteArray(rs.getUnicodeStream("clob"))));
+
 
         String expNClob = IOUtils.toString(((Clob)compositeRow[4]).getCharacterStream());
         assertEquals(expNClob, IOUtils.toString(rs.getClob(5).getCharacterStream()));
@@ -240,6 +243,8 @@ class DelegatingResultSetTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getObject("any", Collections.emptyMap()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRef(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRef("any"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRowId(1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRowId("any"));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getSQLXML(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getSQLXML("any"));
     }

@@ -1,6 +1,8 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.util.SneakyThrower;
+import com.nosqldriver.util.ThrowingSupplier;
 
 import javax.script.Bindings;
 import javax.script.ScriptContext;
@@ -20,6 +22,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
@@ -31,6 +35,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     private final ScriptEngine engine;
     private final ResultSet rs;
     private final Map<String, String> aliasToEval;
+    private boolean wasNull = false;
 
     @VisibleForPackage
     ExpressionAwareResultSet(ResultSet rs, List<DataColumn> columns, boolean indexByName) {
@@ -43,222 +48,186 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     @Override
     public String getString(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), String.class) : super.getString(columnIndex);
+        return getValue(columnIndex, String.class, () -> ExpressionAwareResultSet.super.getString(columnIndex));
     }
 
     @Override
     public String getNString(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), String.class) : super.getNString(columnIndex);
+        return getValue(columnIndex, String.class, () -> ExpressionAwareResultSet.super.getString(columnIndex));
     }
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), boolean.class) : super.getBoolean(columnIndex);
+        return getValue(columnIndex, Boolean.class, () -> ExpressionAwareResultSet.super.getBoolean(columnIndex));
     }
 
     @Override
     public byte getByte(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), byte.class) : super.getByte(columnIndex);
+        return getValue(columnIndex, Byte.class, () -> ExpressionAwareResultSet.super.getByte(columnIndex));
     }
 
     @Override
     public short getShort(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), short.class) : super.getShort(columnIndex);
+        return getValue(columnIndex, Short.class, () -> ExpressionAwareResultSet.super.getShort(columnIndex));
     }
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), int.class) : super.getInt(columnIndex);
+        return getValue(columnIndex, Integer.class, () -> ExpressionAwareResultSet.super.getInt(columnIndex));
     }
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), long.class) : super.getLong(columnIndex);
+        return getValue(columnIndex, Long.class, () -> ExpressionAwareResultSet.super.getLong(columnIndex));
     }
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), float.class) : super.getFloat(columnIndex);
+        return getValue(columnIndex, Float.class, () -> ExpressionAwareResultSet.super.getFloat(columnIndex));
     }
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), double.class) : super.getDouble(columnIndex);
+        return getValue(columnIndex, Double.class, () -> ExpressionAwareResultSet.super.getDouble(columnIndex));
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), BigDecimal.class).setScale(scale, RoundingMode.FLOOR) : super.getBigDecimal(columnIndex, scale);
+        return getValue(columnIndex, BigDecimal.class, d -> d.setScale(scale, RoundingMode.FLOOR), () -> ExpressionAwareResultSet.super.getBigDecimal(columnIndex, scale));
     }
 
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), byte[].class) : super.getBytes(columnIndex);
+        return getValue(columnIndex, byte[].class, () -> ExpressionAwareResultSet.super.getBytes(columnIndex));
     }
 
     @Override
     public Date getDate(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), Date.class) : super.getDate(columnIndex);
+        return getValue(columnIndex, Date.class, () -> ExpressionAwareResultSet.super.getDate(columnIndex));
     }
 
     @Override
     public Time getTime(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), Time.class) : super.getTime(columnIndex);
+        return getValue(columnIndex, Time.class, () -> ExpressionAwareResultSet.super.getTime(columnIndex));
     }
 
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), Timestamp.class) : super.getTimestamp(columnIndex);
+        return getValue(columnIndex, Timestamp.class, () -> ExpressionAwareResultSet.super.getTimestamp(columnIndex));
     }
 
     @Override
     public InputStream getAsciiStream(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), InputStream.class) : super.getAsciiStream(columnIndex);
+        return getValue(columnIndex, InputStream.class, () -> ExpressionAwareResultSet.super.getAsciiStream(columnIndex));
     }
 
     @Override
     @Deprecated
     @SuppressWarnings("deprecation")
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), InputStream.class) : super.getUnicodeStream(columnIndex);
+        return getValue(columnIndex, InputStream.class, () -> ExpressionAwareResultSet.super.getUnicodeStream(columnIndex));
     }
 
     @Override
     public InputStream getBinaryStream(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? cast(eval(eval), InputStream.class) : super.getBinaryStream(columnIndex);
+        return getValue(columnIndex, InputStream.class, () -> ExpressionAwareResultSet.super.getBinaryStream(columnIndex));
     }
 
     @Override
     public String getString(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), String.class) : super.getString(columnLabel);
+        return getValue(columnLabel, String.class, () -> ExpressionAwareResultSet.super.getString(columnLabel));
     }
 
     @Override
     public String getNString(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), String.class) : super.getNString(columnLabel);
+        return getValue(columnLabel, String.class, () -> ExpressionAwareResultSet.super.getString(columnLabel));
     }
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), boolean.class) : super.getBoolean(columnLabel);
+        return getValue(columnLabel, Boolean.class, () -> ExpressionAwareResultSet.super.getBoolean(columnLabel));
     }
 
     @Override
     public byte getByte(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), byte.class) : super.getByte(columnLabel);
+        return getValue(columnLabel, Byte.class, () -> ExpressionAwareResultSet.super.getByte(columnLabel));
     }
 
     @Override
     public short getShort(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), short.class) : super.getShort(columnLabel);
+        return getValue(columnLabel, Short.class, () -> ExpressionAwareResultSet.super.getShort(columnLabel));
     }
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), int.class) : super.getInt(columnLabel);
+        return getValue(columnLabel, Integer.class, () -> ExpressionAwareResultSet.super.getInt(columnLabel));
     }
 
     @Override
     public long getLong(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), long.class) : super.getLong(columnLabel);
+        return getValue(columnLabel, Long.class, () -> ExpressionAwareResultSet.super.getLong(columnLabel));
     }
 
     @Override
     public float getFloat(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), float.class) : super.getFloat(columnLabel);
+        return getValue(columnLabel, Float.class, () -> ExpressionAwareResultSet.super.getFloat(columnLabel));
     }
 
     @Override
     public double getDouble(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), double.class) : super.getDouble(columnLabel);
+        return getValue(columnLabel, Double.class, () -> ExpressionAwareResultSet.super.getDouble(columnLabel));
     }
 
     @Override
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), BigDecimal.class).setScale(scale) : super.getBigDecimal(columnLabel, scale);
+        return getValue(columnLabel, BigDecimal.class, d -> d.setScale(scale, RoundingMode.FLOOR), () -> ExpressionAwareResultSet.super.getBigDecimal(columnLabel, scale));
     }
 
     @Override
     public byte[] getBytes(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), byte[].class) : super.getBytes(columnLabel);
+        return getValue(columnLabel, byte[].class, () -> ExpressionAwareResultSet.super.getBytes(columnLabel));
     }
 
     @Override
     public Date getDate(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), Date.class) : super.getDate(columnLabel);
+        return getValue(columnLabel, Date.class, () -> ExpressionAwareResultSet.super.getDate(columnLabel));
     }
 
     @Override
     public Time getTime(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), Time.class) : super.getTime(columnLabel);
+        return getValue(columnLabel, Time.class, () -> ExpressionAwareResultSet.super.getTime(columnLabel));
     }
 
     @Override
     public Timestamp getTimestamp(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), Timestamp.class) : super.getTimestamp(columnLabel);
+        return getValue(columnLabel, Timestamp.class, () -> ExpressionAwareResultSet.super.getTimestamp(columnLabel));
     }
 
     @Override
     public InputStream getAsciiStream(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), InputStream.class) : super.getAsciiStream(columnLabel);
+        return getValue(columnLabel, InputStream.class, () -> ExpressionAwareResultSet.super.getAsciiStream(columnLabel));
     }
 
     @Override
     @Deprecated
     @SuppressWarnings("deprecation")
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), InputStream.class) : super.getUnicodeStream(columnLabel);
+        return getValue(columnLabel, InputStream.class, () -> ExpressionAwareResultSet.super.getUnicodeStream(columnLabel));
     }
 
     @Override
     public InputStream getBinaryStream(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? cast(eval(eval), InputStream.class) : super.getBinaryStream(columnLabel);
+        return getValue(columnLabel, InputStream.class, () -> ExpressionAwareResultSet.super.getBinaryStream(columnLabel));
     }
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        String eval = getEval(columnIndex);
-        return eval != null ? eval(eval) : super.getObject(columnIndex);
+        return getValue(columnIndex, Object.class, () -> ExpressionAwareResultSet.super.getObject(columnIndex));
     }
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
-        String eval = aliasToEval.get(columnLabel);
-        return eval != null ? eval(eval) : super.getObject(columnLabel);
+        return getValue(columnLabel, Object.class, () -> ExpressionAwareResultSet.super.getObject(columnLabel));
     }
 
     @Override
@@ -328,13 +297,14 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     }
 
 
-    private Object eval(String eval) throws SQLException {
+    private Object eval(String eval) {
         Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
         Collection<String> bound = bind(rs, columns, bindings);
         try {
             return engine.eval(eval);
         } catch (ScriptException e) {
-            throw new SQLException(e);
+            SneakyThrower.sneakyThrow(new SQLException(e));
+            return null; //just to satisfy compiler
         } finally {
             bound.forEach(bindings::remove);
         }
@@ -342,5 +312,42 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     private String getEval(int index) {
         return index <= columns.size() ? ofNullable(columns.get(index - 1)).map(DataColumn::getExpression).orElse(null) : null;
+    }
+
+    private Optional<String> getEval2(int index) {
+        return index <= columns.size() ? ofNullable(columns.get(index - 1)).map(DataColumn::getExpression) : Optional.empty();
+    }
+
+    @Override
+    public boolean wasNull() throws SQLException {
+        return wasNull;
+    }
+
+    private <T> T wasNull(T value) {
+        wasNull = value == null;
+        return value;
+    }
+
+    private <T> T getValue(int columnIndex, Class<T> type, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
+        return getValue(columnIndex, type, v -> v, superGetter);
+    }
+
+
+    private <T> T getValue(int columnIndex, Class<T> type, Function<T, T> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
+        Optional<T> res = getEval2(columnIndex).map(eval -> transformer.apply(cast(eval(eval), type)));
+        return getValue(res, superGetter);
+    }
+
+    private <T> T getValue(String columnLabel, Class<T> type, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
+        return getValue(columnLabel, type, v -> v, superGetter);
+    }
+
+    private <T> T getValue(String columnLabel, Class<T> type, Function<T, T> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
+        Optional<T> res = Optional.ofNullable(aliasToEval.get(columnLabel)).map(eval -> transformer.apply(cast(eval(eval), type)));
+        return getValue(res, superGetter);
+    }
+
+    private <T> T getValue(Optional<T> value, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
+        return wasNull(value.isPresent() ? value.get() : superGetter.get());
     }
 }

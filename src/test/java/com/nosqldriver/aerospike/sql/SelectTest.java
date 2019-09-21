@@ -50,6 +50,7 @@ import static java.lang.String.format;
 import static java.sql.ResultSet.CONCUR_READ_ONLY;
 import static java.sql.ResultSet.FETCH_FORWARD;
 import static java.sql.ResultSet.FETCH_REVERSE;
+import static java.sql.ResultSet.HOLD_CURSORS_OVER_COMMIT;
 import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static java.sql.ResultSetMetaData.columnNullable;
 import static java.sql.Types.BIGINT;
@@ -154,6 +155,7 @@ class SelectTest {
         assertThrows(SQLException.class, () -> rs.setFetchSize(2));
         assertEquals(TYPE_FORWARD_ONLY, rs.getType());
         assertEquals(CONCUR_READ_ONLY, rs.getConcurrency());
+        assertEquals(HOLD_CURSORS_OVER_COMMIT, rs.getHoldability());
         assertThrows(SQLFeatureNotSupportedException.class, rs::getCursorName);
         assertNull(rs.getWarnings());
         rs.setFetchDirection(FETCH_REVERSE); // passes but adds warning
@@ -200,6 +202,7 @@ class SelectTest {
                     case BIGINT: assertEquals(rs.getInt(i + 1), rs.getInt(name)); break;
                     default: throw new IllegalArgumentException("Unexpected column type " + actualTypes.get(name));
                 }
+                assertFalse(rs.wasNull());
             }
             selectedPeople.put(rs.getInt("id"), rs.getString("first_name") + " " + rs.getString("last_name") + " " + rs.getInt("year_of_birth"));
         }

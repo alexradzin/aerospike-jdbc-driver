@@ -153,7 +153,7 @@ class InsertTest {
         Key key1 = new Key(NAMESPACE, DATA, 1);
         assertNull(client.get(null, key1));
         PreparedStatement ps = testConn.prepareStatement(
-                "insert into data (PK, byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "insert into data (PK, byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url, nothing) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
         long now = currentTimeMillis();
@@ -188,6 +188,7 @@ class InsertTest {
         ps.setTimestamp(16, new Timestamp(now));
         ps.setDate(17, new java.sql.Date(now));
         ps.setURL(18, new URL(google));
+        ps.setNull(19, Types.VARCHAR);
 
 
         assertEquals(1, ps.executeUpdate());
@@ -211,9 +212,10 @@ class InsertTest {
         assertEquals(new Timestamp(now), record1.getValue("ts"));
         assertEquals(new java.sql.Date(now), record1.getValue("d"));
         assertEquals(google, record1.getString("url"));
+        assertNull(record1.getString("nothing"));
 
 
-        PreparedStatement query = testConn.prepareStatement("select byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url from data where PK=?");
+        PreparedStatement query = testConn.prepareStatement("select byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url, nothing from data where PK=?");
         query.setInt(1, 1);
 
         ResultSet rs = query.executeQuery();
@@ -247,6 +249,7 @@ class InsertTest {
         assertEquals(Types.TIMESTAMP, md.getColumnType(15));
         assertEquals(Types.DATE, md.getColumnType(16));
         assertEquals(Types.VARCHAR, md.getColumnType(17));
+        assertEquals(Types.NULL, md.getColumnType(18));
 
         assertTrue(rs.first());
 
@@ -304,6 +307,11 @@ class InsertTest {
 
         assertEquals(google, rs.getString(17));
         assertEquals(google, rs.getString("url"));
+
+        assertFalse(rs.wasNull());
+        assertNull(rs.getString(18));
+        assertNull(rs.getString("nothing"));
+        assertTrue(rs.wasNull());
 
         assertFalse(rs.next());
     }

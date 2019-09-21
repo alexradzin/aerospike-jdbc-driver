@@ -93,166 +93,166 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public String getString(int columnIndex) throws SQLException {
-        return getString(getName(columnIndex));
+        return wasNull(getString(getName(columnIndex)));
     }
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        return getBoolean(getName(columnIndex));
+        return wasNull(getBoolean(getName(columnIndex)));
     }
 
     @Override
     public byte getByte(int columnIndex) throws SQLException {
-        return getByte(getName(columnIndex));
+        return wasNull(getByte(getName(columnIndex)));
     }
 
     @Override
     public short getShort(int columnIndex) throws SQLException {
-        return getShort(getName(columnIndex));
+        return wasNull(getShort(getName(columnIndex)));
     }
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        return getInt(getName(columnIndex));
+        return wasNull(getInt(getName(columnIndex)));
     }
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        return getLong(getName(columnIndex));
+        return wasNull(getLong(getName(columnIndex)));
     }
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        return getFloat(getName(columnIndex));
+        return wasNull(getFloat(getName(columnIndex)));
     }
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        return getDouble(getName(columnIndex));
+        return wasNull(getDouble(getName(columnIndex)));
     }
 
     @Override
     @Deprecated//(since="1.2")
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        return getBigDecimal(getName(columnIndex)).setScale(scale, RoundingMode.FLOOR);
+        return wasNull(getBigDecimal(getName(columnIndex)).setScale(scale, RoundingMode.FLOOR));
     }
 
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
-        return getBytes(getName(columnIndex));
+        return wasNull(getBytes(getName(columnIndex)));
     }
 
     @Override
     public Date getDate(int columnIndex) throws SQLException {
-        return getDate(getName(columnIndex));
+        return wasNull(getDate(getName(columnIndex)));
     }
 
     @Override
     public Time getTime(int columnIndex) throws SQLException {
-        return getTime(getName(columnIndex));
+        return wasNull(getTime(getName(columnIndex)));
     }
 
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        return getTimestamp(getName(columnIndex));
+        return wasNull(getTimestamp(getName(columnIndex)));
     }
 
     @Override
     public InputStream getAsciiStream(int columnIndex) throws SQLException {
-        return getAsciiStream(getName(columnIndex));
+        return wasNull(getAsciiStream(getName(columnIndex)));
     }
 
     @Override
     @Deprecated//(since="1.2")
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
-        return getUnicodeStream(getName(columnIndex));
+        return wasNull(getUnicodeStream(getName(columnIndex)));
     }
 
     @Override
     public InputStream getBinaryStream(int columnIndex) throws SQLException {
-        return getBinaryStream(getName(columnIndex));
+        return wasNull(getBinaryStream(getName(columnIndex)));
     }
 
     @Override
     public String getString(String columnLabel) throws SQLException {
-        return getString(getRecord(), columnLabel);
+        return wasNull(getString(getRecord(), columnLabel));
     }
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        return getBoolean(getRecord(), columnLabel);
+        return wasNull(getBoolean(getRecord(), columnLabel));
     }
 
     @Override
     public byte getByte(String columnLabel) throws SQLException {
-        return getByte(getRecord(), columnLabel);
+        return wasNull(getByte(getRecord(), columnLabel));
     }
 
     @Override
     public short getShort(String columnLabel) throws SQLException {
-        return getShort(getRecord(), columnLabel);
+        return wasNull(getShort(getRecord(), columnLabel));
     }
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
-        return getInt(getRecord(), columnLabel);
+        return wasNull(getInt(getRecord(), columnLabel));
     }
 
     @Override
     public long getLong(String columnLabel) throws SQLException {
-        return getLong(getRecord(), columnLabel);
+        return wasNull(getLong(getRecord(), columnLabel));
     }
 
     @Override
     public float getFloat(String columnLabel) throws SQLException {
-        return getFloat(getRecord(), columnLabel);
+        return wasNull(getFloat(getRecord(), columnLabel));
     }
 
     @Override
     public double getDouble(String columnLabel) throws SQLException {
-        return getDouble(getRecord(), columnLabel);
+        return wasNull(getDouble(getRecord(), columnLabel));
     }
 
     @Override
     @Deprecated//(since="1.2")
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        return getBigDecimal(columnLabel).setScale(scale, RoundingMode.FLOOR);
+        return wasNull(getBigDecimal(columnLabel).setScale(scale, RoundingMode.FLOOR));
     }
 
     @Override
     public byte[] getBytes(String columnLabel) throws SQLException {
-        return (byte[])getValue(getRecord(), columnLabel);
+        return wasNull((byte[])getValue(getRecord(), columnLabel));
     }
 
     @Override
     public Date getDate(String columnLabel) throws SQLException {
-        return getValue(columnLabel, v -> v instanceof Date ? (Date)v : new Date((Long)v));
+        return wasNull(getValue(columnLabel, v -> v instanceof Date ? (Date)v : new Date((Long)v)));
     }
 
     @Override
     public Time getTime(String columnLabel) throws SQLException {
-        return getValue(columnLabel, v -> v instanceof Time ? (Time)v : new Time((Long)v));
+        return wasNull(getValue(columnLabel, v -> v instanceof Time ? (Time)v : new Time((Long)v)));
     }
 
     @Override
     public Timestamp getTimestamp(String columnLabel) throws SQLException {
-        return getValue(columnLabel, v -> v instanceof Timestamp ? (Timestamp)v : new Timestamp((Long)v));
+        return wasNull(getValue(columnLabel, v -> v instanceof Timestamp ? (Timestamp)v : new Timestamp((Long)v)));
     }
 
     @Override
     public InputStream getAsciiStream(String columnLabel) throws SQLException {
-        return getUnicodeStream(columnLabel);
+        return wasNull(getUnicodeStream(columnLabel));
     }
 
     @Override
     @Deprecated//(since="1.2")
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {
-        return getBinaryStream(columnLabel);
+        return wasNull(getBinaryStream(columnLabel));
     }
 
     @Override
     public InputStream getBinaryStream(String columnLabel) throws SQLException {
-        return getValue(columnLabel, v -> {
+        return wasNull(getValue(columnLabel, v -> {
             //TODO: this code is copied from TypeTransformers. Fix code duplication!
             try {
                 if (v instanceof byte[]) {
@@ -272,7 +272,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
                 SneakyThrower.sneakyThrow(new SQLException(e));
                 return null;
             }
-        });
+        }));
     }
 
     @Override
@@ -333,12 +333,12 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        return getObject(getName(columnIndex));
+        return wasNull(getObject(getName(columnIndex)));
     }
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
-        return ofNullable(getRecord()).map(r -> getValue(r, columnLabel)).orElse(null);
+        return wasNull(ofNullable(getRecord()).map(r -> getValue(r, columnLabel)).orElse(null));
     }
 
     @Override
@@ -352,26 +352,26 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Reader getCharacterStream(int columnIndex) throws SQLException {
-        return getCharacterStream(getName(columnIndex));
+        return wasNull(getCharacterStream(getName(columnIndex)));
     }
 
     @Override
     public Reader getCharacterStream(String columnLabel) throws SQLException {
         Object value = getValue(getRecord(), columnLabel);
         if (value instanceof Clob) {
-            return ((Clob)value).getCharacterStream();
+            return wasNull(((Clob)value).getCharacterStream());
         }
-        return new StringReader((String)value);
+        return wasNull(new StringReader((String)value));
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
-        return getBigDecimal(getName(columnIndex));
+        return wasNull(getBigDecimal(getName(columnIndex)));
     }
 
     @Override
     public BigDecimal getBigDecimal(String columnLabel) throws SQLException {
-        return new BigDecimal(getDouble(columnLabel));
+        return wasNull(new BigDecimal(getDouble(columnLabel)));
     }
 
     @Override
@@ -493,11 +493,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Blob getBlob(int columnIndex) throws SQLException {
-        Object value = getValue(getRecord(), getName(columnIndex));
-        if (value instanceof Blob) {
-            return (Blob)value;
-        }
-        return new ByteArrayBlob((byte[])value);
+        return getBlob(getName(columnIndex));
     }
 
     @Override
@@ -507,7 +503,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Array getArray(int columnIndex) throws SQLException {
-        return toArray(getObject(columnIndex), columnIndex);
+        return wasNull(toArray(getObject(columnIndex), columnIndex));
     }
 
     @Override
@@ -523,6 +519,11 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
         Object value = getValue(getRecord(), columnLabel);
+        if (value == null) {
+            wasNull = true;
+            return null;
+        }
+        wasNull = false;
         if (value instanceof Blob) {
             return (Blob)value;
         }
@@ -531,16 +532,12 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Clob getClob(String columnLabel) throws SQLException {
-        Object value = getObject(columnLabel);
-        if (value instanceof Clob) {
-            return (Clob)value;
-        }
-        return new StringClob((String)value);
+        return getNClob(columnLabel);
     }
 
     @Override
     public Array getArray(String columnLabel) throws SQLException {
-        return toArray(getObject(columnLabel), columnLabel);
+        return wasNull(toArray(getObject(columnLabel), columnLabel));
     }
 
     private <T> Array toArray(Object obj, T columnIdentifier) throws SQLException {
@@ -572,49 +569,50 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Date getDate(int columnIndex, Calendar cal) throws SQLException {
-        return getDate(getName(columnIndex), cal);
+        return wasNull(getDate(getName(columnIndex), cal));
     }
 
     @Override
     public Date getDate(String columnLabel, Calendar cal) throws SQLException {
         long epoch = getLong(columnLabel);
         cal.setTime(new java.util.Date(epoch));
-        return new Date(cal.getTime().getTime());
+        return wasNull(new Date(cal.getTime().getTime()));
     }
 
     @Override
     public Time getTime(int columnIndex, Calendar cal) throws SQLException {
-        return getTime(getName(columnIndex), cal);
+        return wasNull(getTime(getName(columnIndex), cal));
     }
 
     @Override
     public Time getTime(String columnLabel, Calendar cal) throws SQLException {
         long epoch = getLong(columnLabel);
         cal.setTime(new java.util.Date(epoch));
-        return new Time(cal.getTime().getTime());
+        return wasNull(new Time(cal.getTime().getTime()));
     }
 
     @Override
     public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
-        return getTimestamp(getName(columnIndex), cal);
+        return wasNull(getTimestamp(getName(columnIndex), cal));
     }
 
     @Override
     public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
         long epoch = getLong(columnLabel);
         cal.setTime(new java.util.Date(epoch));
-        return new Timestamp(cal.getTime().getTime());
+        return wasNull(new Timestamp(cal.getTime().getTime()));
     }
 
     @Override
     public URL getURL(int columnIndex) throws SQLException {
-        return getURL(getName(columnIndex));
+        return wasNull(getURL(getName(columnIndex)));
     }
 
     @Override
     public URL getURL(String columnLabel) throws SQLException {
         try {
-            return new URL(getString(columnLabel));
+            String spec = getString(columnLabel);
+            return wasNull(spec != null ? new URL(spec) : null);
         } catch (MalformedURLException e) {
             throw new SQLException(e);
         }
@@ -648,6 +646,11 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     @Override
     public NClob getNClob(String columnLabel) throws SQLException {
         Object value = getObject(columnLabel);
+        if (value == null) {
+            wasNull = true;
+            return null;
+        }
+        wasNull = false;
         if (value instanceof NClob) {
             return (NClob)value;
         }
@@ -686,7 +689,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getObject(getName(columnIndex), type);
     }
 
     @Override
@@ -697,13 +700,14 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
         }
         Object value = getValue(getRecord(), columnLabel);
         if (value == null) {
+            wasNull = true;
             return null;
         }
         if (type.isAssignableFrom(value.getClass())) {
-            return (T)value;
+            return wasNull((T)value);
         }
 
-        return cast(value, type);
+        return wasNull(cast(value, type));
     }
 
     private String getName(int index) throws SQLException {
@@ -759,6 +763,11 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
         }
 
         return anyRecordSupplier.get();
+    }
+
+    private <T> T wasNull(T value) {
+        wasNull = value == null;
+        return value;
     }
 
     protected abstract boolean moveToNext();
