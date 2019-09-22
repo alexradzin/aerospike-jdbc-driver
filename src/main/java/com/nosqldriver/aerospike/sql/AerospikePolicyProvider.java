@@ -1,5 +1,6 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.policy.InfoPolicy;
 import com.aerospike.client.policy.Policy;
@@ -21,13 +22,13 @@ public class AerospikePolicyProvider {
     private final ConnectionParametersParser parser = new ConnectionParametersParser();
 
 
-    AerospikePolicyProvider(Properties props) {
-        policy = parser.initProperties(new Policy(), parser.subProperties(props, "policy"));
-        queryPolicy = parser.initProperties(new QueryPolicy(), parser.subProperties(props, "policy.query"));
-        batchPolicy = parser.initProperties(new BatchPolicy(), parser.subProperties(props, "policy.batch"));
-        scanPolicy = parser.initProperties(new ScanPolicy(), parser.subProperties(props, "policy.scan"));
-        writePolicy = parser.initProperties(new WritePolicy(), parser.subProperties(props, "policy.write"));
-        infoPolicy = parser.initProperties(new InfoPolicy(), parser.subProperties(props, "policy.info"));
+    AerospikePolicyProvider(IAerospikeClient client, Properties props) {
+        policy = parser.initProperties(client.getReadPolicyDefault(), parser.subProperties(props, "policy"));
+        queryPolicy = parser.initProperties(client.getQueryPolicyDefault(), parser.subProperties(props, "policy.query"));
+        batchPolicy = parser.initProperties(client.getBatchPolicyDefault(), parser.subProperties(props, "policy.batch"));
+        scanPolicy = parser.initProperties(client.getScanPolicyDefault(), parser.subProperties(props, "policy.scan"));
+        writePolicy = parser.initProperties(client.getWritePolicyDefault(), parser.subProperties(props, "policy.write"));
+        infoPolicy = parser.initProperties(client.getInfoPolicyDefault(), parser.subProperties(props, "policy.info"));
     }
 
     public Policy getPolicy() {

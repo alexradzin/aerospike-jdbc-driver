@@ -62,7 +62,7 @@ class AerospikeConnection implements Connection, SimpleWrapper {
         Host[] hosts = parser.hosts(url);
         client = new AerospikeSqlClient(() -> new AerospikeClient(parser.policy(url, props), hosts));
         schema.set(parser.schema(url));
-        policyProvider = new AerospikePolicyProvider(parser.clientInfo(url, props));
+        policyProvider = new AerospikePolicyProvider(client, parser.clientInfo(url, props));
 
         registerScript("stats", "distinct", "groupby");
         getMetaData();

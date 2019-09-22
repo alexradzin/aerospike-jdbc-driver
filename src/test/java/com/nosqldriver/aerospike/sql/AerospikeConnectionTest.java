@@ -185,7 +185,26 @@ class AerospikeConnectionTest {
         Properties info1 = conn.getClientInfo();
         assertEquals(1, info1.size());
         assertEquals("value1", info1.getProperty("test1"));
+        conn.close();
     }
+
+    @Test
+    void validateClientInfoSetAll() throws SQLException {
+        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost", new Properties());
+        assertTrue(conn.getClientInfo().isEmpty());
+
+        Properties props = new Properties();
+        props.setProperty("test1", "value1");
+        props.setProperty("test2", "value2");
+
+        conn.setClientInfo(props);
+        Properties info1 = conn.getClientInfo();
+        assertEquals(props.size(), info1.size());
+        assertEquals("value1", info1.getProperty("test1"));
+        assertEquals("value2", info1.getProperty("test2"));
+        conn.close();
+    }
+
 
     @Test
     void validateTypeMap() throws SQLException {
