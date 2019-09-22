@@ -20,6 +20,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -137,6 +138,41 @@ class SelectTest {
         assertEquals(Long.class.getName(), md.getColumnClassName(2));
     }
 
+    @Test
+    void validateStatementFields() throws SQLException {
+        Statement statement = testConn.createStatement();
+        assertEquals(Integer.MAX_VALUE, statement.getMaxRows());
+        statement.setMaxRows(12345);
+        assertEquals(12345, statement.getMaxRows());
+
+        assertThrows(SQLFeatureNotSupportedException.class, () -> statement.setMaxFieldSize(1024));
+        assertEquals(8 * 1024 * 1024, statement.getMaxFieldSize());
+
+        assertThrows(SQLFeatureNotSupportedException.class, statement::cancel);
+
+        assertEquals(0, statement.getQueryTimeout());
+        statement.setQueryTimeout(45678);
+        assertEquals(45678, statement.getQueryTimeout());
+
+
+        assertNull(statement.getWarnings());
+        statement.clearWarnings();
+        assertNull(statement.getWarnings());
+
+        assertEquals(FETCH_FORWARD, statement.getFetchDirection());
+        statement.setFetchDirection(FETCH_FORWARD);
+        assertEquals(FETCH_FORWARD, statement.getFetchDirection());
+        assertThrows(SQLException.class, () -> statement.setFetchDirection(FETCH_REVERSE));
+        assertEquals(FETCH_FORWARD, statement.getFetchDirection());
+
+        assertEquals(1, statement.getFetchSize());
+        statement.setFetchSize(1);
+        assertEquals(1, statement.getFetchSize());
+        assertThrows(SQLException.class, () -> statement.setFetchSize(2));
+        assertEquals(1, statement.getFetchSize());
+
+        assertEquals(testConn, statement.getConnection());
+    }
 
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
