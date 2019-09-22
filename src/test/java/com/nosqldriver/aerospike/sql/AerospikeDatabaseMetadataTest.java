@@ -118,8 +118,8 @@ class AerospikeDatabaseMetadataTest {
     void trivialInt() throws SQLException {
         DatabaseMetaData md = testConn.getMetaData();
         // Driver version is taken from Manifest and is not available when running from IDE
-//        assertEquals(1, md.getDriverMajorVersion());
-//        assertEquals(1, md.getDriverMinorVersion());
+        assertTrue(md.getDriverMajorVersion() >= 0);
+        assertTrue(md.getDriverMinorVersion() >= 0);
         assertEquals(14, md.getMaxBinaryLiteralLength());
         assertEquals(0, md.getMaxCharLiteralLength());
         assertEquals(14, md.getMaxColumnNameLength());
@@ -191,6 +191,19 @@ class AerospikeDatabaseMetadataTest {
 
        assertTrue(md.supportsResultSetHoldability(HOLD_CURSORS_OVER_COMMIT));
        assertFalse(md.supportsResultSetHoldability(CLOSE_CURSORS_AT_COMMIT));
+
+
+       assertFalse(md.supportsResultSetType(0));
+       assertFalse(md.supportsResultSetConcurrency(0, 0));
+       assertFalse(md.ownUpdatesAreVisible(0));
+       assertFalse(md.ownDeletesAreVisible(0));
+       assertFalse(md.ownInsertsAreVisible(0));
+       assertFalse(md.othersUpdatesAreVisible(0));
+       assertFalse(md.othersDeletesAreVisible(0));
+       assertFalse(md.othersInsertsAreVisible(0));
+       assertFalse(md.updatesAreDetected(0));
+       assertFalse(md.deletesAreDetected(0));
+       assertFalse(md.insertsAreDetected(0));
 
 
    }

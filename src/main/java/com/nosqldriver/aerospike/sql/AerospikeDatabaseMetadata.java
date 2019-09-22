@@ -136,17 +136,21 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public String getDriverVersion() {
-        return manifest.map(m -> (String)m.getMainAttributes().get("Version")).orElse("N/A");
+        return fetchDriverVersion().orElse("N/A");
     }
 
     @Override
     public int getDriverMajorVersion() {
-        return manifest.map(m -> (String)m.getMainAttributes().get("Version")).map(v -> Integer.parseInt(v.split("\\.")[0])).orElse(1);
+        return fetchDriverVersion().map(v -> Integer.parseInt(v.split("\\.")[0])).orElse(1);
     }
 
     @Override
     public int getDriverMinorVersion() {
-        return manifest.map(m -> (String)m.getMainAttributes().get("Version")).map(v -> v.split("\\.")).map(a -> a.length > 1 ? Integer.parseInt(a[a.length -1]) : 0).get();
+        return fetchDriverVersion().map(v -> v.split("\\.")).map(a -> a.length > 1 ? Integer.parseInt(a[a.length -1]) : 0).orElse(0);
+    }
+
+    private Optional<String> fetchDriverVersion() {
+        return manifest.map(m -> (String)m.getMainAttributes().get("Implementation-Version"));
     }
 
     @Override
