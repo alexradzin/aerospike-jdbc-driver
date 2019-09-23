@@ -13,7 +13,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.math.BigDecimal;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Blob;
 import java.sql.Clob;
@@ -479,8 +478,8 @@ class InsertTest {
         assertThrows(SQLFeatureNotSupportedException.class, ps::getMetaData);
         long now = currentTimeMillis();
         assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setDate(1, new java.sql.Date(now), Calendar.getInstance()));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setTime(1, new java.sql.Time(now), Calendar.getInstance()));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setTimestamp(1, new java.sql.Timestamp(now), Calendar.getInstance()));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setTime(1, new Time(now), Calendar.getInstance()));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setTimestamp(1, new Timestamp(now), Calendar.getInstance()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setRowId(1, null));
     }
 

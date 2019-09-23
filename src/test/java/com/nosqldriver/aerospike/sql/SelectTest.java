@@ -313,7 +313,7 @@ class SelectTest {
     void selectSpecificFieldsUsingExecute(String sql) throws SQLException {
         selectSpecificFields(sql, sql1 -> {
             try {
-                java.sql.Statement statement = testConn.createStatement();
+                Statement statement = testConn.createStatement();
                 statement.execute(sql1);
                 return statement.getResultSet();
             } catch (SQLException e) {
@@ -326,7 +326,6 @@ class SelectTest {
     @SuppressWarnings("unused") // referenced from annotation VariableSource
     private static Stream<Arguments> orderBy = Stream.of(
             Arguments.of("select * from people order by first_name", new String[] {"George", "John", "Paul", "Ringo"}),
-            Arguments.of("select * from people order by first_name desc", new String[] {"Ringo", "Paul", "John", "George"}),
             Arguments.of("select * from people order by year_of_birth, kids_count", new String[] {"John", "Ringo", "Paul", "George"}),
             Arguments.of("select * from people order by year_of_birth, kids_count desc", new String[] {"Ringo", "John", "Paul", "George"}),
             Arguments.of("select * from people order by first_name limit 3", new String[] {"George", "John", "Paul"}),
@@ -995,7 +994,7 @@ class SelectTest {
         selectDistinctYearOfBirth(query, "yob", "year");
     }
 
-    void selectDistinctYearOfBirth(String query, String expectedName, String expectedLabel) throws SQLException {
+    private void selectDistinctYearOfBirth(String query, String expectedName, String expectedLabel) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(query);
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(NAMESPACE, md.getSchemaName(1));

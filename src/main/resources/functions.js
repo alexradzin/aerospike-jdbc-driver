@@ -64,6 +64,22 @@ function reverse(str) {
 ///////////////////////////////////////////////////////////
 // Date and Time functions
 ///////////////////////////////////////////////////////////
+function _parse(str, fmt) {
+    var d = fmt ? new java.text.SimpleDateFormat(fmt).parse(str) : com.nosqldriver.util.DateParser.date(str);
+    return new Date(d.getTime());
+}
+
+/**
+ * @arg - (optional) epoch or string representation of date
+ */
+function date(arg) {
+    result = (arg == null || typeof arg === 'undefined') ? new Date() : typeof arg === 'number' ? new Date(arg) : typeof arg === 'string' ? _parse(arg) : typeof arg.getMonth === 'function' ? arg : null;
+    if (!result) {
+        throw new java.sql.SQLException("Wrong argument " + arg);
+    }
+    return result;
+}
+
 function now() {
     return new Date().getTime();
 }
@@ -96,26 +112,10 @@ function millisecond(d) {
     return date(d).getMilliseconds();
 }
 
-
-/**
- * @arg - (optional) epoch or string representation of date
- */
-function date(arg) {
-    return result = (arg == null || typeof arg === 'undefined') ? new Date() : typeof arg === 'number' ? new Date(arg) : typeof arg === 'string' ? _parse(arg) : typeof arg.getMonth === 'function' ? arg : null;
-    if (!result) {
-        throw new java.sql.SQLException("Wrong argument " + arg);
-    }
-}
-
 function epoch(str, fmt) {
     return _parse(str, fmt).getTime();
 }
 
 function millis(date) {
     return date.getTime();
-}
-
-function _parse(str, fmt) {
-    var d = fmt ? new java.text.SimpleDateFormat(fmt).parse(str) : com.nosqldriver.util.DateParser.date(str);
-    return new Date(d.getTime());
 }

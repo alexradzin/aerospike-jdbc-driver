@@ -76,11 +76,11 @@ while (rs.next()) {
     rs.getInt("year_of_birth");
 }
 ```
+
 ### JDBC URL
 
 The JDBC URL format is: `jdbc:aerospike:HOST[:PORT][/NAMESPACE][?PARAM1=VALUE1[&PARAM2=VALUE2]`.
 For example `jdbc:aerospike:localhost` connectts to aerospike running on local machine and listening to the default port (3000). If you want to customize port use URL like `jdbc:aerospike:localhost:4000`, to connecto to specific namespace add it to URL like: `jdbc:aerospike:localhost/test`. The following example shows how to connect to namespace `test` of aerospike running on remote machine and listening to port 4567: `jdbc:aerospike:10.1.1.1:4567/test`.
-
 
 ## SQL compliance
 

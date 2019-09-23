@@ -33,15 +33,12 @@ class SimpleWrapperTest {
         failing(pmd, Function.class);
     }
 
-
-
-
-    <T extends Wrapper> void successful(T wrapper, Class<?> iface) throws SQLException {
+    private <T extends Wrapper> void successful(T wrapper, Class<?> iface) throws SQLException {
         assertEquals(wrapper, wrapper.unwrap(iface));
         assertTrue(wrapper.isWrapperFor(iface));
     }
 
-    <T extends Wrapper> void failing(T wrapper, Class<?> iface) throws SQLException {
+    private <T extends Wrapper> void failing(T wrapper, Class<?> iface) throws SQLException {
         assertThrows(SQLException.class, () -> wrapper.unwrap(iface));
         assertFalse(wrapper.isWrapperFor(iface));
     }

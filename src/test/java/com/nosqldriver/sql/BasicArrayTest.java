@@ -1,6 +1,5 @@
 package com.nosqldriver.sql;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Array;
@@ -69,7 +68,7 @@ class BasicArrayTest {
 
     @Test
     void createArraysOfInvalidType() {
-        Assertions.assertThrows(IllegalArgumentException.class, () -> assertEquals(0, ((Object[])new BasicArray("schema", "unknown", new Object[0]).getArray()).length));
+        assertThrows(IllegalArgumentException.class, () -> assertEquals(0, ((Object[])new BasicArray("schema", "unknown", new Object[0]).getArray()).length));
     }
 
     private void assertVarcharArray(Array a) throws SQLException {

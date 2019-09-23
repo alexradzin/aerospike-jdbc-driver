@@ -66,7 +66,7 @@ class IndexTest {
     }
 
 
-    void assertCreateAndDropIndex(String column, String indexName, String indexType) throws SQLException, IOException {
+    private void assertCreateAndDropIndex(String column, String indexName, String indexType) throws SQLException, IOException {
         TestDataUtils.writeBeatles();
         assertFalse(Info.request(TestDataUtils.client.getNodes()[0], "sindex").contains(indexName));
         testConn.createStatement().execute(format("CREATE %s INDEX %s ON people (%s)", indexType, indexName, column));
