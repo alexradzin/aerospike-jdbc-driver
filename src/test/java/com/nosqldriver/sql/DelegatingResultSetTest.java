@@ -42,6 +42,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,11 +56,12 @@ class DelegatingResultSetTest {
             column("float", FLOAT), column("double", DOUBLE),
             column("text", VARCHAR),
             column("d", DATE), column("t", Types.TIME), column("ts", Types.TIMESTAMP),
-            column("url", VARCHAR)
+            column("url", VARCHAR),
+            column("empty", Types.NULL)
     );
 
     private static final long now = currentTimeMillis();
-    private static final Object[] simpleRow = new Object[] {(byte)64, (short)123, 123456, now, true, false, 3.14f, 3.1415926, "hello, world!", new java.sql.Date(now), new java.sql.Time(now), new java.sql.Timestamp(now), "http://www.google.com"};
+    private static final Object[] simpleRow = new Object[] {(byte)64, (short)123, 123456, now, true, false, 3.14f, 3.1415926, "hello, world!", new java.sql.Date(now), new java.sql.Time(now), new java.sql.Timestamp(now), "http://www.google.com", null};
     private static final List<List<?>> simpleData = singletonList(Arrays.asList(simpleRow));
 
 
@@ -109,6 +111,7 @@ class DelegatingResultSetTest {
     @ParameterizedTest(name = "{index} {1}")
     @VariableSource("resultSetsForSimpleTypes")
     void getAllSimpleTypes(ResultSet rs, String name) throws SQLException, MalformedURLException {
+        assertEquals(0, rs.getRow());
         assertTrue(rs.next());
 
         assertEquals(simpleRow[0], rs.getByte(1));
@@ -120,6 +123,7 @@ class DelegatingResultSetTest {
         assertEquals(expByte.intValue(), rs.getInt("byte"));
         assertEquals(expByte.longValue(), rs.getLong(1));
         assertEquals(expByte.longValue(), rs.getLong("byte"));
+        assertFalse(rs.wasNull());
 
         assertEquals(simpleRow[1], rs.getShort(2));
         assertEquals(simpleRow[1], rs.getShort("short"));
@@ -128,11 +132,13 @@ class DelegatingResultSetTest {
         assertEquals(expShort.intValue(), rs.getInt("short"));
         assertEquals(expShort.longValue(), rs.getLong(2));
         assertEquals(expShort.longValue(), rs.getLong("short"));
+        assertFalse(rs.wasNull());
 
         assertEquals(simpleRow[2], rs.getInt(3));
         assertEquals(simpleRow[2], rs.getInt("int"));
         assertEquals(Integer.valueOf((int) simpleRow[2]).longValue(), rs.getLong(3));
         assertEquals(Integer.valueOf((int) simpleRow[2]).longValue(), rs.getLong("int"));
+        assertFalse(rs.wasNull());
 
         assertEquals(simpleRow[3], rs.getLong(4));
         assertEquals(simpleRow[3], rs.getLong("long"));
@@ -141,40 +147,56 @@ class DelegatingResultSetTest {
         assertEquals(simpleRow[4], rs.getBoolean("on"));
         assertEquals(simpleRow[5], rs.getBoolean(6));
         assertEquals(simpleRow[5], rs.getBoolean("off"));
+        assertFalse(rs.wasNull());
 
         assertEquals((float) simpleRow[6], rs.getFloat(7));
         assertEquals((float) simpleRow[6], rs.getFloat("float"));
         assertEquals((float) simpleRow[6], rs.getDouble(7));
         assertEquals((float) simpleRow[6], rs.getDouble("float"));
+        assertFalse(rs.wasNull());
 
         assertEquals((double) simpleRow[7], rs.getDouble(8));
         assertEquals((double) simpleRow[7], rs.getDouble("double"));
         assertEquals((double) simpleRow[7], rs.getBigDecimal(8).doubleValue());
         assertEquals((double) simpleRow[7], rs.getBigDecimal("double").doubleValue());
+        assertFalse(rs.wasNull());
 
         double roundedExpValue = new BigDecimal((double) simpleRow[7]).setScale(2, RoundingMode.FLOOR).doubleValue();
         assertEquals(roundedExpValue, rs.getBigDecimal(8, 2).doubleValue());
         assertEquals(roundedExpValue, rs.getBigDecimal("double", 2).doubleValue());
+        assertFalse(rs.wasNull());
 
 
         assertEquals(simpleRow[8], rs.getString(9));
         assertEquals(simpleRow[8], rs.getString("text"));
         assertEquals(simpleRow[8], rs.getNString(9));
         assertEquals(simpleRow[8], rs.getNString("text"));
+        assertFalse(rs.wasNull());
 
         assertEquals(simpleRow[9], rs.getDate(10));
         assertEquals(simpleRow[9], rs.getDate("d"));
+        assertFalse(rs.wasNull());
 
         assertEquals(simpleRow[10], rs.getTime(11));
         assertEquals(simpleRow[10], rs.getTime("t"));
+        assertFalse(rs.wasNull());
 
         assertEquals(simpleRow[11], rs.getTimestamp(12));
         assertEquals(simpleRow[11], rs.getTimestamp("ts"));
+        assertFalse(rs.wasNull());
 
         URL expUrl = new URL((String) simpleRow[12]);
         assertEquals(expUrl, rs.getURL(13));
         assertEquals(expUrl, rs.getURL("url"));
         assertEquals(expUrl, rs.getObject("url", URL.class));
+        assertFalse(rs.wasNull());
+
+
+        assertNull(rs.getObject(14));
+        assertNull(rs.getObject("empty"));
+        assertTrue(rs.wasNull());
+
+        assertEquals(1, rs.getRow());
 
         assertFalse(rs.next());
     }
