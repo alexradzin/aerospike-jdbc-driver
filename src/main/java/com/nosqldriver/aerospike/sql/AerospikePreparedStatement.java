@@ -177,7 +177,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
     @Override
     public void setObject(int parameterIndex, Object x) throws SQLException {
         if (parameterIndex <= 0 || parameterIndex > parameterValues.length) {
-            throw new IllegalArgumentException(parameterValues.length == 0 ?
+            throw new SQLException(parameterValues.length == 0 ?
                     "Current SQL statement does not have parameters" :
                     format("Wrong parameter index. Expected from %d till %d", 1, parameterValues.length));
         }

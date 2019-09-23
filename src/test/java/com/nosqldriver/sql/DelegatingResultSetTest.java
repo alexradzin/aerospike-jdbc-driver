@@ -159,6 +159,27 @@ class DelegatingResultSetTest {
         assertEquals((double) simpleRow[7], rs.getDouble("double"));
         assertEquals((double) simpleRow[7], rs.getBigDecimal(8).doubleValue());
         assertEquals((double) simpleRow[7], rs.getBigDecimal("double").doubleValue());
+
+        //TODO: fix BaseSchemalessResultSet to use TypeTransformer.cast() and make these test to work for all result sets
+
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getBinaryStream(8)));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getBinaryStream("double")));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getAsciiStream(8)));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getAsciiStream("double")));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getCharacterStream(8)));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getCharacterStream("double")));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getNCharacterStream(8)));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getNCharacterStream("double")));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getUnicodeStream(8)));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getUnicodeStream("double")));
+
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getBlob(8)));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getBlob("double")));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getClob(8)));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getClob("double")));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getNClob(8)));
+//        assertThrows(SQLException.class, () -> assertEquals(simpleRow[7], rs.getNClob("double")));
+
         assertFalse(rs.wasNull());
 
         double roundedExpValue = new BigDecimal((double) simpleRow[7]).setScale(2, RoundingMode.FLOOR).doubleValue();

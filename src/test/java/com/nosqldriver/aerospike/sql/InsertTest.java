@@ -22,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -47,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests of INSERT SQL statement
@@ -383,6 +385,10 @@ class InsertTest {
         ps.setClob(3, new StringReader(text));
         ps.setClob(4, new StringReader(text), text.length());
 
+        // Wrong clob length
+        assertThrows(SQLException.class, () -> ps.setClob(4, new StringReader(text), text.length() + 1));
+        assertThrows(SQLException.class, () -> ps.setClob(4, new StringReader(text), text.length() - 1));
+
         assertEquals(1, ps.executeUpdate());
 
         Record record1 = client.get(null, key1);
@@ -481,6 +487,11 @@ class InsertTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setTime(1, new Time(now), Calendar.getInstance()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setTimestamp(1, new Timestamp(now), Calendar.getInstance()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setRowId(1, null));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setNull(1, Types.INTEGER, "integer"));
+
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setSQLXML(1, mock(SQLXML.class)));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setObject(1, "", Types.VARCHAR, 0));
+
     }
 
     @Test
@@ -513,6 +524,36 @@ class InsertTest {
         assertEquals(FETCH_FORWARD, statement.getFetchDirection());
         assertFalse(statement.isClosed());
     }
+
+
+    @Test
+    void insertUsingPreparedStatementAndExecute() throws SQLException {
+        Key key1 = new Key(NAMESPACE, DATA, 1);
+        assertNull(client.get(null, key1));
+        PreparedStatement ps = testConn.prepareStatement("insert into data (PK, text) values (?, ?)");
+        ps.setInt(1, 1);
+        ps.setString(2, "ok");
+        assertTrue(ps.execute());
+
+        Record record1 = client.get(null, key1);
+        assertEquals("ok", record1.getString("text"));
+    }
+
+
+    @Test
+    void insertWrong() throws SQLException {
+        Key key1 = new Key(NAMESPACE, DATA, 1);
+        assertNull(client.get(null, key1));
+        PreparedStatement ps = testConn.prepareStatement("insert into data (PK, text) values (?, ?)");
+        ps.setInt(1, 1);
+
+        // Index out of bounds
+        assertThrows(SQLException.class, () -> ps.setString(0, "ooops"));
+        assertThrows(SQLException.class, () -> ps.setString(3, "ooops"));
+        ps.setString(2, "ok");
+
+    }
+
 
     private String getString(Clob clob) throws SQLException {
         return clob.getSubString(1, (int)clob.length());
