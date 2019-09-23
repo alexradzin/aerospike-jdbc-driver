@@ -237,6 +237,30 @@ class TypesTest {
         assertFalse(rs.next());
     }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select 0, 1, 3.14, 'text'",
+    })
+    void types(String sql) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertEquals(0, rs.getByte(1));
+        assertEquals(0, rs.getShort(1));
+        assertEquals(0, rs.getInt(1));
+//        assertFalse(rs.getBoolean(1));
+
+        assertEquals(1, rs.getByte(2));
+        assertEquals(1, rs.getShort(2));
+        assertEquals(1, rs.getInt(2));
+//        assertTrue(rs.getBoolean(2));
+
+        assertEquals(3.14f, rs.getFloat(3));
+        assertEquals(3.14, rs.getDouble(3));
+//        assertEquals(3.14, rs.getBigDecimal(3).setScale(2).doubleValue());
+
+        assertFalse(rs.next());
+    }
+
 
     @SafeVarargs
     private final <T> void assertValue(T expected, Callable<T>... getters) throws Exception {
