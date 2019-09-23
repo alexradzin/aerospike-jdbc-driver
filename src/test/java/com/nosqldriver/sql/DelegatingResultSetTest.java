@@ -171,6 +171,13 @@ class DelegatingResultSetTest {
         assertEquals(simpleRow[8], rs.getString("text"));
         assertEquals(simpleRow[8], rs.getNString(9));
         assertEquals(simpleRow[8], rs.getNString("text"));
+
+        assertThrows(SQLException.class, () -> assertEquals(simpleRow[8], rs.getURL(9)));
+        assertThrows(SQLException.class, () -> assertEquals(simpleRow[8], rs.getURL("text")));
+        assertThrows(SQLException.class, () -> assertEquals(simpleRow[8], rs.getInt(9)));
+        assertThrows(SQLException.class, () -> assertEquals(simpleRow[8], rs.getInt("text")));
+
+
         assertFalse(rs.wasNull());
 
         assertEquals(simpleRow[9], rs.getDate(10));

@@ -314,10 +314,6 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
         return index <= columns.size() ? ofNullable(columns.get(index - 1)).map(DataColumn::getExpression).orElse(null) : null;
     }
 
-    private Optional<String> getEval2(int index) {
-        return index <= columns.size() ? ofNullable(columns.get(index - 1)).map(DataColumn::getExpression) : Optional.empty();
-    }
-
     @Override
     public boolean wasNull() throws SQLException {
         return wasNull;
@@ -334,8 +330,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
 
     private <T> T getValue(int columnIndex, Class<T> type, Function<T, T> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
-        Optional<T> res = getEval2(columnIndex).map(eval -> transformer.apply(cast(eval(eval), type)));
-        return getValue(res, superGetter);
+        return getValueUsingExpression(getEval(columnIndex), type, transformer, superGetter);
     }
 
     private <T> T getValue(String columnLabel, Class<T> type, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
@@ -343,9 +338,14 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     }
 
     private <T> T getValue(String columnLabel, Class<T> type, Function<T, T> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
-        Optional<T> res = Optional.ofNullable(aliasToEval.get(columnLabel)).map(eval -> transformer.apply(cast(eval(eval), type)));
-        return getValue(res, superGetter);
+        return getValueUsingExpression(aliasToEval.get(columnLabel), type, transformer, superGetter);
     }
+
+    private <T> T getValueUsingExpression(String expr, Class<T> type, Function<T, T> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
+        T value = expr != null ? transformer.apply(cast(eval(expr), type)) : null;
+        return getValue(Optional.ofNullable(value), superGetter);
+    }
+
 
     private <T> T getValue(Optional<T> value, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
         return wasNull(value.isPresent() ? value.get() : superGetter.get());

@@ -773,13 +773,13 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     protected abstract boolean moveToNext();
 
     protected abstract Object getValue(R record, String label);
-    protected abstract String getString(R record, String label);
-    protected abstract boolean getBoolean(R record, String label);
+    protected abstract String getString(R record, String label) throws SQLException;
+    protected abstract boolean getBoolean(R record, String label) throws SQLException;
 
-    protected abstract byte getByte(R record, String label);
-    protected abstract short getShort(R record, String label);
-    protected abstract int getInt(R record, String label);
-    protected abstract long getLong(R record, String label);
-    protected abstract float getFloat(R record, String label);
-    protected abstract double getDouble(R record, String label);
+    protected abstract byte getByte(R record, String label) throws SQLException;
+    protected abstract short getShort(R record, String label) throws SQLException;
+    protected abstract int getInt(R record, String label) throws SQLException;
+    protected abstract long getLong(R record, String label) throws SQLException;
+    protected abstract float getFloat(R record, String label) throws SQLException;
+    protected abstract double getDouble(R record, String label) throws SQLException;
 }

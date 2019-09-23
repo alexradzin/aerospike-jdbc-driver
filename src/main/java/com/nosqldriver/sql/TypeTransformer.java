@@ -78,8 +78,17 @@ public class TypeTransformer {
     private static final DateFormat isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"); // used by javascript engine
     private static final DateFormat sqlDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS"); // used by SQL
 
+
+    public static <T> T cast(Object obj, Class<T> type) throws SQLException {
+        try {
+            return castImpl(obj, type);
+        } catch (RuntimeException e) {
+            throw new SQLException(e);
+        }
+    }
+
     @SuppressWarnings("unchecked")
-    public static <T> T cast(Object obj, Class<T> type) {
+    private static <T> T castImpl(Object obj, Class<T> type) {
         if (typeTransformers.containsKey(type)) {
             return (T) typeTransformers.get(type).apply(obj);
         }

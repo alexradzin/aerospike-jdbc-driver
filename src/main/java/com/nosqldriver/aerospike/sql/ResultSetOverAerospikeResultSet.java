@@ -44,42 +44,42 @@ public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map
     }
 
     @Override
-    protected String getString(Map<String, Object> record, String label) {
+    protected String getString(Map<String, Object> record, String label) throws SQLException {
         return cast(getValue(record, label), String.class);
     }
 
     @Override
-    protected boolean getBoolean(Map<String, Object> record, String label) {
+    protected boolean getBoolean(Map<String, Object> record, String label) throws SQLException {
         return cast(getValue(record, label), Boolean.class);
     }
 
     @Override
-    protected byte getByte(Map<String, Object> record, String label) {
+    protected byte getByte(Map<String, Object> record, String label) throws SQLException {
         return cast(getValue(record, label), byte.class);
     }
 
     @Override
-    protected short getShort(Map<String, Object> record, String label) {
+    protected short getShort(Map<String, Object> record, String label) throws SQLException {
         return cast(getValue(record, label), short.class);
     }
 
     @Override
-    protected int getInt(Map<String, Object> record, String label) {
+    protected int getInt(Map<String, Object> record, String label) throws SQLException {
         return cast(getValue(record, label), int.class);
     }
 
     @Override
-    protected long getLong(Map<String, Object> record, String label) {
+    protected long getLong(Map<String, Object> record, String label) throws SQLException {
         return cast(getValue(record, label), long.class);
     }
 
     @Override
-    protected float getFloat(Map<String, Object> record, String label) {
+    protected float getFloat(Map<String, Object> record, String label) throws SQLException {
         return cast(getValue(record, label), float.class);
     }
 
     @Override
-    protected double getDouble(Map<String, Object> record, String label) {
+    protected double getDouble(Map<String, Object> record, String label) throws SQLException {
         return cast(getValue(record, label), double.class);
     }
 
