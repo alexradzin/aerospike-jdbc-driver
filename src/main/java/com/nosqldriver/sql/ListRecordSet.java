@@ -1,6 +1,7 @@
 package com.nosqldriver.sql;
 
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -57,7 +58,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
         return new DataColumnBasedResultSetMetaData(columns);
     }
 
-    public static int[] discoverTypes(int nColumns, Iterable<List<?>> data) {
+    public static int[] discoverTypes(int nColumns, Iterable<List<?>> data) throws SQLException {
         int[] types = new int[nColumns];
         int rowIndex = 0;
         for (List<?> row : data) {
@@ -75,7 +76,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
                     continue;
                 }
                 if (type != rowType) {
-                    throw new IllegalArgumentException(format("Type of value [%d,%d] %s does not match already discovered type %s", rowIndex, i, rowType, type));
+                    throw new SQLException(format("Type of value [%d,%d] %s does not match already discovered type %s", rowIndex, i, rowType, type));
                 }
             }
             rowIndex++;

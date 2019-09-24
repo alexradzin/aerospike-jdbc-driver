@@ -855,7 +855,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     }
 
     @Override
-    public ResultSet getTypeInfo() {
+    public ResultSet getTypeInfo() throws SQLException {
         String[] columns = new String[] {
                 "TYPE_NAME", "DATA_TYPE", "PRECISION", "LITERAL_PREFIX", "LITERAL_SUFFIX", "CREATE_PARAMS", "NULLABLE",
                 "CASE_SENSITIVE", "SEARCHABLE", "UNSIGNED_ATTRIBUTE", "FIXED_PREC_SCALE", "AUTO_INCREMENT", "LOCAL_TYPE_NAME",

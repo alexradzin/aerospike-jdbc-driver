@@ -19,7 +19,10 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
@@ -61,6 +64,7 @@ class ListRecordSetTest {
                         EXPRESSION.create(catalog, table, "year()-year_of_birth", "age")),
                 emptyList());
 
+
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(3, md.getColumnCount());
@@ -82,7 +86,7 @@ class ListRecordSetTest {
 
     @Test
     void noFieldsOneRecord() throws SQLException {
-        ResultSet rs = new ListRecordSet("schema", "table",
+        ListRecordSet rs = new ListRecordSet("schema", "table",
                 asList(
                         DATA.create(catalog, table, "first_name", "first_name"),
                         DATA.create(catalog, table, "last_name", "last_name"),
@@ -97,11 +101,21 @@ class ListRecordSetTest {
         assertEquals("John", rs.getString(1));
         assertEquals("Smith", rs.getString(2));
         assertEquals(1970, rs.getInt(3));
+
+
+        Map<String, Object> actual = rs.getData(rs.getRecord());
+        Map<String, Object> expected = new HashMap<>();
+        expected.put("first_name", "John");
+        expected.put("last_name", "Smith");
+        expected.put("year_of_birth", 1970);
+        assertEquals(expected, actual);
+
+
         assertFalse(rs.next());
     }
 
     @Test
-    void discoverTypes() {
+    void discoverTypes() throws SQLException {
         long now = currentTimeMillis();
         List<Object> data = asList(
                 (short)123, 12345, now, true, 3.14f, 3.14, "test", new byte[0],
@@ -127,6 +141,18 @@ class ListRecordSetTest {
         assertArrayEquals(expected, actual);
     }
 
+
+    @Test
+    void discoverTypesUnknownType() throws SQLException {
+        List<Object> data = singletonList(new Thread()); // Thread cannot be persisted in DB and its type cannot be discovered.
+        int[] actual = ListRecordSet.discoverTypes(data.size(), singletonList(data));
+        assertArrayEquals(new int[] {0}, actual);
+    }
+
+    @Test
+    void discoverTypesDifferentTypesInSameColumn() {
+        assertThrows(SQLException.class, () -> ListRecordSet.discoverTypes(1, Arrays.asList(singletonList(1), singletonList("1"))));
+    }
 
 
     @Test
