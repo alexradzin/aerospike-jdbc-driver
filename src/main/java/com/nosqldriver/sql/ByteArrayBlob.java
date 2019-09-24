@@ -38,7 +38,7 @@ public class ByteArrayBlob implements Blob {
             throw new SQLException(format("Length must be >= 0 but was %d", length));
         }
         int from = (int)pos - 1;
-        return Arrays.copyOfRange(data, from, length);
+        return Arrays.copyOfRange(data, from, from + length);
     }
 
     @Override
@@ -48,6 +48,9 @@ public class ByteArrayBlob implements Blob {
 
     @Override
     public long position(byte[] pattern, long start) throws SQLException {
+        if (start > length()) {
+            return -1;
+        }
         int index = indexOf(data, (int)start - 1, data.length, pattern, 0, pattern.length, 0);
         return index >= 0 ? index + 1 : index;
     }

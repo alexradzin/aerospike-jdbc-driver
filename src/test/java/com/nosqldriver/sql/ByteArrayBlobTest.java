@@ -41,6 +41,12 @@ class ByteArrayBlobTest {
     }
 
     @Test
+    void setBytesWrongOffset() {
+        Blob blob = new ByteArrayBlob();
+        assertThrows(SQLException.class, () -> blob.setBytes(0, new byte[] {123}, -1, 1));
+    }
+
+    @Test
     void getBytesWrongPos() throws SQLException {
         Blob blob = new ByteArrayBlob();
         blob.setBytes(1, new byte[] {123});
@@ -92,7 +98,10 @@ class ByteArrayBlobTest {
         Blob blob = new ByteArrayBlob();
         blob.setBytes(1, "hello world".getBytes());
         assertEquals(7, blob.position("world".getBytes(), 1));
+        assertEquals(1, blob.position("world".getBytes(), 7));
+        assertEquals(3, blob.position("world".getBytes(), 5));  // effective target is "o world"
     }
+
     @Test
     void positionBlobExists() throws SQLException {
         Blob blob = new ByteArrayBlob();
@@ -115,6 +124,8 @@ class ByteArrayBlobTest {
         Blob blob = new ByteArrayBlob();
         blob.setBytes(1, "hello world".getBytes());
         assertEquals(-1, blob.position("bye".getBytes(), 1));
+        assertEquals(-1, blob.position("hello".getBytes(), 2));
+        assertEquals(-1, blob.position("hello".getBytes(), 12));
     }
 
 
@@ -143,14 +154,16 @@ class ByteArrayBlobTest {
     @Test
     void geStream() throws SQLException, IOException {
         Blob blob = new ByteArrayBlob();
-        blob.setBytes(1, "hello world".getBytes());
-        assertArrayEquals("hello world".getBytes(), IOUtils.toByteArray(blob.getBinaryStream()));
+        String str = "hello world";
+        blob.setBytes(1, str.getBytes());
+        assertArrayEquals(str.getBytes(), IOUtils.toByteArray(blob.getBinaryStream()));
+        assertArrayEquals(str.getBytes(), IOUtils.toByteArray(blob.getBinaryStream(1, str.length())));
+        assertArrayEquals("hello".getBytes(), IOUtils.toByteArray(blob.getBinaryStream(1, 5)));
+        assertArrayEquals("world".getBytes(), IOUtils.toByteArray(blob.getBinaryStream(7, 5)));
+        assertArrayEquals("lo wor".getBytes(), IOUtils.toByteArray(blob.getBinaryStream(4, 6)));
     }
-
-
 
     private byte[] getBytes(Blob blob) throws SQLException {
         return blob.getBytes(1, (int)blob.length());
     }
-
 }
