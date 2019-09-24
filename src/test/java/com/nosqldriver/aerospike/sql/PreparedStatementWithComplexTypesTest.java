@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -36,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PreparedStatementWithComplexTypesTest {
@@ -108,7 +110,7 @@ class PreparedStatementWithComplexTypesTest {
         Key key1 = new Key(NAMESPACE, DATA, 1);
         assertNull(client.get(null, key1));
         PreparedStatement ps = testConn.prepareStatement(
-                "insert into data (PK, byte, short, int, long, boolean, string, nstring, blob, clob, nclob, t, ts, d) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "insert into data (PK, byte, short, int, long, boolean, string, nstring, blob, clob, nclob, t, ts, d, fval, dval) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
         long now = currentTimeMillis();
@@ -137,6 +139,8 @@ class PreparedStatementWithComplexTypesTest {
         ps.setObject(12, new Time[] {new Time(now)});
         ps.setObject(13, new Timestamp[] {new Timestamp(now)});
         ps.setObject(14, new java.sql.Date[] {new java.sql.Date(now)});
+        ps.setObject(15, new float[] {3.14f, 2.7f});
+        ps.setObject(16, new double[] {3.1415926, 2.718281828});
 
 
         assertEquals(1, ps.executeUpdate());
@@ -163,8 +167,11 @@ class PreparedStatementWithComplexTypesTest {
         assertEquals(new ArrayList<>(singleton(new Timestamp(now))), record1.getList("ts"));
         assertEquals(new ArrayList<>(singleton(new java.sql.Date(now))), record1.getList("d"));
 
+        assertEquals(new ArrayList<>(Arrays.asList(3.14f, 2.7f)), record1.getList("fval").stream().map(v -> ((Number)v).floatValue()).collect(Collectors.toList()));
+        assertEquals(new ArrayList<>(Arrays.asList(3.1415926, 2.718281828)), record1.getList("dval"));
 
-        PreparedStatement query = testConn.prepareStatement("select byte, short, int, long, boolean, string, nstring, blob, clob, nclob, t, ts, d from data where PK=?");
+
+        PreparedStatement query = testConn.prepareStatement("select byte, short, int, long, boolean, string, nstring, blob, clob, nclob, t, ts, d, fval, dval from data where PK=?");
         query.setInt(1, 1);
 
         ResultSet rs = query.executeQuery();
@@ -245,7 +252,53 @@ class PreparedStatementWithComplexTypesTest {
         assertArrayEquals(expectedDates, (Object[])rs.getArray(12).getArray());
         assertArrayEquals(expectedDates, (Object[])rs.getArray("d").getArray());
 
+        Object[] expectedFloats = new Object[] {3.14f, 2.7f};
+        assertArrayEquals(expectedFloats, Arrays.stream((Object[]) rs.getArray(14).getArray()).map(v -> ((Number)v).floatValue()).toArray());
+        assertArrayEquals(expectedFloats, Arrays.stream((Object[]) rs.getArray("fval").getArray()).map(v -> ((Number)v).floatValue()).toArray());
+
+        Object[] expectedDoubles = new Object[] {3.1415926, 2.718281828};
+        assertArrayEquals(expectedDoubles, (Object[])rs.getArray(15).getArray());
+        assertArrayEquals(expectedDoubles, (Object[])rs.getArray("dval").getArray());
+
         assertFalse(rs.next());
+    }
+
+    @Test
+    void insertOneRowWithStringKey() throws SQLException {
+        insertOneRowWithTypedKey("one", new Key("test", "people", "one"));
+    }
+
+
+    @Test
+    void insertOneRowWithByteArrayKey() throws SQLException {
+        insertOneRowWithTypedKey("one".getBytes(), new Key("test", "people", "one".getBytes()));
+    }
+
+    @Test
+    void insertOneRowWithKeyOfUnsupportedType() throws SQLException {
+        PreparedStatement insert = testConn.prepareStatement("insert into people (PK, id, first_name, last_name) values (?, ?, ?, ?, ?)");
+        insert.setObject(1, new ArrayList<>());
+        insert.setInt(2, 1);
+        insert.setString(3, "John");
+        insert.setString(4, "Lennon");
+        assertThrows(SQLException.class, insert::executeUpdate);
+    }
+
+    <T> void insertOneRowWithTypedKey(T id, Key key) throws SQLException {
+        PreparedStatement insert = testConn.prepareStatement("insert into people (PK, id, first_name, last_name) values (?, ?, ?, ?, ?)");
+        insert.setObject(1, id);
+        insert.setInt(2, 1);
+        insert.setString(3, "John");
+        insert.setString(4, "Lennon");
+        int rowCount = insert.executeUpdate();
+        assertEquals(1, rowCount);
+        Record record = client.get(null, key);
+        assertNotNull(record);
+        Map<String, Object> expectedData = new HashMap<>();
+        expectedData.put("id", 1L);
+        expectedData.put("first_name", "John");
+        expectedData.put("last_name", "Lennon");
+        assertEquals(expectedData, record.bins);
     }
 
     private byte[] getBytes(Blob blob) {

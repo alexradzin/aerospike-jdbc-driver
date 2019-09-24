@@ -216,12 +216,20 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
-        return getStatementType(sql).executeQuery(this, sql);
+        try {
+            return getStatementType(sql).executeQuery(this, sql);
+        } catch (RuntimeException e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
-        return getStatementType(sql).executeUpdate(this, sql);
+        try {
+            return getStatementType(sql).executeUpdate(this, sql);
+        } catch (RuntimeException e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override

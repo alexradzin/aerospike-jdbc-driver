@@ -157,7 +157,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
             return new Key(schema, set, (Long) pk);
         }
         if (pk instanceof byte[]) {
-            return new Key(schema, set, (byte) pk);
+            return new Key(schema, set, (byte[]) pk);
         }
 
         throw new IllegalArgumentException("Key must be either String, int, long or byte[]. " + pk.getClass() + " is not supported");
