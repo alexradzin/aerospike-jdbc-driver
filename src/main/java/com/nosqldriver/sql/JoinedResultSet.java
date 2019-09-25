@@ -5,6 +5,7 @@ import com.nosqldriver.aerospike.sql.query.JoinHolder;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URL;
 import java.sql.Array;
 import java.sql.Blob;
@@ -30,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
+import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 
 public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapper {
@@ -151,7 +153,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        return getBigDecimal(getColumnLabel(columnIndex));
+        return getBigDecimal(getColumnLabel(columnIndex)).setScale(scale, RoundingMode.FLOOR);
     }
 
     @Override
@@ -196,7 +198,14 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        return get(columnLabel, boolean.class).orElse(false);
+        Object result = get(columnLabel, Object.class).orElse(false);
+        if (result instanceof Boolean) {
+            return (Boolean)result;
+        }
+        if (result instanceof Number) {
+            return ((Number)result).longValue() != 0;
+        }
+        throw new  ClassCastException(format("Cannot class %s to boolean", result.getClass()));
     }
 
     @Override
@@ -231,7 +240,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
 
     @Override
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        return get(columnLabel, BigDecimal.class).orElse(null);
+        return get(columnLabel, BigDecimal.class).map(n -> n.setScale(scale, RoundingMode.FLOOR)).orElse(null);
     }
 
     @Override
@@ -370,7 +379,13 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
 
     @Override
     public boolean first() throws SQLException {
-        return false;
+        if (row == 0) {
+            return next();
+        }
+        if (row == 1) {
+            return true;
+        }
+        throw new SQLException("Cannot got backwards on result set type TYPE_FORWARD_ONLY");
     }
 
     @Override
@@ -475,12 +490,28 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
 
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
-        return get(columnLabel, Blob.class).orElse(null);
+        Object result = get(columnLabel, Object.class).orElse(null);
+        if (result instanceof Blob) {
+            return (Blob)result;
+        }
+        if (result instanceof byte[]) {
+            return new ByteArrayBlob((byte[])result);
+        }
+
+        throw new  ClassCastException(format("Cannot class %s to boolean", result.getClass()));
     }
 
     @Override
     public Clob getClob(String columnLabel) throws SQLException {
-        return get(columnLabel, Clob.class).orElse(null);
+        Object result = get(columnLabel, Object.class).orElse(null);
+        if (result instanceof Clob) {
+            return (Clob)result;
+        }
+        if (result instanceof String) {
+            return new StringClob((String)result);
+        }
+
+        throw new  ClassCastException(format("Cannot class %s to boolean", result.getClass()));
     }
 
     @Override
@@ -555,7 +586,15 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
 
     @Override
     public NClob getNClob(String columnLabel) throws SQLException {
-        return get(columnLabel, NClob.class).orElse(null);
+        Object result = get(columnLabel, Object.class).orElse(null);
+        if (result instanceof NClob) {
+            return (NClob)result;
+        }
+        if (result instanceof String) {
+            return new StringClob((String)result);
+        }
+
+        throw new  ClassCastException(format("Cannot class %s to boolean", result.getClass()));
     }
 
     @Override

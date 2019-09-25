@@ -150,14 +150,27 @@ class InsertTest {
     }
 
     @Test
-    void insertOneRowUsingPreparedStatementVariousTypes() throws SQLException, IOException {
+    void insertAndSelectOneRowUsingPreparedStatementVariousTypes() throws SQLException, IOException {
+        long now = currentTimeMillis();
+        insertOneRowUsingPreparedStatementVariousTypes(now);
+        selectAndAssertOneRowUsingPreparedStatementVariousTypes(now, "select byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url, nothing from data where PK=?", 1);
+    }
+
+    @Test
+    void insertAndSelectWithJoinOneRowUsingPreparedStatementVariousTypes() throws SQLException, IOException {
+        long now = currentTimeMillis();
+        insertOneRowUsingPreparedStatementVariousTypes(now);
+        selectAndAssertOneRowUsingPreparedStatementVariousTypes(now, "select l.byte, l.short, l.int, l.long, l.boolean, l.float_number, l.double_number, l.bigdecimal, l.string, l.nstring, l.blob, l.clob, l.nclob, l.t, l.ts, l.d, l.url, l.nothing from data as l left join data2 as r on l.byte=r.id where PK=?", 1);
+    }
+
+
+    private void insertOneRowUsingPreparedStatementVariousTypes(long now) throws SQLException, IOException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
         assertNull(client.get(null, key1));
         PreparedStatement ps = testConn.prepareStatement(
                 "insert into data (PK, byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url, nothing) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
-        long now = currentTimeMillis();
         String helloWorld = "hello, world!";
         String google = "http://www.google.com";
         ps.setInt(1, 1);
@@ -214,12 +227,16 @@ class InsertTest {
         assertEquals(new java.sql.Date(now), record1.getValue("d"));
         assertEquals(google, record1.getString("url"));
         assertNull(record1.getString("nothing"));
+    }
 
 
-        PreparedStatement query = testConn.prepareStatement("select byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url, nothing from data where PK=?");
-        query.setInt(1, 1);
+    private void selectAndAssertOneRowUsingPreparedStatementVariousTypes(long now, String query, int pk) throws SQLException, IOException {
+        String helloWorld = "hello, world!";
+        String google = "http://www.google.com";
+        PreparedStatement ps = testConn.prepareStatement(query);
+        ps.setInt(1, pk);
 
-        ResultSet rs = query.executeQuery();
+        ResultSet rs = ps.executeQuery();
         ResultSetMetaData md = rs.getMetaData();
 
         int n = md.getColumnCount();
