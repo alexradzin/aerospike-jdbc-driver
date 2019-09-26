@@ -34,7 +34,7 @@ import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 
-public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapper {
+public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabelResultSet, SimpleWrapper {
     private final ResultSet resultSet;
     private final List<JoinHolder> joinHolders;
     private final List<ResultSet> resultSets = new ArrayList<>();
@@ -111,85 +111,6 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
         return wasNull;
     }
 
-    @Override
-    public String getString(int columnIndex) throws SQLException {
-        return getString(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public boolean getBoolean(int columnIndex) throws SQLException {
-        return getBoolean(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public byte getByte(int columnIndex) throws SQLException {
-        return getByte(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public short getShort(int columnIndex) throws SQLException {
-        return getShort(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public int getInt(int columnIndex) throws SQLException {
-        return getInt(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public long getLong(int columnIndex) throws SQLException {
-        return getLong(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public float getFloat(int columnIndex) throws SQLException {
-        return getFloat(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public double getDouble(int columnIndex) throws SQLException {
-        return getDouble(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        return getBigDecimal(getColumnLabel(columnIndex)).setScale(scale, RoundingMode.FLOOR);
-    }
-
-    @Override
-    public byte[] getBytes(int columnIndex) throws SQLException {
-        return getBytes(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public Date getDate(int columnIndex) throws SQLException {
-        return getDate(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public Time getTime(int columnIndex) throws SQLException {
-        return getTime(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        return getTimestamp(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public InputStream getAsciiStream(int columnIndex) throws SQLException {
-        return getAsciiStream(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public InputStream getUnicodeStream(int columnIndex) throws SQLException {
-        return getUnicodeStream(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public InputStream getBinaryStream(int columnIndex) throws SQLException {
-        return getBinaryStream(getColumnLabel(columnIndex));
-    }
 
     @Override
     public String getString(String columnLabel) throws SQLException {
@@ -313,11 +234,6 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
     }
 
     @Override
-    public Object getObject(int columnIndex) throws SQLException {
-        return getObject(getColumnLabel(columnIndex));
-    }
-
-    @Override
     public Object getObject(String columnLabel) throws SQLException {
         return get(columnLabel, Object.class);
     }
@@ -328,18 +244,8 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
     }
 
     @Override
-    public Reader getCharacterStream(int columnIndex) throws SQLException {
-        return getCharacterStream(getColumnLabel(columnIndex));
-    }
-
-    @Override
     public Reader getCharacterStream(String columnLabel) throws SQLException {
         return get(columnLabel, Reader.class).orElse(null);
-    }
-
-    @Override
-    public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
-        return getBigDecimal(getColumnLabel(columnIndex));
     }
 
     @Override
@@ -454,31 +360,6 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
     }
 
     @Override
-    public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
-        return null;
-    }
-
-    @Override
-    public Ref getRef(int columnIndex) throws SQLException {
-        return null;
-    }
-
-    @Override
-    public Blob getBlob(int columnIndex) throws SQLException {
-        return getBlob(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public Clob getClob(int columnIndex) throws SQLException {
-        return getClob(getColumnLabel(columnIndex));
-    }
-
-    @Override
-    public Array getArray(int columnIndex) throws SQLException {
-        return getArray(getColumnLabel(columnIndex));
-    }
-
-    @Override
     public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
         return null;
     }
@@ -520,17 +401,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
     }
 
     @Override
-    public Date getDate(int columnIndex, Calendar cal) throws SQLException {
-        return null;
-    }
-
-    @Override
     public Date getDate(String columnLabel, Calendar cal) throws SQLException {
-        return null;
-    }
-
-    @Override
-    public Time getTime(int columnIndex, Calendar cal) throws SQLException {
         return null;
     }
 
@@ -540,28 +411,13 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
     }
 
     @Override
-    public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
-        return null;
-    }
-
-    @Override
     public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
         return null;
     }
 
     @Override
-    public URL getURL(int columnIndex) throws SQLException {
-        return getURL(getColumnLabel(columnIndex));
-    }
-
-    @Override
     public URL getURL(String columnLabel) throws SQLException {
         return get(columnLabel, URL.class).orElse(null);
-    }
-
-    @Override
-    public RowId getRowId(int columnIndex) throws SQLException {
-        return null;
     }
 
     @Override
@@ -576,12 +432,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
 
     @Override
     public boolean isClosed() throws SQLException {
-        return false;
-    }
-
-    @Override
-    public NClob getNClob(int columnIndex) throws SQLException {
-        return getNClob(getColumnLabel(columnIndex));
+        return resultSet.isClosed();
     }
 
     @Override
@@ -598,28 +449,13 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
     }
 
     @Override
-    public SQLXML getSQLXML(int columnIndex) throws SQLException {
-        return getSQLXML(getColumnLabel(columnIndex));
-    }
-
-    @Override
     public SQLXML getSQLXML(String columnLabel) throws SQLException {
         throw new SQLFeatureNotSupportedException();
     }
 
     @Override
-    public String getNString(int columnIndex) throws SQLException {
-        return getNString(getColumnLabel(columnIndex));
-    }
-
-    @Override
     public String getNString(String columnLabel) throws SQLException {
         return getString(columnLabel);
-    }
-
-    @Override
-    public Reader getNCharacterStream(int columnIndex) throws SQLException {
-        return getNCharacterStream(getColumnLabel(columnIndex));
     }
 
     @Override
@@ -629,18 +465,9 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, SimpleWrapp
 
 
     @Override
-    public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
-        return getObject(getColumnLabel(columnIndex), type);
-    }
-
-    @Override
     @SuppressWarnings("unchecked")
     public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
         return (T)getObject(columnLabel);
-    }
-
-    private String getColumnLabel(int columnIndex) throws SQLException {
-        return getMetaData().getColumnLabel(columnIndex);
     }
 
     private <T> Optional<T> get(String alias, Class<T> type) throws SQLException {
