@@ -500,4 +500,43 @@ public interface ResultSetAdaptor extends ResultSet {
         throw new SQLFeatureNotSupportedException();
     }
 
+    @Override
+    default boolean previous() throws SQLException {
+        return false;
+    }
+
+    @Override
+    default void setFetchDirection(int direction) throws SQLException {
+        if (direction != ResultSet.FETCH_FORWARD) {
+            throw new SQLFeatureNotSupportedException("This version supports fetch forward direction only");
+        }
+    }
+
+    @Override
+    default int getFetchDirection() throws SQLException {
+        return ResultSet.FETCH_FORWARD;
+    }
+
+    @Override
+    default void setFetchSize(int rows) throws SQLException {
+        //TODO: add support of fetch size
+        if (rows != 1) {
+            throw new SQLFeatureNotSupportedException("This version supports fetch size=1 only");
+        }
+    }
+
+    @Override
+    default int getFetchSize() throws SQLException {
+        return 1;
+    }
+
+    @Override
+    default int getType() throws SQLException {
+        return ResultSet.TYPE_FORWARD_ONLY;
+    }
+
+    @Override
+    default int getConcurrency() throws SQLException {
+        return ResultSet.CONCUR_READ_ONLY;
+    }
 }

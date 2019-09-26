@@ -26,6 +26,8 @@ import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 /**
@@ -82,12 +84,20 @@ class SelectJoinTest {
                 DATA.create(NAMESPACE, INSTRUMENTS, "person_id", "person_id").withType(BIGINT)
         );
 
+
+        assertEquals(ResultSet.HOLD_CURSORS_OVER_COMMIT, rs.getHoldability());
+        assertFalse(rs.isClosed());
         Map<String, Collection<String>> result = collect(rs, "first_name", "name");
         assertEquals(4, result.size());
         assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
         assertEquals(new HashSet<>(asList("vocals", "bass guitar", "guitar", "keyboards")), result.get("Paul"));
         assertEquals(new HashSet<>(asList("vocals", "guitar", "sitar")), result.get("George"));
         assertEquals(new HashSet<>(asList("vocals", "drums")), result.get("Ringo"));
+
+
+        assertFalse(rs.isClosed());
+        rs.close();
+        assertTrue(rs.isClosed());
     }
 
 

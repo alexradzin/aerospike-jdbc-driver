@@ -315,46 +315,6 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
     }
 
     @Override
-    public boolean previous() throws SQLException {
-        return false;
-    }
-
-    @Override
-    public void setFetchDirection(int direction) throws SQLException {
-        if (direction != ResultSet.FETCH_FORWARD) {
-            throw new SQLFeatureNotSupportedException("This version supports fetch forward direction only");
-        }
-    }
-
-    @Override
-    public int getFetchDirection() throws SQLException {
-        return ResultSet.FETCH_FORWARD;
-    }
-
-    @Override
-    public void setFetchSize(int rows) throws SQLException {
-        //TODO: add support of fetch size
-        if (rows != 1) {
-            throw new SQLFeatureNotSupportedException("This version supports fetch size=1 only");
-        }
-    }
-
-    @Override
-    public int getFetchSize() throws SQLException {
-        return 1;
-    }
-
-    @Override
-    public int getType() throws SQLException {
-        return ResultSet.TYPE_FORWARD_ONLY;
-    }
-
-    @Override
-    public int getConcurrency() throws SQLException {
-        return ResultSet.CONCUR_READ_ONLY;
-    }
-
-    @Override
     public Statement getStatement() throws SQLException {
         return null;
     }
