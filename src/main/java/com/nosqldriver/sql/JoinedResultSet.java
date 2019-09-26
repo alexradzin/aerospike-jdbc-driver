@@ -331,28 +331,12 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
-        Object result = get(columnLabel, Object.class).orElse(null);
-        if (result instanceof Blob) {
-            return (Blob)result;
-        }
-        if (result instanceof byte[]) {
-            return new ByteArrayBlob((byte[])result);
-        }
-
-        throw new  ClassCastException(format("Cannot class %s to boolean", result.getClass()));
+        return get(columnLabel, Blob.class).orElse(null);
     }
 
     @Override
     public Clob getClob(String columnLabel) throws SQLException {
-        Object result = get(columnLabel, Object.class).orElse(null);
-        if (result instanceof Clob) {
-            return (Clob)result;
-        }
-        if (result instanceof String) {
-            return new StringClob((String)result);
-        }
-
-        throw new  ClassCastException(format("Cannot class %s to boolean", result.getClass()));
+        return get(columnLabel, Clob.class).orElse(null);
     }
 
     @Override
@@ -397,15 +381,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public NClob getNClob(String columnLabel) throws SQLException {
-        Object result = get(columnLabel, Object.class).orElse(null);
-        if (result instanceof NClob) {
-            return (NClob)result;
-        }
-        if (result instanceof String) {
-            return new StringClob((String)result);
-        }
-
-        throw new  ClassCastException(format("Cannot class %s to boolean", result.getClass()));
+        return get(columnLabel, NClob.class).orElse(null);
     }
 
     @Override

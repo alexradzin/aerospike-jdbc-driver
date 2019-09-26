@@ -12,6 +12,7 @@ import java.net.URL;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Date;
+import java.sql.NClob;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -73,6 +74,35 @@ public class TypeTransformer {
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }
+        });
+        typeTransformers.put(Blob.class, o -> {
+            if (o instanceof byte[]) {
+                return new ByteArrayBlob((byte[])o);
+            }
+            if (o instanceof Blob) {
+                return o;
+            }
+            throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
+        });
+        typeTransformers.put(Clob.class, o -> {
+            if (o instanceof String) {
+                return new StringClob((String)o);
+            }
+            if (o instanceof Clob) {
+                return o;
+            }
+
+            throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
+        });
+        typeTransformers.put(NClob.class, o -> {
+            if (o instanceof String) {
+                return new StringClob((String)o);
+            }
+            if (o instanceof Clob) {
+                return o;
+            }
+
+            throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
         });
     }
     private static final DateFormat isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"); // used by javascript engine
