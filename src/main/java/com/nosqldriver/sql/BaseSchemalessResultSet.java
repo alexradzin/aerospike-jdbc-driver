@@ -1,11 +1,9 @@
 package com.nosqldriver.sql;
 
-import com.nosqldriver.util.SneakyThrower;
+import com.nosqldriver.util.ThrowingBiFunction;
 
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.Reader;
-import java.io.StringReader;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.MalformedURLException;
@@ -93,17 +91,17 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public String getString(String columnLabel) throws SQLException {
-        return wasNull(getString(getRecord(), columnLabel));
+        return getValue(columnLabel, (r, s) -> getString(r, columnLabel));
     }
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        return wasNull(getBoolean(getRecord(), columnLabel));
+        return getValue(columnLabel, (r, s) -> getBoolean(r, columnLabel));
     }
 
     @Override
     public byte getByte(String columnLabel) throws SQLException {
-        return wasNull(getByte(getRecord(), columnLabel));
+        return getValue(columnLabel, (r, s) -> getByte(r, columnLabel));
     }
 
     @Override
@@ -113,84 +111,64 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
-        return wasNull(getInt(getRecord(), columnLabel));
+        return getValue(columnLabel, (r, s) -> getInt(r, columnLabel));
     }
 
     @Override
     public long getLong(String columnLabel) throws SQLException {
-        return wasNull(getLong(getRecord(), columnLabel));
+        return getValue(columnLabel, (r, s) -> getLong(r, columnLabel));
     }
 
     @Override
     public float getFloat(String columnLabel) throws SQLException {
-        return wasNull(getFloat(getRecord(), columnLabel));
+        return getValue(columnLabel, (r, s) -> getFloat(r, columnLabel));
     }
 
     @Override
     public double getDouble(String columnLabel) throws SQLException {
-        return wasNull(getDouble(getRecord(), columnLabel));
+        return getValue(columnLabel, (r, s) -> getDouble(r, columnLabel));
     }
 
     @Override
     @Deprecated//(since="1.2")
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        return wasNull(getBigDecimal(columnLabel).setScale(scale, RoundingMode.FLOOR));
+        return getValue(columnLabel, (r, s) -> getBigDecimal(columnLabel).setScale(scale, RoundingMode.FLOOR));
     }
 
     @Override
     public byte[] getBytes(String columnLabel) throws SQLException {
-        return wasNull((byte[])getValue(getRecord(), columnLabel));
+        return wasNull(cast(getValue(getRecord(), columnLabel), byte[].class));
     }
 
     @Override
     public Date getDate(String columnLabel) throws SQLException {
-        return wasNull(getValue(columnLabel, v -> v instanceof Date ? (Date)v : new Date((Long)v)));
+        return wasNull(cast(getValue(getRecord(), columnLabel), Date.class));
     }
 
     @Override
     public Time getTime(String columnLabel) throws SQLException {
-        return wasNull(getValue(columnLabel, v -> v instanceof Time ? (Time)v : new Time((Long)v)));
+        return wasNull(cast(getValue(getRecord(), columnLabel), Time.class));
     }
 
     @Override
     public Timestamp getTimestamp(String columnLabel) throws SQLException {
-        return wasNull(getValue(columnLabel, v -> v instanceof Timestamp ? (Timestamp)v : new Timestamp((Long)v)));
+        return wasNull(cast(getValue(getRecord(), columnLabel), Timestamp.class));
     }
 
     @Override
     public InputStream getAsciiStream(String columnLabel) throws SQLException {
-        return wasNull(getUnicodeStream(columnLabel));
+        return getBinaryStream(columnLabel);
     }
 
     @Override
     @Deprecated//(since="1.2")
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {
-        return wasNull(getBinaryStream(columnLabel));
+        return getAsciiStream(columnLabel);
     }
 
     @Override
     public InputStream getBinaryStream(String columnLabel) throws SQLException {
-        return wasNull(getValue(columnLabel, v -> {
-            //TODO: this code is copied from TypeTransformers. Fix code duplication!
-            try {
-                if (v instanceof byte[]) {
-                    return new ByteArrayInputStream((byte[])v);
-                }
-                if (v instanceof String) {
-                    return new ByteArrayInputStream(((String)v).getBytes());
-                }
-                if (v instanceof Blob) {
-                    return ((Blob)v).getBinaryStream();
-                }
-                if (v instanceof Clob) {
-                    return ((Clob)v).getAsciiStream();
-                }
-                throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", v));
-            } catch (SQLException e) {
-                SneakyThrower.sneakyThrow(new SQLException(e));
-                return null;
-            }
-        }));
+        return wasNull(cast(getValue(getRecord(), columnLabel), InputStream.class));
     }
 
     @Override
@@ -265,11 +243,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Reader getCharacterStream(String columnLabel) throws SQLException {
-        Object value = getValue(getRecord(), columnLabel);
-        if (value instanceof Clob) {
-            return wasNull(((Clob)value).getCharacterStream());
-        }
-        return wasNull(new StringReader((String)value));
+        return wasNull(cast(getValue(getRecord(), columnLabel), Reader.class));
     }
 
     @Override
@@ -396,16 +370,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
-        Object value = getValue(getRecord(), columnLabel);
-        if (value == null) {
-            wasNull = true;
-            return null;
-        }
-        wasNull = false;
-        if (value instanceof Blob) {
-            return (Blob)value;
-        }
-        return new ByteArrayBlob((byte[])value);
+        return wasNull(cast(getValue(getRecord(), columnLabel), Blob.class));
     }
 
     @Override
@@ -493,16 +458,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public NClob getNClob(String columnLabel) throws SQLException {
-        Object value = getObject(columnLabel);
-        if (value == null) {
-            wasNull = true;
-            return null;
-        }
-        wasNull = false;
-        if (value instanceof NClob) {
-            return (NClob)value;
-        }
-        return new StringClob((String)value);
+        return wasNull(cast(getValue(getRecord(), columnLabel), NClob.class));
     }
 
     @Override
@@ -549,11 +505,6 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     public String getColumnLabel(int index) throws SQLException {
         return getMetaData().getColumnName(index);
     }
-
-    private <T> T getValue(String columnLabel, Function<Object, T> mapper) {
-        return ofNullable(getValue(getRecord(), columnLabel)).map(mapper).orElse(null);
-    }
-
 
     protected void assertClosed() throws SQLException {
         if (closed) {
@@ -604,6 +555,11 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     private <T> T wasNull(T value) {
         wasNull = value == null;
         return value;
+    }
+
+    private <V> V getValue(String columnLabel, ThrowingBiFunction<R, String, V, SQLException> getter) throws SQLException {
+        R record = getRecord();
+        return wasNull(record == null ? null : getter.apply(record, columnLabel));
     }
 
     protected abstract boolean moveToNext();

@@ -5,7 +5,6 @@ import com.nosqldriver.aerospike.sql.query.JoinHolder;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.net.URL;
 import java.sql.Array;
 import java.sql.Blob;
@@ -28,11 +27,6 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
-import static com.nosqldriver.sql.TypeTransformer.cast;
-import static java.lang.String.format;
-import static java.util.Optional.ofNullable;
 
 public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabelResultSet, SimpleWrapper {
     private final ResultSet resultSet;
@@ -111,92 +105,90 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
         return wasNull;
     }
 
+    private <T> T wasNull(T value) {
+        wasNull = value == null;
+        return value;
+    }
 
     @Override
     public String getString(String columnLabel) throws SQLException {
-        return get(columnLabel, String.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getString(columnLabel));
     }
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        Object result = get(columnLabel, Object.class).orElse(false);
-        if (result instanceof Boolean) {
-            return (Boolean)result;
-        }
-        if (result instanceof Number) {
-            return ((Number)result).longValue() != 0;
-        }
-        throw new  ClassCastException(format("Cannot class %s to boolean", result.getClass()));
+        return wasNull(findResultSet(columnLabel).getBoolean(columnLabel));
     }
 
     @Override
     public byte getByte(String columnLabel) throws SQLException {
-        return get(columnLabel, byte.class).orElse((byte)0);
+        return wasNull(findResultSet(columnLabel).getByte(columnLabel));
     }
 
     @Override
     public short getShort(String columnLabel) throws SQLException {
-        return get(columnLabel, short.class).orElse((short)0);
+        return wasNull(findResultSet(columnLabel).getShort(columnLabel));
     }
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
-        return get(columnLabel, int.class).orElse(0);
+        return wasNull(findResultSet(columnLabel).getInt(columnLabel));
     }
 
     @Override
     public long getLong(String columnLabel) throws SQLException {
-        return get(columnLabel, long.class).orElse(0L);
+        return wasNull(findResultSet(columnLabel).getLong(columnLabel));
+
     }
 
     @Override
     public float getFloat(String columnLabel) throws SQLException {
-        return get(columnLabel, float.class).orElse(0.0f);
+        return wasNull(findResultSet(columnLabel).getFloat(columnLabel));
     }
 
     @Override
     public double getDouble(String columnLabel) throws SQLException {
-        return get(columnLabel, double.class).orElse(0.0);
+        return wasNull(findResultSet(columnLabel).getDouble(columnLabel));
     }
 
     @Override
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        return get(columnLabel, BigDecimal.class).map(n -> n.setScale(scale, RoundingMode.FLOOR)).orElse(null);
+        return wasNull(findResultSet(columnLabel).getBigDecimal(columnLabel, scale));
     }
 
     @Override
     public byte[] getBytes(String columnLabel) throws SQLException {
-        return get(columnLabel, byte[].class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getBytes(columnLabel));
     }
 
     @Override
     public Date getDate(String columnLabel) throws SQLException {
-        return get(columnLabel, Date.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getDate(columnLabel));
     }
 
     @Override
     public Time getTime(String columnLabel) throws SQLException {
-        return get(columnLabel, Time.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getTime(columnLabel));
     }
 
     @Override
     public Timestamp getTimestamp(String columnLabel) throws SQLException {
-        return get(columnLabel, Timestamp.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getTimestamp(columnLabel));
     }
 
     @Override
     public InputStream getAsciiStream(String columnLabel) throws SQLException {
-        return get(columnLabel, InputStream.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getAsciiStream(columnLabel));
     }
 
     @Override
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {
-        return get(columnLabel, InputStream.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getUnicodeStream(columnLabel));
     }
 
     @Override
     public InputStream getBinaryStream(String columnLabel) throws SQLException {
-        return get(columnLabel, InputStream.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getBinaryStream(columnLabel));
     }
 
     @Override
@@ -235,7 +227,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
-        return get(columnLabel, Object.class);
+        return wasNull(findResultSet(columnLabel).getObject(columnLabel));
     }
 
     @Override
@@ -245,12 +237,12 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public Reader getCharacterStream(String columnLabel) throws SQLException {
-        return get(columnLabel, Reader.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getCharacterStream(columnLabel));
     }
 
     @Override
     public BigDecimal getBigDecimal(String columnLabel) throws SQLException {
-        return get(columnLabel, BigDecimal.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getBigDecimal(columnLabel));
     }
 
     @Override
@@ -331,37 +323,37 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
-        return get(columnLabel, Blob.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getBlob(columnLabel));
     }
 
     @Override
     public Clob getClob(String columnLabel) throws SQLException {
-        return get(columnLabel, Clob.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getClob(columnLabel));
     }
 
     @Override
     public Array getArray(String columnLabel) throws SQLException {
-        return get(columnLabel, Array.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getArray(columnLabel));
     }
 
     @Override
     public Date getDate(String columnLabel, Calendar cal) throws SQLException {
-        return null;
+        return wasNull(findResultSet(columnLabel).getDate(columnLabel, cal));
     }
 
     @Override
     public Time getTime(String columnLabel, Calendar cal) throws SQLException {
-        return null;
+        return wasNull(findResultSet(columnLabel).getTime(columnLabel, cal));
     }
 
     @Override
     public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
-        return null;
+        return wasNull(findResultSet(columnLabel).getTimestamp(columnLabel, cal));
     }
 
     @Override
     public URL getURL(String columnLabel) throws SQLException {
-        return get(columnLabel, URL.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getURL(columnLabel));
     }
 
     @Override
@@ -381,7 +373,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public NClob getNClob(String columnLabel) throws SQLException {
-        return get(columnLabel, NClob.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getNClob(columnLabel));
     }
 
     @Override
@@ -396,7 +388,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public Reader getNCharacterStream(String columnLabel) throws SQLException {
-        return get(columnLabel, Reader.class).orElse(null);
+        return wasNull(findResultSet(columnLabel).getNCharacterStream(columnLabel));
     }
 
 
@@ -406,28 +398,23 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
         return (T)getObject(columnLabel);
     }
 
-    private <T> Optional<T> get(String alias, Class<T> type) throws SQLException {
+    private ResultSet findResultSet(String alias) throws SQLException {
         if (columnTags(resultSet.getMetaData()).contains(alias)) {
             Object value = resultSet.getObject(alias);
             // Metadata of the main result set contains all fields including those that in fact are retrieved from
             // joined tables. So, we have to perform null check and try to retrieve the data from other result sets
             // if it is null here.
             if (value != null) {
-                Optional<T> res = ofNullable(cast(value, type));
-                wasNull = !res.isPresent();
-                return res;
+                return resultSet;
             }
         }
 
         for (ResultSet rs : resultSets) {
             if (columnTags(rs.getMetaData()).contains(alias)) {
-                Optional<T> res = ofNullable(cast(rs.getObject(alias), type));
-                wasNull = !res.isPresent();
-                return res;
+                return rs;
             }
         }
-        wasNull = true;
-        return Optional.empty();
+        return resultSet;
 
     }
 

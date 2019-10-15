@@ -14,6 +14,8 @@ import java.sql.Clob;
 import java.sql.Date;
 import java.sql.NClob;
 import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -41,12 +43,31 @@ public class TypeTransformer {
         typeTransformers.put(float.class, n -> n == null ? 0.0f : ((Number)n).floatValue());
         typeTransformers.put(double.class, n -> n == null ? 0.0 : ((Number)n).doubleValue());
 
+        typeTransformers.put(Date.class, o -> o instanceof Date ? o : new Date((Long)o));
+        typeTransformers.put(Time.class, o -> o instanceof Time ? o : new Time((Long)o));
+        typeTransformers.put(Timestamp.class, o -> o instanceof Timestamp ? o : new Timestamp((Long)o));
+
+
         typeTransformers.put(URL.class, o -> {
             try {
                 return o instanceof URL ? o : new URL((String)o);
             } catch (MalformedURLException e) {
                 throw new IllegalArgumentException(e);
             }
+        });
+        typeTransformers.put(byte[].class, o -> {
+            if (o instanceof byte[]) {
+                return o;
+            }
+            if (o instanceof Blob) {
+                Blob blob = ((Blob)o);
+                try {
+                    return blob.getBytes(1, (int)blob.length());
+                } catch (SQLException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+            throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
         });
         typeTransformers.put(InputStream.class, o -> {
             try {
