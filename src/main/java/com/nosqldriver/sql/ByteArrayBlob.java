@@ -158,4 +158,16 @@ public class ByteArrayBlob implements Blob {
         }
         return -1;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        return Arrays.equals(data, ((ByteArrayBlob)o).data);
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(data);
+    }
 }

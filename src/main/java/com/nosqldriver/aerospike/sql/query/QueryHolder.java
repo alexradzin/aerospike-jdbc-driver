@@ -651,7 +651,7 @@ public class QueryHolder implements QueryContainer {
                             }
                         }
                     } else {
-                        throw new IllegalStateException(value.getClass().getName());
+                        throw new IllegalStateException(value != null ? value.getClass().getName() : null);
                     }
                 }
             }

@@ -2,10 +2,14 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
+import com.nosqldriver.util.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.NClob;
@@ -39,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 class PreparedStatementWithComplexTypesTest {
     private static final String DATA = "data";
@@ -262,6 +267,64 @@ class PreparedStatementWithComplexTypesTest {
 
         assertFalse(rs.next());
     }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select id, bytes, blob, clob from data",
+            "select id, bytes, blob, clob from data as d left join other as o on d.id=o.id"
+    })
+    void insertOneRowUsingPreparedStatementVariousCompositeTypes(String sql) throws SQLException, IOException {
+        Key key1 = new Key(NAMESPACE, DATA, 1);
+        assertNull(client.get(null, key1));
+        PreparedStatement ps = testConn.prepareStatement(
+                "insert into data (PK, id, bytes, blob, clob) values (?, ?, ?, ?, ?)"
+        );
+
+        String helloWorld = "hello, world!";
+        ps.setInt(1, 1);
+        ps.setInt(2, 1);
+        ps.setBytes(3, new byte[] {(byte)8});
+
+
+        Blob blob = testConn.createBlob();
+        blob.setBytes(1, helloWorld.getBytes());
+        ps.setBlob(4, blob);
+
+        Clob clob = testConn.createClob();
+        clob.setString(1, helloWorld);
+        ps.setClob(5, clob);
+
+        assertEquals(1, ps.executeUpdate());
+
+
+        ResultSet rs  = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertArrayEquals(new byte[] {(byte)8}, rs.getBytes(2));
+        assertArrayEquals(new byte[] {(byte)8}, IOUtils.toByteArray(rs.getBinaryStream(2)));
+        assertArrayEquals(new byte[] {(byte)8}, (byte[])rs.getObject(2));
+
+
+        assertEquals(blob, rs.getBlob(3));
+        assertEquals(clob, rs.getClob(4));
+
+        assertEquals(helloWorld, new String(IOUtils.toByteArray(rs.getAsciiStream(4))));
+        assertEquals(helloWorld, new String(IOUtils.toByteArray(rs.getUnicodeStream(4))));
+        assertEquals(helloWorld, IOUtils.toString(rs.getNCharacterStream(4)));
+        assertEquals(helloWorld, IOUtils.toString(rs.getCharacterStream(4)));
+    }
+
+
+
+
+
+
+
+
+
+
+
+
 
     @Test
     void insertOneRowWithStringKey() throws SQLException {

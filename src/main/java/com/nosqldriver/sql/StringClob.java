@@ -12,6 +12,7 @@ import java.io.Writer;
 import java.sql.Clob;
 import java.sql.NClob;
 import java.sql.SQLException;
+import java.util.Objects;
 
 import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
 import static java.lang.String.format;
@@ -134,4 +135,15 @@ public class StringClob implements NClob {
         return new StringReader(getSubString(pos, (int)length));
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        return Objects.equals(data, ((StringClob) o).data);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(data);
+    }
 }

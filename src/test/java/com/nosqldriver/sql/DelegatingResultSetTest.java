@@ -104,13 +104,17 @@ class DelegatingResultSetTest {
     @SuppressWarnings("unused") // referenced from annotation VariableSource
     private static Stream<Arguments> resultSetsForUnsupported = Stream.of(
             Arguments.of(new FilteredResultSet(new ListRecordSet("schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), "Filtered(index-by-name)"),
-            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), new ArrayList<>()), "Buffered(Filtered(index-by-name))")
+            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), new ArrayList<>()), "Buffered(Filtered(index-by-name))"),
+            Arguments.of(new JoinedResultSet(new ListRecordSet("schema", "table", simpleColumns, simpleData), Collections.emptyList()), "Joined")
     );
 
 
     @ParameterizedTest(name = "{index} {1}")
     @VariableSource("resultSetsForSimpleTypes")
     void getAllSimpleTypes(ResultSet rs, String name) throws SQLException, MalformedURLException {
+
+
+
         assertEquals(0, rs.getRow());
         assertTrue(rs.next());
 

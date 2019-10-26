@@ -248,6 +248,12 @@ class SelectTest {
         assertEquals("George Harrison 1943", selectedPeople.get(3));
         assertEquals("Ringo Starr 1940", selectedPeople.get(4));
 
+        assertThrows(SQLException.class, rs::first);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::last);
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.absolute(1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.relative(1));
+        assertThrows(SQLFeatureNotSupportedException.class, rs::previous);
+
         rs.close();
         assertTrue(rs.isClosed());
 

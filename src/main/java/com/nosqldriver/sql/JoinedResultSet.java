@@ -247,32 +247,32 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public boolean isBeforeFirst() throws SQLException {
-        return false;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public boolean isAfterLast() throws SQLException {
-        return false;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public boolean isFirst() throws SQLException {
-        return false;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public boolean isLast() throws SQLException {
-        return false;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void beforeFirst() throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void afterLast() throws SQLException {
-
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -288,7 +288,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public boolean last() throws SQLException {
-        return false;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -298,12 +298,12 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public boolean absolute(int row) throws SQLException {
-        return false;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public boolean relative(int rows) throws SQLException {
-        return false;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
@@ -313,12 +313,12 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
-        return null;
+        return wasNull(findResultSet(columnLabel).getObject(columnLabel, map));
     }
 
     @Override
     public Ref getRef(String columnLabel) throws SQLException {
-        return null;
+        return findResultSet(columnLabel).getRef(columnLabel);
     }
 
     @Override
@@ -358,7 +358,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public RowId getRowId(String columnLabel) throws SQLException {
-        return null;
+        return findResultSet(columnLabel).getRowId(columnLabel);
     }
 
     @Override
@@ -393,9 +393,8 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
-        return (T)getObject(columnLabel);
+        return wasNull(findResultSet(columnLabel).getObject(columnLabel, type));
     }
 
     private ResultSet findResultSet(String alias) throws SQLException {
