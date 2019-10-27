@@ -2,8 +2,11 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.AerospikeException;
 import com.aerospike.client.Info;
+import com.nosqldriver.util.ThrowingBiFunction;
+import com.nosqldriver.util.ThrowingConsumer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.StringReader;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
@@ -56,26 +60,49 @@ class IndexTest {
 
 
     @Test
-    void createAndDropStringIndex() throws SQLException, IOException {
-        assertCreateAndDropIndex("first_name", STRING_INDEX_NAME, "STRING");
+    void createAndDropStringIndexUsingExecute() throws SQLException, IOException {
+        assertCreateAndDropIndex("first_name", STRING_INDEX_NAME, "STRING", Statement::execute, Assertions::assertTrue);
     }
 
     @Test
-    void createAndDropNumericIndex() throws SQLException, IOException {
-        assertCreateAndDropIndex("year_of_birth", NUMERIC_INDEX_NAME, "NUMERIC");
+    void createAndDropNumericIndexUsingExecute() throws SQLException, IOException {
+        assertCreateAndDropIndex("year_of_birth", NUMERIC_INDEX_NAME, "NUMERIC", Statement::execute, Assertions::assertTrue);
     }
 
 
-    private void assertCreateAndDropIndex(String column, String indexName, String indexType) throws SQLException, IOException {
+    @Test
+    void createAndDropStringIndexUsingExecuteUpdate() throws SQLException, IOException {
+        assertCreateAndDropIndex("first_name", STRING_INDEX_NAME, "STRING", Statement::executeUpdate, r -> assertEquals(1, r.intValue()));
+    }
+
+    @Test
+    void createAndDropNumericIndexUsingExecuteUpdate() throws SQLException, IOException {
+        assertCreateAndDropIndex("year_of_birth", NUMERIC_INDEX_NAME, "NUMERIC", Statement::executeUpdate, r -> assertEquals(1, r.intValue()));
+    }
+
+    @Test
+    void createAndDropStringIndexUsingExecuteQuery() throws SQLException, IOException {
+        assertCreateAndDropIndex("first_name", STRING_INDEX_NAME, "STRING", Statement::executeQuery, rs -> assertFalse(rs.next()));
+    }
+
+    @Test
+    void createAndDropNumericIndexUsingExecuteQuery() throws SQLException, IOException {
+        assertCreateAndDropIndex("year_of_birth", NUMERIC_INDEX_NAME, "NUMERIC", Statement::executeQuery, rs -> assertFalse(rs.next()));
+    }
+
+
+    private <R> void assertCreateAndDropIndex(String column, String indexName, String indexType, ThrowingBiFunction<Statement, String, R, SQLException> executor, ThrowingConsumer<R, SQLException> validator) throws SQLException, IOException {
         TestDataUtils.writeBeatles();
         assertFalse(Info.request(TestDataUtils.client.getNodes()[0], "sindex").contains(indexName));
-        testConn.createStatement().execute(format("CREATE %s INDEX %s ON people (%s)", indexType, indexName, column));
+        validator.accept(executor.apply(testConn.createStatement(), format("CREATE %s INDEX %s ON people (%s)", indexType, indexName, column)));
 
         Properties indexProps = new Properties();
         indexProps.load(new StringReader(Info.request(TestDataUtils.client.getNodes()[0], "sindex").replace(':', '\n')));
         assertEquals(indexName, indexProps.getProperty("indexname"));
 
-        testConn.createStatement().execute(format("DROP INDEX people.%s", indexName));
+        validator.accept(executor.apply(testConn.createStatement(), format("DROP INDEX people.%s", indexName)));
         assertFalse(TestDataUtils.getIndexes().contains(indexName));
+
     }
+
 }
