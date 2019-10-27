@@ -6,8 +6,11 @@ import com.aerospike.client.Bin;
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.Language;
+import com.aerospike.client.Record;
 import com.aerospike.client.ScanCallback;
 import com.aerospike.client.Value;
+import com.aerospike.client.admin.Role;
+import com.aerospike.client.admin.User;
 import com.aerospike.client.async.EventLoop;
 import com.aerospike.client.cluster.Node;
 import com.aerospike.client.listener.BatchListListener;
@@ -30,18 +33,27 @@ import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.query.IndexCollectionType;
 import com.aerospike.client.query.IndexType;
+import com.aerospike.client.query.RecordSet;
+import com.aerospike.client.query.ResultSet;
 import com.aerospike.client.query.Statement;
+import com.aerospike.client.task.ExecuteTask;
+import com.aerospike.client.task.RegisterTask;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.List;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -50,6 +62,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class AerospikeSqlClientTest {
     @Test
@@ -93,6 +106,88 @@ class AerospikeSqlClientTest {
         assertEquals(realClient.exists(null, notExistingKey), wrapperClient.exists(null, notExistingKey));
         assertArrayEquals(realClient.exists(null, new Key[] {notExistingKey}), wrapperClient.exists(null, new Key[] {notExistingKey}));
     }
+
+    @Test
+    void parameterizedGetters() {
+        IAerospikeClient mock = mock(IAerospikeClient.class);
+        IAerospikeClient wrapperClient = new AerospikeSqlClient(() -> mock);
+        Policy p = new Policy();
+        BatchPolicy bp = new BatchPolicy();
+        WritePolicy wp = new WritePolicy();
+        QueryPolicy qp = new QueryPolicy();
+        AdminPolicy ap = new AdminPolicy();
+
+        Key key = new Key(NAMESPACE, PEOPLE, "KEY");
+        Key[] keys = new Key[] {key};
+        String[] bins = {"bin1", "bin2"};
+
+        Record r = new Record(Collections.emptyMap(), 0, 0);
+        Record[] rs = new Record[] {r};
+        when(mock.get(p, key, bins)).thenReturn(r);
+        assertEquals(r, wrapperClient.get(p, key, bins));
+
+        when(mock.get(bp, keys, bins)).thenReturn(rs);
+        assertEquals(rs, wrapperClient.get(bp, keys, bins));
+
+        when(mock.getHeader(p, key)).thenReturn(r);
+        assertEquals(r, wrapperClient.getHeader(p, key));
+
+        when(mock.getHeader(bp, keys)).thenReturn(rs);
+        assertEquals(rs, wrapperClient.getHeader(bp, keys));
+
+        when(mock.operate(wp, key)).thenReturn(r);
+        assertEquals(r, wrapperClient.operate(wp, key));
+
+
+        RegisterTask registerTask = new RegisterTask(null, p, "package");
+        when(mock.register(p, "clientpath", "serverpath", Language.LUA)).thenReturn(registerTask);
+        assertEquals(registerTask, wrapperClient.register(p, "clientpath", "serverpath", Language.LUA));
+
+        when(mock.registerUdfString(p, "code", "serverpath", Language.LUA)).thenReturn(registerTask);
+        assertEquals(registerTask, wrapperClient.registerUdfString(p, "code", "serverpath", Language.LUA));
+
+        when(mock.execute(wp, key, "package", "function")).thenReturn("ok");
+        assertEquals("ok", wrapperClient.execute(wp, key, "package", "function"));
+
+
+        Statement statement = new Statement();
+        statement.setNamespace("test");
+        statement.setSetName("set");
+        ExecuteTask executeTask = new ExecuteTask(null, p, statement);
+        when(mock.execute(wp, statement, "package", "function")).thenReturn(executeTask);
+        assertEquals(executeTask, wrapperClient.execute(wp, statement, "package", "function"));
+
+        Node node = mock(Node.class);
+        when(mock.queryNode(qp, statement, node)).thenReturn(null);
+        assertNull(wrapperClient.queryNode(qp, statement, node));
+
+        when(mock.queryAggregate(qp, statement, "p", "f")).thenReturn(null);
+        assertNull(wrapperClient.queryAggregate(qp, statement, "p", "f"));
+
+
+        when(mock.queryAggregateNode(qp, statement, node)).thenReturn(null);
+        assertNull(wrapperClient.queryAggregateNode(qp, statement, node));
+
+        User user = new User();
+        when(mock.queryUser(ap, "user")).thenReturn(user);
+        assertEquals(user, wrapperClient.queryUser(ap, "user"));
+
+
+        List<User> users = singletonList(user);
+        when(mock.queryUsers(ap)).thenReturn(users);
+        assertEquals(users, wrapperClient.queryUsers(ap));
+
+
+        Role role = new Role();
+        when(mock.queryRole(ap, "role")).thenReturn(role);
+        assertEquals(role, wrapperClient.queryRole(ap, "role"));
+
+
+        List<Role> roles = singletonList(role);
+        when(mock.queryRoles(ap)).thenReturn(roles);
+        assertEquals(roles, wrapperClient.queryRoles(ap));
+    }
+
 
 
     @Test
