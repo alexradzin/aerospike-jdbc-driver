@@ -3,8 +3,10 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import com.nosqldriver.util.IOUtils;
+import com.nosqldriver.util.ThrowingConsumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -56,16 +58,48 @@ class PreparedStatementWithComplexTypesTest {
     }
 
     @Test
-    void insertOneRowUsingPreparedStatement() throws SQLException {
+    void insertOneRowUsingPreparedStatementWithIntKey() throws SQLException {
+        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setInt(1, 1), new Key("test", "people", 1));
+    }
+
+    @Test
+    void insertOneRowUsingPreparedStatementWithLongKey() throws SQLException {
+        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setLong(1, 1L), new Key("test", "people", 1L));
+    }
+
+    @Test
+    void insertOneRowUsingPreparedStatementWithShortKey() throws SQLException {
+        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setShort(1, (short)1), new Key("test", "people", 1));
+    }
+
+    @Test
+    @Disabled // Double cannot be used in predicates; this test performs query that adds predicate even if it is used on PK. The real fix is to avoid creating predicates when querying PK
+    void insertOneRowUsingPreparedStatementWithDoubleKey() throws SQLException {
+        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setDouble(1, 1.0), new Key("test", "people", 1));
+    }
+
+    @Test
+    void insertOneRowUsingPreparedStatementWithStringKey() throws SQLException {
+        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setString(1, "one"), new Key("test", "people", "one"));
+    }
+
+    @Test
+    @Disabled // Byte array cannot be used in predicates; this test performs query that adds predicate even if it is used on PK. The real fix is to avoid creating predicates when querying PK
+    void insertOneRowUsingPreparedStatementWithByteArrayKey() throws SQLException {
+        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setBytes(1, new byte[] {1, 2, 3}), new Key("test", "people", new byte[] {1, 2, 3}));
+    }
+
+    private <T> void insertOneRowUsingPreparedStatementWithDifferentKeyType(ThrowingConsumer<PreparedStatement, SQLException> setter, Key key) throws SQLException {
         PreparedStatement insert = testConn.prepareStatement("insert into people (PK, id, first_name, last_name, kids) values (?, ?, ?, ?, ?)");
-        insert.setInt(1, 1);
+        setter.accept(insert);
+
         insert.setInt(2, 1);
         insert.setString(3, "John");
         insert.setString(4, "Lennon");
         insert.setArray(5, testConn.createArrayOf("varchar", new String[] {"Sean", "Julian"}));
         int rowCount = insert.executeUpdate();
         assertEquals(1, rowCount);
-        Record record = client.get(null, new Key("test", "people", 1));
+        Record record = client.get(null, key);
         assertNotNull(record);
         Map<String, Object> expectedData = new HashMap<>();
         expectedData.put("id", 1L);
@@ -76,7 +110,7 @@ class PreparedStatementWithComplexTypesTest {
 
 
         PreparedStatement select = testConn.prepareStatement("select id, first_name, last_name, kids from people where PK=?");
-        select.setInt(1, 1);
+        setter.accept(select);
         ResultSet rs = select.executeQuery();
         assertTrue(rs.next());
 

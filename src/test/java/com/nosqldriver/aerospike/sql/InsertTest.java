@@ -10,7 +10,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.net.URL;
@@ -48,7 +51,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests of INSERT SQL statement
@@ -387,7 +393,7 @@ class InsertTest {
 
 
     @Test
-    void insertClobs() throws SQLException {
+    void insertClobs() throws SQLException, IOException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
         assertNull(client.get(null, key1));
         PreparedStatement ps = testConn.prepareStatement("insert into data (PK, clob, reader, limited_reader) values (?, ?, ?, ?)");
@@ -405,6 +411,22 @@ class InsertTest {
         // Wrong clob length
         assertThrows(SQLException.class, () -> ps.setClob(4, new StringReader(text), text.length() + 1));
         assertThrows(SQLException.class, () -> ps.setClob(4, new StringReader(text), text.length() - 1));
+
+        Reader exceptionalReader = mock(Reader.class);
+
+        when(exceptionalReader.read(any(), anyInt(), anyInt())).thenThrow(new IOException());
+        assertThrows(SQLException.class, () -> ps.setClob(4, exceptionalReader, 0));
+        assertThrows(SQLException.class, () -> ps.setClob(4, exceptionalReader));
+
+        InputStream exceptionalInputStream = mock(InputStream.class);
+        when(exceptionalInputStream.read(any(), anyInt(), anyInt())).thenThrow(new IOException());
+        assertThrows(SQLException.class, () -> ps.setBlob(4, exceptionalInputStream, 0));
+        assertThrows(SQLException.class, () -> ps.setBlob(4, exceptionalInputStream));
+
+        InputStream exceptionalInputStream2 = mock(InputStream.class);
+        when(exceptionalInputStream2.read(any(), anyInt(), anyInt())).thenThrow(new EOFException());
+        assertThrows(SQLException.class, () -> ps.setBlob(4, exceptionalInputStream2, 0));
+
 
         assertEquals(1, ps.executeUpdate());
 

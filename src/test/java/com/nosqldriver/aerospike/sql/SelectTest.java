@@ -110,6 +110,17 @@ class SelectTest {
         selectAll(sql, executeQuery);
     }
 
+
+    @Test
+    void wrongSyntax() {
+        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("select from"));
+        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("wrong query"));
+        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("select * from one concat select * from two"));
+        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("update nothing"));
+        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("select * from people where year_of_birth between 1941"));
+        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("select * from people where first_name between 'Adam' and 'Abel'"));
+    }
+
     @Test
     void checkMetadata() throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery("select first_name, year_of_birth from people limit 1");
@@ -741,11 +752,45 @@ class SelectTest {
     @Test
     @DisplayName("select * from people where PK=?")
     void selectOneRecordByPrimaryKeyUsingPreparedStatement() throws SQLException {
-        PreparedStatement ps = testConn.prepareStatement("select * from people where PK=?");
+        PreparedStatement ps = testConn.prepareStatement(getDisplayName());
         ps.setInt(1, 1);
         ResultSet rs = ps.executeQuery();
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
         assertPeople(rs, beatles, 1);
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people where PK=?",
+    })
+    void selectOneRecordByPrimaryKeyUsingPreparedStatementClearParameters(String sql) throws SQLException {
+        PreparedStatement ps = testConn.prepareStatement(sql);
+        ps.setInt(1, 1);
+        ps.clearParameters();
+        ps.setInt(1, 2);
+        ResultSet rs = ps.executeQuery();
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertPeople(rs, beatles, 2);
+    }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people",
+            "select * from people where PK=1",
+            "select * from people where PK=?",
+            "select * from people where first_name='John' and last_name=?",
+    })
+    void setParameterToPreparedStatementAtWrongPosition(String sql) throws SQLException {
+        PreparedStatement ps = testConn.prepareStatement(sql);
+        assertThrows(SQLException.class, () -> ps.setInt(0, 1));
+        assertThrows(SQLException.class, () -> ps.setInt(2, 1));
+    }
+
+    @Test
+    void preparedStatementUnsupportedSetter() throws SQLException {
+        PreparedStatement ps = testConn.prepareStatement("select * from people where PK=?");
+        assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setObject(1, 1, INTEGER));
     }
 
 

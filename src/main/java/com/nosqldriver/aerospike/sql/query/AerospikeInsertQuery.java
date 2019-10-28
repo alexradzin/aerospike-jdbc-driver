@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKey;
 import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -127,7 +128,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
         if (!skipDuplicates) {
             List<Key> keys = new LinkedList<>();
             for (List<Object> row : criteria) {
-                keys.add(key(row));
+                keys.add(createKey(schema, set, row.get(indexOfPK)));
             }
             if (Arrays.stream(client.get(new BatchPolicy(), keys.toArray(new Key[0]))).anyMatch(Objects::nonNull)) {
                 sneakyThrow(new SQLException("Duplicate entries"));
@@ -136,7 +137,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
         int n = 0;
         for (List<Object> row : criteria) {
-            client.put(policy, key(row), bins(row));
+            client.put(policy, createKey(schema, set, row.get(indexOfPK)), bins(row));
             n++;
         }
 
@@ -144,25 +145,6 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
         return new ListRecordSet(schema, set, emptyList(), emptyList());
     }
-
-    private Key key(List<Object> row) {
-        Object pk = row.get(indexOfPK);
-        if (pk instanceof String) {
-            return new Key(schema, set, (String) pk);
-        }
-        if (pk instanceof Integer) {
-            return new Key(schema, set, (Integer) pk);
-        }
-        if (pk instanceof Long) {
-            return new Key(schema, set, (Long) pk);
-        }
-        if (pk instanceof byte[]) {
-            return new Key(schema, set, (byte[]) pk);
-        }
-
-        throw new IllegalArgumentException("Key must be either String, int, long or byte[]. " + pk.getClass() + " is not supported");
-    }
-
 
     private Bin[] bins(List<Object> row) {
         Bin[] bins = new Bin[columns.size() - 1];

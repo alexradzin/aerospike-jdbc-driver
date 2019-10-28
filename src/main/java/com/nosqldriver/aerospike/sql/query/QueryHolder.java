@@ -57,6 +57,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKey;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
@@ -201,7 +202,7 @@ public class QueryHolder implements QueryContainer {
                 if (predExps.get(i - 1) instanceof ColumnRefPredExp) {
                     String binName = ((ColumnRefPredExp)predExps.get(i - 1)).getName();
                     if ("PK".equals(binName)) {
-                        final Key key = createKey(parameter, this);
+                        final Key key = createKey(getSchema(), getSetName(), parameter);
                         createPkQuery(key);
                         indexesToRemove.addAll(asList(i - 1, i, i +1 ));
                     }
@@ -222,25 +223,6 @@ public class QueryHolder implements QueryContainer {
             predExps.remove(i);
         }
     }
-
-
-    private Key createKey(Object value, QueryHolder queries) {
-        final Key key;
-        final String schema = queries.getSchema();
-        if (value instanceof Long) {
-            key = new Key(schema, queries.getSetName(), (Long) value);
-        } else if (value instanceof Integer) {
-            key = new Key(schema, queries.getSetName(), (Integer) value);
-        } else if (value instanceof Number) {
-            key = new Key(schema, queries.getSetName(), ((Number) value).intValue());
-        } else if (value instanceof String) {
-            key = new Key(schema, queries.getSetName(), (String) value);
-        } else {
-            throw new IllegalArgumentException(format("Filter by %s is not supported right now. Use either number or string", value == null ? null : value.getClass()));
-        }
-        return key;
-    }
-
 
     private PredExp createBinPredExp(String name, Class<?> type) {
         if(intTypes.contains(type)) {
