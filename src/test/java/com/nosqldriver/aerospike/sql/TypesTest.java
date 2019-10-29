@@ -26,6 +26,7 @@ import static java.sql.Types.DOUBLE;
 import static java.sql.Types.VARCHAR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
@@ -89,6 +90,15 @@ class TypesTest {
         String format = "yyyy-MM-dd HH:mm:ss z";
         assertEpoch(date, format, format("select epoch('%s', '%s')", date, format));
     }
+
+    @Test
+    void epochWrongDateFormat() throws SQLException {
+        String date = "foobar";
+        ResultSet rs = testConn.createStatement().executeQuery(format("select epoch('%s')", date));
+        assertTrue(rs.next());
+        assertThrows(SQLException.class, () -> rs.getLong(1));
+    }
+
 
     private void assertEpoch(String date, String format, String query) throws SQLException, ParseException {
         long expected = new SimpleDateFormat(format).parse(date).getTime();

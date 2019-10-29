@@ -7,6 +7,7 @@ import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.SimpleWrapper;
+import com.nosqldriver.util.ThrowingSupplier;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -1042,18 +1043,18 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public int getDatabaseMajorVersion() {
-        try {
-            return Integer.parseInt(getDatabaseProductVersion().split("\\.")[0]);
-        } catch (NumberFormatException e) {
-            return 0;
-        }
+        return parseVersion(getDatabaseProductVersion().split("\\.")[0]);
     }
 
     @Override
     public int getDatabaseMinorVersion() {
+        String[] fragments = getDatabaseProductVersion().split("\\.");
+        return parseVersion(fragments[fragments.length - 1]);
+    }
+
+    private int parseVersion(String str) {
         try {
-            String[] fragments = getDatabaseProductVersion().split("\\.");
-            return Integer.parseInt(fragments[fragments.length - 1]);
+            return Integer.parseInt(str);
         } catch (NumberFormatException e) {
             return 0;
         }
@@ -1151,14 +1152,10 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     }
 
     private Optional<Manifest> manifest() {
-        try {
-            return Collections.list(getClass().getClassLoader().getResources("META-INF/MANIFEST.MF")).stream()
-                    .map(r -> manifest(stream(r)))
-                    .filter(m -> AerospikeDriver.class.getSimpleName().equals(m.getMainAttributes().getValue("Name")))
-                    .findFirst();
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        return iosafe(() -> Collections.list(getClass().getClassLoader().getResources("META-INF/MANIFEST.MF")).stream()
+                .map(r -> manifest(stream(r)))
+                .filter(m -> AerospikeDriver.class.getSimpleName().equals(m.getMainAttributes().getValue("Name")))
+                .findFirst());
     }
 
     private InputStream stream(URL url) {
@@ -1171,11 +1168,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
 
     private Manifest manifest(InputStream in) {
-        try {
-            return new Manifest(in);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        return iosafe(() -> new Manifest(in));
     }
 
     private List<DataColumn> systemColumns(String[] names, int[] types) {
@@ -1185,4 +1178,13 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     private List<DataColumn> columns(String catalog, String table, String[] names, int[] types) {
         return range(0, names.length).boxed().map(i -> DATA.create(catalog, table, names[i], names[i]).withType(types[i])).collect(toList());
     }
+
+    private <R> R iosafe(ThrowingSupplier<R, IOException> supplier) {
+        try {
+            return supplier.get();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
 }

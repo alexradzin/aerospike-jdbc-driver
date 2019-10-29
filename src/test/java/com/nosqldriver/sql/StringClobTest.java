@@ -10,7 +10,9 @@ import java.sql.Clob;
 import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StringClobTest {
     private static final String HELLO = "hello";
@@ -92,10 +94,28 @@ class StringClobTest {
     }
 
     @Test
+    void setAsciiStreamWrongIndex() {
+        Clob clob = new StringClob();
+        assertThrows(SQLException.class, () -> clob.setAsciiStream(0));
+        assertThrows(SQLException.class, () -> clob.setAsciiStream(Integer.MAX_VALUE + 1L));
+    }
+
+    @Test
     void getCharacterStream() throws SQLException, IOException {
         Clob clob = new StringClob();
         clob.setString(1, HELLO_WORLD);
         assertEquals(HELLO_WORLD, IOUtils.toString(clob.getCharacterStream()));
+    }
+
+    @Test
+    void checkHashCode() throws SQLException, IOException {
+        Clob clob = new StringClob();
+        int emptyHashCode = clob.hashCode();
+        assertTrue(emptyHashCode > 0);
+        clob.setString(1, HELLO_WORLD);
+        int notEmptyHashCode = clob.hashCode();
+        assertTrue(notEmptyHashCode > 0);
+        assertNotEquals(emptyHashCode, notEmptyHashCode);
     }
 
     @Test

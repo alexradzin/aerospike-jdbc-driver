@@ -240,6 +240,7 @@ class AerospikeDatabaseMetadataTest {
         assertResultSet(md.getAttributes(null, null, null, null), false);
         assertResultSet(md.getSchemas(null, null), false);
         assertResultSet(md.getFunctions(null, null, null), true);
+        assertResultSet(md.getFunctionColumns(null, null, null, null), false);
         assertResultSet(md.getPseudoColumns(null, null, null, null), false);
     }
 

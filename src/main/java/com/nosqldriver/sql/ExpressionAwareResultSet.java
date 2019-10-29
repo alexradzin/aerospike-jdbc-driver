@@ -302,7 +302,10 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
         Collection<String> bound = bind(rs, columns, bindings);
         try {
             return engine.eval(eval);
-        } catch (ScriptException e) {
+        } catch (ScriptException | RuntimeException e) {
+            if (e instanceof RuntimeException && e.getCause() instanceof SQLException) {
+                SneakyThrower.sneakyThrow(e.getCause());
+            }
             SneakyThrower.sneakyThrow(new SQLException(e));
             return null; //just to satisfy compiler
         } finally {

@@ -10,7 +10,9 @@ import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ByteArrayBlobTest {
     @Test
@@ -43,7 +45,8 @@ class ByteArrayBlobTest {
     @Test
     void setBytesWrongOffset() {
         Blob blob = new ByteArrayBlob();
-        assertThrows(SQLException.class, () -> blob.setBytes(0, new byte[] {123}, -1, 1));
+        assertThrows(SQLException.class, () -> blob.setBytes(0, new byte[] {123}, 0, 1));
+        assertThrows(SQLException.class, () -> blob.setBytes(1, new byte[] {123}, -1, 1));
     }
 
     @Test
@@ -162,6 +165,19 @@ class ByteArrayBlobTest {
         assertArrayEquals("world".getBytes(), IOUtils.toByteArray(blob.getBinaryStream(7, 5)));
         assertArrayEquals("lo wor".getBytes(), IOUtils.toByteArray(blob.getBinaryStream(4, 6)));
     }
+
+    @Test
+    void checkHashCode() throws SQLException, IOException {
+        Blob blob = new ByteArrayBlob();
+        int emptyHashCode = blob.hashCode();
+        String str = "hello world";
+        blob.setBytes(1, str.getBytes());
+        assertTrue(emptyHashCode > 0);
+        int notEmptyHashCode = blob.hashCode();
+        assertTrue(notEmptyHashCode > 0);
+        assertNotEquals(emptyHashCode, notEmptyHashCode);
+    }
+
 
     private byte[] getBytes(Blob blob) throws SQLException {
         return blob.getBytes(1, (int)blob.length());
