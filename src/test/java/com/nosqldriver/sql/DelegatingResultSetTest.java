@@ -20,6 +20,7 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
@@ -112,9 +113,6 @@ class DelegatingResultSetTest {
     @ParameterizedTest(name = "{index} {1}")
     @VariableSource("resultSetsForSimpleTypes")
     void getAllSimpleTypes(ResultSet rs, String name) throws SQLException, MalformedURLException {
-
-
-
         assertEquals(0, rs.getRow());
         assertTrue(rs.next());
 
@@ -146,6 +144,22 @@ class DelegatingResultSetTest {
 
         assertEquals(simpleRow[3], rs.getLong(4));
         assertEquals(simpleRow[3], rs.getLong("long"));
+
+        assertEquals(simpleRow[3], rs.getDate(4).getTime());
+        assertEquals(simpleRow[3], rs.getDate("long").getTime());
+        assertEquals(simpleRow[3], rs.getTime(4).getTime());
+        assertEquals(simpleRow[3], rs.getTime("long").getTime());
+        assertEquals(simpleRow[3], rs.getTimestamp(4).getTime());
+        assertEquals(simpleRow[3], rs.getTimestamp("long").getTime());
+
+        Calendar calendar = Calendar.getInstance();
+        assertEquals(simpleRow[3], rs.getDate(4, calendar).getTime());
+        assertEquals(simpleRow[3], rs.getDate("long", calendar).getTime());
+        assertEquals(simpleRow[3], rs.getTime(4, calendar).getTime());
+        assertEquals(simpleRow[3], rs.getTime("long", calendar).getTime());
+        assertEquals(simpleRow[3], rs.getTimestamp(4, calendar).getTime());
+        assertEquals(simpleRow[3], rs.getTimestamp("long", calendar).getTime());
+
 
         assertEquals(simpleRow[4], rs.getBoolean(5));
         assertEquals(simpleRow[4], rs.getBoolean("on"));

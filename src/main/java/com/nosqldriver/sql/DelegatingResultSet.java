@@ -265,32 +265,32 @@ public interface DelegatingResultSet extends ResultSet {
 
     @Override
     default Date getDate(int columnIndex, Calendar cal) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return TypeTransformer.getDate(getLong(columnIndex), cal);
     }
 
     @Override
     default Date getDate(String columnLabel, Calendar cal) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return TypeTransformer.getDate(getLong(columnLabel), cal);
     }
 
     @Override
     default Time getTime(int columnIndex, Calendar cal) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return TypeTransformer.getTime(getLong(columnIndex), cal);
     }
 
     @Override
     default Time getTime(String columnLabel, Calendar cal) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return TypeTransformer.getTime(getLong(columnLabel), cal);
     }
 
     @Override
     default Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return TypeTransformer.getTimestamp(getLong(columnIndex), cal);
     }
 
     @Override
     default Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return TypeTransformer.getTimestamp(getLong(columnLabel), cal);
     }
 
     @Override

@@ -19,6 +19,7 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -155,4 +156,25 @@ public class TypeTransformer {
         }
         return (T)obj;
     }
+
+
+
+    public static Date getDate(long epoch, Calendar cal) {
+        return getDateTime(epoch, cal, Date::new);
+    }
+
+    public static Time getTime(long epoch, Calendar cal) {
+        return getDateTime(epoch, cal, Time::new);
+    }
+
+    public static Timestamp getTimestamp(long epoch, Calendar cal) {
+        return getDateTime(epoch, cal, Timestamp::new);
+    }
+
+
+    public static <R> R getDateTime(long epoch, Calendar cal, Function<Long, R> factory) {
+        cal.setTime(new java.util.Date(epoch));
+        return factory.apply(cal.getTime().getTime());
+    }
+
 }

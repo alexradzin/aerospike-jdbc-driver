@@ -412,23 +412,17 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Date getDate(String columnLabel, Calendar cal) throws SQLException {
-        long epoch = getLong(columnLabel);
-        cal.setTime(new java.util.Date(epoch));
-        return wasNull(new Date(cal.getTime().getTime()));
+        return TypeTransformer.getDate(getLong(columnLabel), cal);
     }
 
     @Override
     public Time getTime(String columnLabel, Calendar cal) throws SQLException {
-        long epoch = getLong(columnLabel);
-        cal.setTime(new java.util.Date(epoch));
-        return wasNull(new Time(cal.getTime().getTime()));
+        return TypeTransformer.getTime(getLong(columnLabel), cal);
     }
 
     @Override
     public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
-        long epoch = getLong(columnLabel);
-        cal.setTime(new java.util.Date(epoch));
-        return wasNull(new Timestamp(cal.getTime().getTime()));
+        return TypeTransformer.getTimestamp(getLong(columnLabel), cal);
     }
 
     @Override

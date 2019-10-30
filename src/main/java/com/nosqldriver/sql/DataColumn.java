@@ -50,10 +50,6 @@ public class DataColumn {
         return this;
     }
 
-    public void setType(int type) {
-        this.type = type;
-    }
-
     public String getCatalog() {
         return catalog;
     }
