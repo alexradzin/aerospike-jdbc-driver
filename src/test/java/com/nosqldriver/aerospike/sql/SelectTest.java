@@ -123,66 +123,69 @@ class SelectTest {
 
     @Test
     void checkMetadata() throws SQLException {
-        ResultSet rs = testConn.createStatement().executeQuery("select first_name, year_of_birth from people limit 1");
-        assertTrue(rs.next());
-        assertEquals(1, rs.findColumn("first_name"));
-        assertEquals(2, rs.findColumn("year_of_birth"));
-        ResultSetMetaData md = rs.getMetaData();
-        int n = md.getColumnCount();
-        assertEquals(2, n);
-        for (int i = 1; i <= n; i++) {
-            assertFalse(md.isAutoIncrement(i));
-            assertTrue(md.isCaseSensitive(i));
-            assertTrue(md.isSearchable(i));
-            assertTrue(md.isSearchable(i));
-            assertFalse(md.isCurrency(i));
-            assertEquals(columnNullable, md.isNullable(i));
-            assertFalse(md.isSigned(i));
-            assertFalse(md.isSigned(i));
-            assertTrue(md.getColumnDisplaySize(i) > 0);
-            assertFalse(md.isReadOnly(i));
-            assertTrue(md.isWritable(i));
-            assertTrue(md.isDefinitelyWritable(i));
-        }
+        try(ResultSet rs = testConn.createStatement().executeQuery("select first_name, year_of_birth from people limit 1")) {
+            assertTrue(rs.next());
+            assertEquals(1, rs.findColumn("first_name"));
+            assertEquals(2, rs.findColumn("year_of_birth"));
+            ResultSetMetaData md = rs.getMetaData();
+            int n = md.getColumnCount();
+            assertEquals(2, n);
+            for (int i = 1; i <= n; i++) {
+                assertFalse(md.isAutoIncrement(i));
+                assertTrue(md.isCaseSensitive(i));
+                assertTrue(md.isSearchable(i));
+                assertTrue(md.isSearchable(i));
+                assertFalse(md.isCurrency(i));
+                assertEquals(columnNullable, md.isNullable(i));
+                assertFalse(md.isSigned(i));
+                assertFalse(md.isSigned(i));
+                assertTrue(md.getColumnDisplaySize(i) > 0);
+                assertFalse(md.isReadOnly(i));
+                assertTrue(md.isWritable(i));
+                assertTrue(md.isDefinitelyWritable(i));
+            }
 
-        assertEquals(String.class.getName(), md.getColumnClassName(1));
-        assertEquals(Long.class.getName(), md.getColumnClassName(2));
+            assertEquals(String.class.getName(), md.getColumnClassName(1));
+            assertEquals(Long.class.getName(), md.getColumnClassName(2));
+            assertFalse(rs.isClosed());
+        }
     }
 
     @Test
     void validateStatementFields() throws SQLException {
-        Statement statement = testConn.createStatement();
-        assertEquals(Integer.MAX_VALUE, statement.getMaxRows());
-        statement.setMaxRows(12345);
-        assertEquals(12345, statement.getMaxRows());
+        try(Statement statement = testConn.createStatement()) {
+            assertEquals(Integer.MAX_VALUE, statement.getMaxRows());
+            statement.setMaxRows(12345);
+            assertEquals(12345, statement.getMaxRows());
 
-        assertThrows(SQLFeatureNotSupportedException.class, () -> statement.setMaxFieldSize(1024));
-        assertEquals(8 * 1024 * 1024, statement.getMaxFieldSize());
+            assertThrows(SQLFeatureNotSupportedException.class, () -> statement.setMaxFieldSize(1024));
+            assertEquals(8 * 1024 * 1024, statement.getMaxFieldSize());
 
-        assertThrows(SQLFeatureNotSupportedException.class, statement::cancel);
+            assertThrows(SQLFeatureNotSupportedException.class, statement::cancel);
 
-        assertEquals(0, statement.getQueryTimeout());
-        statement.setQueryTimeout(45678);
-        assertEquals(45678, statement.getQueryTimeout());
+            assertEquals(0, statement.getQueryTimeout());
+            statement.setQueryTimeout(45678);
+            assertEquals(45678, statement.getQueryTimeout());
 
 
-        assertNull(statement.getWarnings());
-        statement.clearWarnings();
-        assertNull(statement.getWarnings());
+            assertNull(statement.getWarnings());
+            statement.clearWarnings();
+            assertNull(statement.getWarnings());
 
-        assertEquals(FETCH_FORWARD, statement.getFetchDirection());
-        statement.setFetchDirection(FETCH_FORWARD);
-        assertEquals(FETCH_FORWARD, statement.getFetchDirection());
-        assertThrows(SQLException.class, () -> statement.setFetchDirection(FETCH_REVERSE));
-        assertEquals(FETCH_FORWARD, statement.getFetchDirection());
+            assertEquals(FETCH_FORWARD, statement.getFetchDirection());
+            statement.setFetchDirection(FETCH_FORWARD);
+            assertEquals(FETCH_FORWARD, statement.getFetchDirection());
+            assertThrows(SQLException.class, () -> statement.setFetchDirection(FETCH_REVERSE));
+            assertEquals(FETCH_FORWARD, statement.getFetchDirection());
 
-        assertEquals(1, statement.getFetchSize());
-        statement.setFetchSize(1);
-        assertEquals(1, statement.getFetchSize());
-        assertThrows(SQLException.class, () -> statement.setFetchSize(2));
-        assertEquals(1, statement.getFetchSize());
+            assertEquals(1, statement.getFetchSize());
+            statement.setFetchSize(1);
+            assertEquals(1, statement.getFetchSize());
+            assertThrows(SQLException.class, () -> statement.setFetchSize(2));
+            assertEquals(1, statement.getFetchSize());
 
-        assertEquals(testConn, statement.getConnection());
+            assertEquals(testConn, statement.getConnection());
+        }
     }
 
 
@@ -265,6 +268,7 @@ class SelectTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.relative(1));
         assertThrows(SQLFeatureNotSupportedException.class, rs::previous);
 
+        assertFalse(rs.isClosed());
         rs.close();
         assertTrue(rs.isClosed());
 
@@ -511,9 +515,22 @@ class SelectTest {
         assertEquals("nine", rs.getMetaData().getColumnLabel(1));
         assertEquals(9, rs.getInt(1));
         assertEquals(9, rs.getInt("nine"));
+        assertTrue(rs.getBoolean(1));
         assertFalse(rs.next());
     }
 
+    @Test
+    @DisplayName("select 0, 1, 2, -1, 3.14")
+    void selectNumberAsBoolean() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
+        assertTrue(rs.next());
+        assertFalse(rs.getBoolean(1));
+        assertTrue(rs.getBoolean(2));
+        assertTrue(rs.getBoolean(3));
+        assertTrue(rs.getBoolean(4));
+        assertTrue(rs.getBoolean(5));
+        assertFalse(rs.next());
+    }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {

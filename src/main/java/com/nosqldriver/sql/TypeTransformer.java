@@ -48,6 +48,18 @@ public class TypeTransformer {
         typeTransformers.put(Time.class, o -> o instanceof Time ? o : new Time((Long)o));
         typeTransformers.put(Timestamp.class, o -> o instanceof Timestamp ? o : new Timestamp((Long)o));
 
+        typeTransformers.put(boolean.class, o -> {
+            if (o == null) {
+                return false;
+            }
+            if (o instanceof Boolean) {
+                return o;
+            }
+            if (o instanceof Number) {
+                return ((Number) o).doubleValue() != 0.0;
+            }
+            throw new IllegalArgumentException(format("Cannot cast value %s to boolean", o));
+        });
 
         typeTransformers.put(URL.class, o -> {
             try {

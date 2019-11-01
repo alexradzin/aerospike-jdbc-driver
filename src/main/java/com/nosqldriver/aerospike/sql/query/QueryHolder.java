@@ -30,6 +30,7 @@ import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.SignedExpression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 
@@ -455,7 +456,7 @@ public class QueryHolder implements QueryContainer {
                 }
             },
 
-            new ColumnType(e -> e instanceof BinaryExpression || e instanceof LongValue || e instanceof DoubleValue || e instanceof net.sf.jsqlparser.expression.StringValue || (e instanceof net.sf.jsqlparser.expression.Function && expressionResultSetWrappingFactory.getClientSideFunctionNames().contains(((net.sf.jsqlparser.expression.Function)e).getName()))) {
+            new ColumnType(e -> e instanceof BinaryExpression || e instanceof LongValue || e instanceof DoubleValue || e instanceof net.sf.jsqlparser.expression.StringValue || (e instanceof net.sf.jsqlparser.expression.Function && expressionResultSetWrappingFactory.getClientSideFunctionNames().contains(((net.sf.jsqlparser.expression.Function)e).getName())) || e instanceof SignedExpression) {
                 @Override
                 protected String getCatalog(Expression expr) {
                     return schema;

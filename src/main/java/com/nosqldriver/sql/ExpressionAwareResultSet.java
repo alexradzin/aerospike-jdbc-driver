@@ -2,6 +2,7 @@ package com.nosqldriver.sql;
 
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.util.SneakyThrower;
+import com.nosqldriver.util.ThrowingFunction;
 import com.nosqldriver.util.ThrowingSupplier;
 
 import javax.script.Bindings;
@@ -23,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
@@ -58,7 +58,10 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        return getValue(columnIndex, Boolean.class, () -> ExpressionAwareResultSet.super.getBoolean(columnIndex));
+        return (boolean)getValue(columnIndex, Object.class, v -> {
+                    return TypeTransformer.cast(v, boolean.class);
+                },
+                () -> ExpressionAwareResultSet.super.getBoolean(columnIndex));
     }
 
     @Override
@@ -145,7 +148,10 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        return getValue(columnLabel, Boolean.class, () -> ExpressionAwareResultSet.super.getBoolean(columnLabel));
+        return (boolean)getValue(columnLabel, Object.class, v -> {
+                    return TypeTransformer.cast(v, boolean.class);
+                },
+                () -> ExpressionAwareResultSet.super.getBoolean(columnLabel));
     }
 
     @Override
@@ -332,7 +338,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     }
 
 
-    private <T> T getValue(int columnIndex, Class<T> type, Function<T, T> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
+    private <T> T getValue(int columnIndex, Class<T> type, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
         return getValueUsingExpression(getEval(columnIndex), type, transformer, superGetter);
     }
 
@@ -340,11 +346,11 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
         return getValue(columnLabel, type, v -> v, superGetter);
     }
 
-    private <T> T getValue(String columnLabel, Class<T> type, Function<T, T> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
+    private <T> T getValue(String columnLabel, Class<T> type, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
         return getValueUsingExpression(aliasToEval.get(columnLabel), type, transformer, superGetter);
     }
 
-    private <T> T getValueUsingExpression(String expr, Class<T> type, Function<T, T> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
+    private <T> T getValueUsingExpression(String expr, Class<T> type, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
         T value = expr != null ? transformer.apply(cast(eval(expr), type)) : null;
         return getValue(Optional.ofNullable(value), superGetter);
     }
