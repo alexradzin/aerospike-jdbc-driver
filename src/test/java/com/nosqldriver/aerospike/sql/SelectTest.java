@@ -39,6 +39,7 @@ import static com.nosqldriver.TestUtils.getDisplayName;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SELECT_ALL;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.assertFindColumn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.beatles;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.createIndex;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.dropIndexSafely;
@@ -446,6 +447,8 @@ class SelectTest {
         assertEquals("year_of_birth", rs.getMetaData().getColumnName(2));
         assertEquals("name", rs.getMetaData().getColumnLabel(1));
         assertEquals("year", rs.getMetaData().getColumnLabel(2));
+        assertFindColumn(rs, "name", "year");
+        assertThrows(SQLException.class, () -> rs.findColumn("doesNotExist"));
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
         while (rs.next()) {
             selectedPeople.put(rs.getString("name"), rs.getInt("year"));

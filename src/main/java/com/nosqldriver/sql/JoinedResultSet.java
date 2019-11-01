@@ -232,7 +232,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public int findColumn(String columnLabel) throws SQLException {
-        return 0;
+        return DelegatingResultSet.findColumn(getMetaData(), columnLabel);
     }
 
     @Override

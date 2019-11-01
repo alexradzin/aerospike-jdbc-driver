@@ -16,6 +16,7 @@ import java.util.Map;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.INSTRUMENTS;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.assertFindColumn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeAllPersonalInstruments;
@@ -59,6 +60,7 @@ class SelectJoinTest {
     })
     void oneToManyJoin(String sql) throws SQLException {
         ResultSet rs = executeQuery(sql, NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", VARCHAR);
+        assertFindColumn(rs, "first_name", "instrument");
         Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(4, result.size());
         assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
@@ -87,6 +89,7 @@ class SelectJoinTest {
 
         assertEquals(ResultSet.HOLD_CURSORS_OVER_COMMIT, rs.getHoldability());
         assertFalse(rs.isClosed());
+        assertFindColumn(rs, "kids_count", "last_name", "id", "first_name", "year_of_birth", "name", null /*id from second table; the label is the same as first one, so it finds the first*/, "person_id");
         Map<String, Collection<String>> result = collect(rs, "first_name", "name");
         assertEquals(4, result.size());
         assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
@@ -111,6 +114,7 @@ class SelectJoinTest {
         Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
         assertEquals(1, result.size());
         assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
+        assertFindColumn(rs, "first_name", "instrument");
     }
 
 

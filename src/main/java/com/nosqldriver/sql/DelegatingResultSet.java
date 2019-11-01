@@ -193,14 +193,7 @@ public interface DelegatingResultSet extends ResultSet {
 
     @Override
     default int findColumn(String columnLabel) throws SQLException {
-        ResultSetMetaData md = getMetaData();
-        int n = md.getColumnCount();
-        for (int i = 0; i < n; i++) {
-            if (Objects.equals(columnLabel, md.getColumnLabel(i))) {
-                return i;
-            }
-        }
-        throw new SQLException(format("Column %s is not found", columnLabel));
+        return findColumn(getMetaData(), columnLabel);
     }
 
     @Override
@@ -357,6 +350,17 @@ public interface DelegatingResultSet extends ResultSet {
     @Override
     default Ref getRef(int columnIndex) throws SQLException {
         throw new SQLFeatureNotSupportedException();
+    }
+
+
+    static int findColumn(ResultSetMetaData md, String columnLabel) throws SQLException {
+        int n = md.getColumnCount();
+        for (int i = 1; i <= n; i++) {
+            if (Objects.equals(columnLabel, md.getColumnLabel(i))) {
+                return i;
+            }
+        }
+        throw new SQLException(format("Column %s is not found", columnLabel));
     }
 
 }

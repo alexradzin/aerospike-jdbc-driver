@@ -377,4 +377,13 @@ public class TestDataUtils {
         }
         return result;
     }
+
+    public static void assertFindColumn(ResultSet rs, String ... columns) throws SQLException {
+        for (int i = 0; i < columns.length; i++) {
+            if (columns[i] != null) {
+                assertEquals(i + 1, rs.findColumn(columns[i]));
+            }
+        }
+        assertEquals(rs.getMetaData().getColumnCount(), columns.length);
+    }
 }
