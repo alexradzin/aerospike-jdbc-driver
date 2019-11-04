@@ -29,24 +29,24 @@ class SortedResultSetTest {
 
     @Test
     void emptyAll() throws SQLException {
-        assertFalse(new SortedResultSet(new ListRecordSet(NAMESPACE, TABLE, emptyList(), emptyList()), emptyList()).next());
+        assertFalse(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, emptyList(), emptyList()), emptyList()).next());
     }
 
     @Test
     void oneColumnNoRecords() throws SQLException {
-        assertFalse(new SortedResultSet(new ListRecordSet(NAMESPACE, TABLE, dataColumn, emptyList()), emptyList()).next());
+        assertFalse(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, emptyList()), emptyList()).next());
     }
 
     @Test
     void oneColumnOneOrderByNoRecords() throws SQLException {
-        assertFalse(new SortedResultSet(new ListRecordSet(NAMESPACE, TABLE, dataColumn, emptyList()), singletonList(new OrderItem("data"))).next());
+        assertFalse(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, emptyList()), singletonList(new OrderItem("data"))).next());
     }
 
 
 
     @Test
     void oneColumnOneOrderByOneRecord() throws SQLException {
-        assertTrue(new SortedResultSet(new ListRecordSet(NAMESPACE, TABLE, dataColumn, singletonList(singletonList("a"))), singletonList(new OrderItem("data"))).next());
+        assertTrue(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, singletonList(singletonList("a"))), singletonList(new OrderItem("data"))).next());
     }
 
     @Test
@@ -84,7 +84,7 @@ class SortedResultSetTest {
     }
 
     private ResultSet dataRs(List<DataColumn> columns, Iterable<List<?>> data) {
-        return new ListRecordSet(NAMESPACE, TABLE, columns, data);
+        return new ListRecordSet(null, NAMESPACE, TABLE, columns, data);
     }
 
     private void assertOneColumnOneOrderBySeveralRecords(List<DataColumn> columns, List<List<?>> data, OrderItem orderBy, String extractColumn, String[] expected) throws SQLException {

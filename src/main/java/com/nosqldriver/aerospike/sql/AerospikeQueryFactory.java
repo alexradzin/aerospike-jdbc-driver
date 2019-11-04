@@ -70,6 +70,7 @@ import net.sf.jsqlparser.statement.update.Update;
 import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -98,12 +99,14 @@ import static java.util.Optional.ofNullable;
 
 public class AerospikeQueryFactory {
     private CCJSqlParserManager parserManager = new CCJSqlParserManager();
+    private final Statement statement;
     private String schema;
     private String set;
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
     @VisibleForPackage
-    AerospikeQueryFactory(String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes) {
+    AerospikeQueryFactory(Statement statement, String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes) {
+        this.statement = statement;
         this.schema = schema;
         this.policyProvider = policyProvider;
         this.indexes = indexes;
@@ -438,6 +441,7 @@ public class AerospikeQueryFactory {
                                         name = dc.get().getName();
                                     }
                                 }
+                                operation.setStatement(statement);
                                 operation.setTable(table);
                                 operation.setColumn(name);
                                 predExpsEmpty.set(queries.queries(operation.getTable()).getPredExps().isEmpty());
@@ -544,8 +548,8 @@ public class AerospikeQueryFactory {
 
 
     @VisibleForPackage
-    Function<IAerospikeClient, Integer> createUpdate(String sql) throws SQLException {
-        return createUpdatePlan(sql).getQuery();
+    Function<IAerospikeClient, Integer> createUpdate(Statement statement, String sql) throws SQLException {
+        return createUpdatePlan(sql).getQuery(statement);
     }
 
 
@@ -734,7 +738,7 @@ public class AerospikeQueryFactory {
 
             return new QueryContainer<Integer>() {
                 @Override
-                public Function<IAerospikeClient, Integer> getQuery() {
+                public Function<IAerospikeClient, Integer> getQuery(Statement statement) {
                     return client -> {
                         AtomicInteger count = new AtomicInteger(0);
                         client.scanAll(policyProvider.getScanPolicy(), schema.get(), tableName.get(),
@@ -749,7 +753,7 @@ public class AerospikeQueryFactory {
                 }
 
                 @Override
-                public void setParameters(Object... parameters) {
+                public void setParameters(Statement statement, Object... parameters) {
                     //TODO: update parameter values in keyPredicate and recordPredicate
                 }
             };

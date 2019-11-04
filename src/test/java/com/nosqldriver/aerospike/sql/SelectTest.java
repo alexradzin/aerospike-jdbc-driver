@@ -63,6 +63,7 @@ import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Collections.singleton;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -357,7 +358,9 @@ class SelectTest {
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @VariableSource("orderBy")
     void selectWithOrderBy(String query, String[] expected) throws SQLException {
-        ResultSet rs = testConn.createStatement().executeQuery(query);
+        Statement staatement = testConn.createStatement();
+        ResultSet rs = staatement.executeQuery(query);
+        assertSame(staatement, rs.getStatement());
         assertArrayEquals(expected, toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).toArray(String[]::new));
     }
 
@@ -377,7 +380,9 @@ class SelectTest {
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @VariableSource("notEqual")
     void selectNoEqual(String query, String[] expected) throws SQLException {
-        ResultSet rs = testConn.createStatement().executeQuery(query);
+        Statement statement = testConn.createStatement();
+        ResultSet rs = statement.executeQuery(query);
+        assertSame(statement, rs.getStatement());
         assertEquals(new HashSet<>(asList(expected)), toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
     }
 
@@ -487,6 +492,7 @@ class SelectTest {
         PreparedStatement ps = testConn.prepareStatement(getDisplayName());
         ps.setInt(1, 1);
         ResultSet rs = ps.executeQuery();
+        assertSame(ps, rs.getStatement());
         assertTrue(rs.next());
         assertEquals("one", rs.getMetaData().getColumnLabel(1));
         assertEquals(1, rs.getInt(1));
@@ -1066,7 +1072,9 @@ class SelectTest {
     }
 
     private void selectDistinctYearOfBirth(String query, String expectedName, String expectedLabel) throws SQLException {
-        ResultSet rs = testConn.createStatement().executeQuery(query);
+        Statement statement = testConn.createStatement();
+        ResultSet rs = statement.executeQuery(query);
+        assertSame(statement, rs.getStatement());
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(NAMESPACE, md.getSchemaName(1));
         assertEquals(1, rs.getMetaData().getColumnCount());
@@ -1216,7 +1224,9 @@ class SelectTest {
     }
 
     private void assertGroupByOrderBy(String query, String column, Object[] expected) throws SQLException {
-        ResultSet rs = testConn.createStatement().executeQuery(query);
+        Statement statement = testConn.createStatement();
+        ResultSet rs = statement.executeQuery(query);
+        assertSame(statement, rs.getStatement());
         assertArrayEquals(expected, toListOfMaps(rs).stream().map(e -> e.get(column)).toArray());
     }
 

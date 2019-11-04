@@ -14,6 +14,7 @@ import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -109,8 +110,8 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
     }
 
 
-    public AerospikeInsertQuery(String schema, String set, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
-        super(schema, set, columns, data, policy, null);
+    public AerospikeInsertQuery(Statement statement, String schema, String set, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
+        super(statement, schema, set, columns, data, policy, null);
         this.skipDuplicates = skipDuplicates;
         columns.stream().map(DataColumn::getName).filter("PK"::equals).findFirst().orElseThrow(() -> new IllegalArgumentException("PK is not specified"));
 
@@ -143,7 +144,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
         updatedRecordsCount.set(n);
 
-        return new ListRecordSet(schema, set, emptyList(), emptyList());
+        return new ListRecordSet(statement, schema, set, emptyList(), emptyList());
     }
 
     private Bin[] bins(List<Object> row) {

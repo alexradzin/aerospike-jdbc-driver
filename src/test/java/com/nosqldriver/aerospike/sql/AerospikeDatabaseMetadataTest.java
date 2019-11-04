@@ -248,6 +248,7 @@ class AerospikeDatabaseMetadataTest {
     private void assertResultSet(ResultSet rs, Boolean hasData) throws SQLException {
         assertNotNull(rs);
         assertNotNull(rs.getMetaData());
+        assertNull(rs.getStatement());
         if (hasData != null) {
             assertEquals(hasData, rs.next());
         }

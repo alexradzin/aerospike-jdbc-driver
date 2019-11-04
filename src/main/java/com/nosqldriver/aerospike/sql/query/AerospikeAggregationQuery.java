@@ -12,12 +12,12 @@ import java.util.Map;
 import java.util.function.BiFunction;
 
 public class AerospikeAggregationQuery extends AerospikeQuery<Statement, QueryPolicy, Map<String, Object>> {
-    public AerospikeAggregationQuery(String schema, String set, List<DataColumn> columns, Statement statement, QueryPolicy policy, BiFunction<IAerospikeClient, QueryPolicy, Map<String, Object>> anyRecordSupplier) {
-        super(schema, set, columns, statement, policy, anyRecordSupplier);
+    public AerospikeAggregationQuery(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Statement statement, QueryPolicy policy, BiFunction<IAerospikeClient, QueryPolicy, Map<String, Object>> anyRecordSupplier) {
+        super(sqlStatement, schema, set, columns, statement, policy, anyRecordSupplier);
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeResultSet(schema, set, columns, client.queryAggregate(policy, criteria), () -> anyRecordSupplier.apply(client, policy));
+        return new ResultSetOverAerospikeResultSet(statement, schema, set, columns, client.queryAggregate(policy, criteria), () -> anyRecordSupplier.apply(client, policy));
     }
 }

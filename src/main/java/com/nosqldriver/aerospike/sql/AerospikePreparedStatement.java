@@ -51,7 +51,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
         int n = parametersCount(sql);
         parameterValues = new Object[n];
         Arrays.fill(parameterValues, Optional.empty());
-        queryPlan = new AerospikeQueryFactory(schema.get(), policyProvider, indexes).createQueryPlan(sql);
+        queryPlan = new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes).createQueryPlan(sql);
     }
 
     private int parametersCount(String sql) {
@@ -379,10 +379,10 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     protected AerospikeQueryFactory createQueryFactory() {
-        return new AerospikeQueryFactory(schema.get(), policyProvider, indexes) {
+        return new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes) {
             @Override  QueryContainer<ResultSet> createQueryPlan(String sql) throws SQLException {
                 QueryContainer<ResultSet> qc = Objects.equals(AerospikePreparedStatement.this.sql, sql) ? AerospikePreparedStatement.this.queryPlan : super.createQueryPlan(sql);
-                qc.setParameters(parameterValues);
+                qc.setParameters(AerospikePreparedStatement.this, parameterValues);
                 return qc;
             }
         };

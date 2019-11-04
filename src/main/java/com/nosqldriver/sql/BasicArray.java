@@ -122,6 +122,6 @@ public class BasicArray extends SerialArray {
                 .skip(index)
                 .map(e -> asList(counter.incrementAndGet(), e))
                 .collect(Collectors.toList());
-        return new ListRecordSet(schema, null, columns, data);
+        return new ListRecordSet(null, schema, null, columns, data);
     }
 }

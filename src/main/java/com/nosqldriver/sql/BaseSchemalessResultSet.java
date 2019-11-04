@@ -49,6 +49,7 @@ import static java.util.Optional.ofNullable;
 
 // TODO: extend this class from DelegatingResultSet, move all type transformations to TypeTransformer and remove getX() method from here.
 public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSetAdaptor, SimpleWrapper, IndexToLabelResultSet {
+    private final Statement statement;
     protected final String schema;
     protected final String table;
     protected final List<DataColumn> columns;
@@ -70,7 +71,8 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
 
 
-    protected BaseSchemalessResultSet(String schema, String table, List<DataColumn> columns, Supplier<R> anyRecordSupplier) {
+    protected BaseSchemalessResultSet(Statement statement, String schema, String table, List<DataColumn> columns, Supplier<R> anyRecordSupplier) {
+        this.statement = statement;
         this.schema = schema;
         this.table = table;
         this.columns = Collections.unmodifiableList(columns);
@@ -355,7 +357,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Statement getStatement() throws SQLException {
-        return null;
+        return statement;
     }
 
     @Override

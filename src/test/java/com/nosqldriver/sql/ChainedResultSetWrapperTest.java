@@ -22,21 +22,21 @@ class ChainedResultSetWrapperTest {
 
     @Test
     void noFieldsNoRecords() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(emptyList(), false);
+        ResultSet rs = new ChainedResultSetWrapper(null, emptyList(), false);
         assertEquals(0, rs.getMetaData().getColumnCount());
         assertEmpty(rs);
     }
 
     @Test
     void noRecordsOneEmptySubResultSet() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(singletonList(createSsimpleResultSet(emptyList())), false);
+        ResultSet rs = new ChainedResultSetWrapper(null, singletonList(createSsimpleResultSet(emptyList())), false);
         assertEquals(3, rs.getMetaData().getColumnCount());
         assertEmpty(rs);
     }
 
     @Test
     void noRecordsSeveralEmptySubResultSet() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(asList(createSsimpleResultSet(emptyList()), createSsimpleResultSet(emptyList()), createSsimpleResultSet(emptyList())), false);
+        ResultSet rs = new ChainedResultSetWrapper(null, asList(createSsimpleResultSet(emptyList()), createSsimpleResultSet(emptyList()), createSsimpleResultSet(emptyList())), false);
         assertEquals(3, rs.getMetaData().getColumnCount());
         assertEmpty(rs);
     }
@@ -44,7 +44,7 @@ class ChainedResultSetWrapperTest {
 
     @Test
     void oneRecord() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(singletonList(createSsimpleResultSet(singletonList(asList("John", "Smith", 1970)))), false);
+        ResultSet rs = new ChainedResultSetWrapper(null, singletonList(createSsimpleResultSet(singletonList(asList("John", "Smith", 1970)))), false);
         TestDataUtils.validate(rs.getMetaData(),
                 DATA.create(catalog, table, "first_name", "first_name").withType(Types.VARCHAR),
                 DATA.create(catalog, table, "last_name", "last_name").withType(Types.VARCHAR),
@@ -56,7 +56,7 @@ class ChainedResultSetWrapperTest {
 
     @Test
     void twoRecords() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(singletonList(createSsimpleResultSet(asList(
+        ResultSet rs = new ChainedResultSetWrapper(null, singletonList(createSsimpleResultSet(asList(
                 asList("John", "Lennon", 1940), asList("Paul", "McCartney", 1942)))), false);
         TestDataUtils.validate(rs.getMetaData(),
                 DATA.create(catalog, table, "first_name", "first_name").withType(Types.VARCHAR),
@@ -72,7 +72,7 @@ class ChainedResultSetWrapperTest {
 
     @Test
     void twoRecordsThenEmptySet() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(asList(
+        ResultSet rs = new ChainedResultSetWrapper(null, asList(
                 createSsimpleResultSet(asList(asList("John", "Lennon", 1940), asList("Paul", "McCartney", 1942))),
                 createSsimpleResultSet(emptyList())), false);
         TestDataUtils.validate(rs.getMetaData(),
@@ -88,7 +88,7 @@ class ChainedResultSetWrapperTest {
 
     @Test
     void emptyThenTwoRecords() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(asList(
+        ResultSet rs = new ChainedResultSetWrapper(null, asList(
                 createSsimpleResultSet(emptyList()),
                 createSsimpleResultSet(asList(asList("John", "Lennon", 1940), asList("Paul", "McCartney", 1942)))), false);
         TestDataUtils.validate(rs.getMetaData(),
@@ -105,7 +105,7 @@ class ChainedResultSetWrapperTest {
 
     @Test
     void severalResultSets() throws SQLException {
-        ResultSet rs = new ChainedResultSetWrapper(asList(
+        ResultSet rs = new ChainedResultSetWrapper(null, asList(
                 createSsimpleResultSet(emptyList()),
                 createSsimpleResultSet(asList(asList("John", "Lennon", 1940), asList("Paul", "McCartney", 1942))),
                 createSsimpleResultSet(asList(asList("George", "Harrison", 1943), asList("Ringo", "Starr", 1940)))
@@ -136,7 +136,7 @@ class ChainedResultSetWrapperTest {
     }
 
     private ResultSet createSsimpleResultSet(List<List<?>> data) {
-        return new ListRecordSet(catalog, table,
+        return new ListRecordSet(null, catalog, table,
                 asList(
                         DATA.create(catalog, table, "first_name", "first_name").withType(Types.VARCHAR),
                         DATA.create(catalog, table, "last_name", "last_name").withType(Types.VARCHAR),

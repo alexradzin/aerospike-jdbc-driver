@@ -15,8 +15,8 @@ import java.util.function.BiFunction;
 
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy, Record> {
     @VisibleForPackage
-    AerospikeBatchQueryBySecondaryIndex(String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, BiFunction<IAerospikeClient, QueryPolicy, Record> anyRecordSupplier) {
-        super(schema, statement.getSetName(), columns, statement, policy, anyRecordSupplier);
+    AerospikeBatchQueryBySecondaryIndex(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, BiFunction<IAerospikeClient, QueryPolicy, Record> anyRecordSupplier) {
+        super(sqlStatement, schema, statement.getSetName(), columns, statement, policy, anyRecordSupplier);
     }
 
     @Override
@@ -35,6 +35,6 @@ public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statemen
                 }
             };
         }
-        return new ResultSetOverAerospikeRecordSet(schema, set, columns, client.query(policy, criteria), () -> anyRecordSupplier.apply(client, policy));
+        return new ResultSetOverAerospikeRecordSet(statement, schema, set, columns, client.query(policy, criteria), () -> anyRecordSupplier.apply(client, policy));
     }
 }

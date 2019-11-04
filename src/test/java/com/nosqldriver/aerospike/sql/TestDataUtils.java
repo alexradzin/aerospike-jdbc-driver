@@ -18,6 +18,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -29,6 +30,7 @@ import java.util.function.Function;
 import static com.aerospike.client.Log.setCallback;
 import static com.aerospike.client.Log.setLevel;
 import static java.lang.String.format;
+import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -274,7 +276,9 @@ public class TestDataUtils {
 
     @VisibleForPackage
     static ResultSet executeQuery(String sql, String expectedSchema, boolean orderedValidation, Object ... expectedMetadataFields) throws SQLException {
-        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        Statement statement = testConn.createStatement();
+        ResultSet rs = statement.executeQuery(sql);
+        assertSame(statement, rs.getStatement());
 
         if (expectedMetadataFields.length > 0) {
             validate(rs.getMetaData(), expectedSchema, orderedValidation, expectedMetadataFields);
@@ -286,7 +290,9 @@ public class TestDataUtils {
 
     @VisibleForPackage
     static ResultSet executeQuery(String sql, DataColumn... expectedColumns) throws SQLException {
-        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        Statement statement = testConn.createStatement();
+        ResultSet rs = statement.executeQuery(sql);
+        assertSame(statement, rs.getStatement());
 
         if (expectedColumns.length > 0) {
             validate(rs.getMetaData(), expectedColumns);

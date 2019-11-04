@@ -190,7 +190,7 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public Statement getStatement() throws SQLException {
-        return null;
+        return rs.getStatement();
     }
 
     @Override

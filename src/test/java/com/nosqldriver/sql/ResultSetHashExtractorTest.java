@@ -74,7 +74,7 @@ class ResultSetHashExtractorTest {
 
 
     private ResultSet resultSet(long now) {
-        return new ListRecordSet("", "",
+        return new ListRecordSet(null, "", "",
                 asList(
                         column("flag", BOOLEAN),
                         column("num1", SMALLINT),

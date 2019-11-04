@@ -4,13 +4,14 @@ import com.aerospike.client.Record;
 import com.nosqldriver.sql.BaseSchemalessResultSet;
 import com.nosqldriver.sql.DataColumn;
 
+import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
 abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> {
-    protected AerospikeRecordResultSet(String schema, String table, List<DataColumn> columns, Supplier<Record> anyRecordSupplier) {
-        super(schema, table, columns, anyRecordSupplier);
+    protected AerospikeRecordResultSet(Statement statement, String schema, String table, List<DataColumn> columns, Supplier<Record> anyRecordSupplier) {
+        super(statement, schema, table, columns, anyRecordSupplier);
     }
 
     @Override

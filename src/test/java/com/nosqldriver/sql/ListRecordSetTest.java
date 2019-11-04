@@ -43,7 +43,7 @@ class ListRecordSetTest {
 
     @Test
     void noFieldsNoRecords() throws SQLException {
-        ResultSet rs = new ListRecordSet("schema", "table", emptyList(), emptyList());
+        ResultSet rs = new ListRecordSet(null, "schema", "table", emptyList(), emptyList());
         assertEquals(0, rs.getMetaData().getColumnCount());
         assertTrue(rs.isBeforeFirst());
         assertFalse(rs.isFirst());
@@ -56,6 +56,7 @@ class ListRecordSetTest {
     @Test
     void columnsDefinedNoRecords() throws SQLException {
         ResultSet rs = new ListRecordSet(
+                null,
                 catalog,
                 table,
                 asList(
@@ -86,7 +87,7 @@ class ListRecordSetTest {
 
     @Test
     void noFieldsOneRecord() throws SQLException {
-        ListRecordSet rs = new ListRecordSet("schema", "table",
+        ListRecordSet rs = new ListRecordSet(null, "schema", "table",
                 asList(
                         DATA.create(catalog, table, "first_name", "first_name"),
                         DATA.create(catalog, table, "last_name", "last_name"),
@@ -157,17 +158,17 @@ class ListRecordSetTest {
 
     @Test
     void updateValueListRecordSet() {
-        assertUpdateValue(new ListRecordSet("schema", "table", emptyList(), emptyList()));
+        assertUpdateValue(new ListRecordSet(null, "schema", "table", emptyList(), emptyList()));
     }
 
     @Test
     void updateValueResultSetWrapper() {
-        assertUpdateValue(new ResultSetWrapper(new ListRecordSet("schema", "table", emptyList(), emptyList()), emptyList(), true));
+        assertUpdateValue(new ResultSetWrapper(new ListRecordSet(null, "schema", "table", emptyList(), emptyList()), emptyList(), true));
     }
 
     @Test
     void updateValueBufferedResultSet() {
-        assertUpdateValue(new BufferedResultSet(new FilteredResultSet(new ListRecordSet("schema", "table", emptyList(), emptyList()), emptyList(), r -> true, true), new ArrayList<>()));
+        assertUpdateValue(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", emptyList(), emptyList()), emptyList(), r -> true, true), new ArrayList<>()));
     }
 
 

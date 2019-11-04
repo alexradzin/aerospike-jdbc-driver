@@ -18,18 +18,18 @@ public class AerospikeDistinctQuery extends AerospikeQuery<Statement, QueryPolic
     private final Predicate<ResultSet> having;
 
     @VisibleForPackage
-    AerospikeDistinctQuery(String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, BiFunction<IAerospikeClient, QueryPolicy, Map<String, Object>> anyRecordSupplier) {
-        this(schema, columns, statement, policy, rs -> true, anyRecordSupplier);
+    AerospikeDistinctQuery(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, BiFunction<IAerospikeClient, QueryPolicy, Map<String, Object>> anyRecordSupplier) {
+        this(sqlStatement, schema, columns, statement, policy, rs -> true, anyRecordSupplier);
     }
 
     @VisibleForPackage
-    AerospikeDistinctQuery(String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, Predicate<ResultSet> having, BiFunction<IAerospikeClient, QueryPolicy, Map<String, Object>> anyRecordSupplier) {
-        super(schema, statement.getSetName(), columns, statement, policy, anyRecordSupplier);
+    AerospikeDistinctQuery(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, Predicate<ResultSet> having, BiFunction<IAerospikeClient, QueryPolicy, Map<String, Object>> anyRecordSupplier) {
+        super(sqlStatement, schema, statement.getSetName(), columns, statement, policy, anyRecordSupplier);
         this.having = having;
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new FilteredResultSet(new ResultSetOverDistinctMap(schema, set, columns, client.queryAggregate(policy, criteria), () -> anyRecordSupplier.apply(client, policy)), columns, having, false);
+        return new FilteredResultSet(new ResultSetOverDistinctMap(statement, schema, set, columns, client.queryAggregate(policy, criteria), () -> anyRecordSupplier.apply(client, policy)), columns, having, false);
     }
 }

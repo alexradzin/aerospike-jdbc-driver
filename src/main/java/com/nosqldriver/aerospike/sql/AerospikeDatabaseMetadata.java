@@ -673,14 +673,14 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     public ResultSet getProcedures(String catalog, String schemaPattern, String procedureNamePattern) {
         String[] columns = new String[] {"PROCEDURE_CAT", "PROCEDURE_SCHEM", "PROCEDURE_NAME", "reserved1", "reserved2", "reserved3", "REMARKS", "PROCEDURE_TYPE"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, CHAR, CHAR, CHAR, VARCHAR, SMALLINT};
-        return new ListRecordSet("system", "procedures", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "procedures", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
     public ResultSet getProcedureColumns(String catalog, String schemaPattern, String procedureNamePattern, String columnNamePattern) {
         String[] columns = new String[] {"PROCEDURE_CAT", "PROCEDURE_SCHEM", "PROCEDURE_NAME", "COLUMN_NAME", "COLUMN_TYPE", "DATA_TYPE", "TYPE_NAME", "PRECISION", "LENGTH", "SCALE", "RADIX", "NULLABLE", "REMARKS", "COLUMN_DEF", "SQL_DATA_TYPE", "SQL_DATETIME_SUB", "CHAR_OCTET_LENGTH", "ORDINAL_POSITION", "IS_NULLABLE", "SPECIFIC_NAME"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT, INTEGER, VARCHAR, INTEGER, SMALLINT, SMALLINT, SMALLINT, VARCHAR, VARCHAR, INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, VARCHAR};
-        return new ListRecordSet("system", "procedure_columns", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "procedure_columns", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
@@ -697,18 +697,18 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         String[] columns = new String[] {"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "TABLE_TYPE", "REMARKS", "TYPE_CAT", "TYPE_SCHEM", "TYPE_NAME", "SELF_REFERENCING_COL_NAME", "REF_GENERATION"};
         int[] sqlTypes = new int[columns.length];
         Arrays.fill(sqlTypes, VARCHAR);
-        return new ListRecordSet("system", "tables", systemColumns(columns, sqlTypes), tables);
+        return new ListRecordSet(null, "system", "tables", systemColumns(columns, sqlTypes), tables);
     }
 
     @Override
     public ResultSet getSchemas() {
-        return new ListRecordSet("system", "schemas", systemColumns(new String[] {"TABLE_SCHEM", "TABLE_CATALOG"}, new int[] {VARCHAR, VARCHAR}), emptyList());
+        return new ListRecordSet(null, "system", "schemas", systemColumns(new String[] {"TABLE_SCHEM", "TABLE_CATALOG"}, new int[] {VARCHAR, VARCHAR}), emptyList());
     }
 
     @Override
     public ResultSet getCatalogs() {
         Iterable<List<?>> catalogs = getCatalogNames().stream().map(Collections::singletonList).collect(toList());
-        return new ListRecordSet("system", "catalogs", systemColumns(new String[] {"TABLE_CAT"}, new int[] {VARCHAR}), catalogs);
+        return new ListRecordSet(null, "system", "catalogs", systemColumns(new String[] {"TABLE_CAT"}, new int[] {VARCHAR}), catalogs);
     }
 
     private List<String> getCatalogNames() {
@@ -724,7 +724,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public ResultSet getTableTypes() {
-        return new ListRecordSet("system", "table_types", systemColumns(new String[] {"TABLE_TYPE"}, new int[] {VARCHAR}), singletonList(singletonList("TABLE")));
+        return new ListRecordSet(null, "system", "table_types", systemColumns(new String[] {"TABLE_TYPE"}, new int[] {VARCHAR}), singletonList(singletonList("TABLE")));
     }
 
     @Override
@@ -749,7 +749,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
         String[] columns = new String[] {"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME", "COLUMN_SIZE", "BUFFER_LENGTH", "DECIMAL_DIGITS", "NUM_PREC_RADIX", "NULLABLE", "REMARKS", "COLUMN_DEF", "SQL_DATA_TYPE", "SQL_DATETIME_SUB", "CHAR_OCTET_LENGTH", "ORDINAL_POSITION", "IS_NULLABLE", "SCOPE_CATALOG", "SCOPE_SCHEMA", "SCOPE_TABLE", "SOURCE_DATA_TYPE", "IS_AUTOINCREMENT", "IS_GENERATEDCOLUMN"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, INTEGER, VARCHAR, INTEGER, SMALLINT, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT, VARCHAR, VARCHAR};
-        return new ListRecordSet("system", "columns", systemColumns(columns, sqlTypes), result);
+        return new ListRecordSet(null, "system", "columns", systemColumns(columns, sqlTypes), result);
     }
 
     private int ordinal(ResultSetMetaData md, String columnName) {
@@ -773,28 +773,28 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     public ResultSet getColumnPrivileges(String catalog, String schema, String table, String columnNamePattern) {
         String[] columns = new String[] {"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "GRANTOR", "GRANTEE", "PRIVILEGE", "IS_GRANTABLE"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR,VARCHAR, VARCHAR, VARCHAR, VARCHAR};
-        return new ListRecordSet("system", "column_privileges", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "column_privileges", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
     public ResultSet getTablePrivileges(String catalog, String schemaPattern, String tableNamePattern) {
         String[] columns = new String[] {"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "GRANTOR", "GRANTEE", "PRIVILEGE", "IS_GRANTABLE"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR,VARCHAR, VARCHAR, VARCHAR};
-        return new ListRecordSet("system", "table_privileges", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "table_privileges", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
     public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope, boolean nullable) {
         String[] columns = new String[]{"SCOPE", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME", "COLUMN_SIZE", "BUFFER_LENGTH", "DECIMAL_DIGITS", "PSEUDO_COLUMN"};
         int[] sqlTypes = new int[]{SMALLINT, VARCHAR, INTEGER, VARCHAR, INTEGER, INTEGER, SMALLINT, SMALLINT};
-        return new ListRecordSet("system", "best_row_identifier", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "best_row_identifier", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
     public ResultSet getVersionColumns(String catalog, String schema, String table) {
         String[] columns = new String[]{"SCOPE", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME", "COLUMN_SIZE", "BUFFER_LENGTH", "DECIMAL_DIGITS", "PSEUDO_COLUMN"};
         int[] sqlTypes = new int[]{SMALLINT, VARCHAR, INTEGER, VARCHAR, INTEGER, INTEGER, SMALLINT, SMALLINT};
-        return new ListRecordSet("system", "version_columns", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "version_columns", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
@@ -808,7 +808,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
         String[] columns = new String[]{"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "KEY_SEQ", "PK_NAME"};
         int[] sqlTypes = new int[]{VARCHAR,VARCHAR,VARCHAR,VARCHAR,SMALLINT,VARCHAR};
-        return new ListRecordSet("system", "primary_keys", systemColumns(columns, sqlTypes), tables);
+        return new ListRecordSet(null, "system", "primary_keys", systemColumns(columns, sqlTypes), tables);
     }
 
 
@@ -838,21 +838,21 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     public ResultSet getImportedKeys(String catalog, String schema, String table) {
         String[] columns = new String[]{"PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME", "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME", "KEY_SEQ", "UPDATE_RULE", "DELETE_RULE", "FK_NAME", "PK_NAME", "DEFERRABILITY",};
         int[] sqlTypes = new int[]{VARCHAR,VARCHAR,VARCHAR,VARCHAR,VARCHAR,VARCHAR,VARCHAR,VARCHAR,SMALLINT,SMALLINT,SMALLINT,VARCHAR,VARCHAR,SMALLINT};
-        return new ListRecordSet("system", "imported_keys", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "imported_keys", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
     public ResultSet getExportedKeys(String catalog, String schema, String table) {
         String[] columns = new String[]{"PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME", "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME", "KEY_SEQ", "UPDATE_RULE", "DELETE_RULE", "FK_NAME", "PK_NAME", "DEFERRABILITY"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT, SMALLINT, SMALLINT, VARCHAR, VARCHAR, SMALLINT};
-        return new ListRecordSet("system", "exported_keys", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "exported_keys", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
     public ResultSet getCrossReference(String parentCatalog, String parentSchema, String parentTable, String foreignCatalog, String foreignSchema, String foreignTable) {
         String[] columns = new String[]{"PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME", "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME", "KEY_SEQ", "UPDATE_RULE", "DELETE_RULE", "FK_NAME", "PK_NAME", "DEFERRABILITY"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT, SMALLINT, SMALLINT, VARCHAR, VARCHAR, SMALLINT};
-        return new ListRecordSet("system", "cross_references", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "cross_references", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
@@ -886,7 +886,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
                 );
 
 
-        return new ListRecordSet("system", "table_info", systemColumns(columns, discoverTypes(columns.length, data)), data);
+        return new ListRecordSet(null, "system", "table_info", systemColumns(columns, discoverTypes(columns.length, data)), data);
     }
 
     @Override
@@ -901,7 +901,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
         String[] columns = new String[]{"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "NON_UNIQUE", "INDEX_QUALIFIER", "INDEX_NAME", "TYPE", "ORDINAL_POSITION", "COLUMN_NAME", "ASC_OR_DESC", "CARDINALITY", "PAGES", "FILTER_CONDITION"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, TINYINT, VARCHAR, VARCHAR, SMALLINT, SMALLINT, VARCHAR, VARCHAR, BIGINT, BIGINT, VARCHAR};
-        return new ListRecordSet("system", "index_info", systemColumns(columns, sqlTypes), indexes);
+        return new ListRecordSet(null, "system", "index_info", systemColumns(columns, sqlTypes), indexes);
     }
 
     private ResultSetMetaData getMetadata(String namespace, String table) {
@@ -976,7 +976,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     public ResultSet getUDTs(String catalog, String schemaPattern, String typeNamePattern, int[] types) {
         String[] columns = new String[] {"TYPE_CAT", "TYPE_SCHEM", "TYPE_NAME", "CLASS_NAME", "DATA_TYPE", "REMARKS", "BASE_TYPE"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, INTEGER, VARCHAR, SMALLINT};
-        return new ListRecordSet("system", "udt", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "udt", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
@@ -1014,21 +1014,21 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
         String[] columns = new String[]{"TYPE_CAT", "TYPE_SCHEM", "TYPE_NAME", "SUPERTYPE_CAT", "SUPERTYPE_SCHEM", "SUPERTYPE_NAME"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR};
-        return new ListRecordSet("system", "super_types", systemColumns(columns, sqlTypes), types);
+        return new ListRecordSet(null, "system", "super_types", systemColumns(columns, sqlTypes), types);
     }
 
     @Override
     public ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern) {
         String[] columns = new String[]{"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "SUPERTABLE_NAME"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR};
-        return new ListRecordSet("system", "super_tables", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "super_tables", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
     public ResultSet getAttributes(String catalog, String schemaPattern, String typeNamePattern, String attributeNamePattern) {
         String[] columns = new String[]{"TYPE_CAT", "TYPE_SCHEM", "TYPE_NAME", "ATTR_NAME", "DATA_TYPE", "ATTR_TYPE_NAME", "ATTR_SIZE", "DECIMAL_DIGITS", "NUM_PREC_RADIX", "NULLABLE", "REMARKS", "ATTR_DEF", "SQL_DATA_TYPE", "SQL_DATETIME_SUB", "CHAR_OCTET_LENGTH", "ORDINAL_POSITION", "IS_NULLABLE", "SCOPE_CATALOG", "SCOPE_SCHEMA", "SCOPE_TABLE", "SOURCE_DATA_TYPE"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, INTEGER, VARCHAR, INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT};
-        return new ListRecordSet("system", "attributes", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "attributes", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
@@ -1094,7 +1094,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     public ResultSet getSchemas(String catalog, String schemaPattern) {
         String[] columns = new String[]{"TABLE_SCHEM", "TABLE_CATALOG"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR};
-        return new ListRecordSet("system", "schemas", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "schemas", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
@@ -1113,7 +1113,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         // TODO: do not forget to add properties here once implemented.
         String[] columns = new String[]{"NAME", "MAX_LEN", "DEFAULT_VALUE", "DESCRIPTION",};
         int[] sqlTypes = new int[]{VARCHAR,INTEGER,VARCHAR,VARCHAR};
-        return new ListRecordSet("system", "client_inf_properties", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "client_inf_properties", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
@@ -1128,7 +1128,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
         String[] columns = new String[]{"FUNCTION_CAT", "FUNCTION_SCHEM", "FUNCTION_NAME", "REMARKS", "FUNCTION_TYPE", "SPECIFIC_NAME"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, SMALLINT, VARCHAR};
-        return new ListRecordSet("system", "functions", systemColumns(columns, sqlTypes), functions);
+        return new ListRecordSet(null, "system", "functions", systemColumns(columns, sqlTypes), functions);
     }
 
     @Override
@@ -1136,14 +1136,14 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         // TODO: implement this method: add kind of annotations that describe the functions parameters to JavaScript and Lua code and  parse them here.
         String[] columns = new String[]{"FUNCTION_CAT", "FUNCTION_SCHEM", "FUNCTION_NAME", "COLUMN_NAME", "COLUMN_TYPE", "DATA_TYPE", "TYPE_NAME", "PRECISION", "LENGTH", "SCALE", "RADIX", "NULLABLE", "REMARKS", "CHAR_OCTET_LENGTH", "ORDINAL_POSITION", "IS_NULLABLE", "SPECIFIC_NAME"};
         int[] sqlTypes = new int[]{VARCHAR,VARCHAR,VARCHAR,VARCHAR,SMALLINT,INTEGER,VARCHAR,INTEGER,INTEGER,SMALLINT,SMALLINT,SMALLINT,VARCHAR,INTEGER,INTEGER,VARCHAR,VARCHAR};
-        return new ListRecordSet("system", "function_columns", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "function_columns", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override
     public ResultSet getPseudoColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) {
         String[] columns = new String[]{"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "DATA_TYPE", "COLUMN_SIZE", "DECIMAL_DIGITS", "NUM_PREC_RADIX", "COLUMN_USAGE", "REMARKS", "CHAR_OCTET_LENGTH", "IS_NULLABLE"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, VARCHAR, INTEGER, INTEGER, INTEGER, INTEGER, VARCHAR, VARCHAR, INTEGER, VARCHAR};
-        return new ListRecordSet("system", "pseudo_columns", systemColumns(columns, sqlTypes), emptyList());
+        return new ListRecordSet(null, "system", "pseudo_columns", systemColumns(columns, sqlTypes), emptyList());
     }
 
     @Override

@@ -8,20 +8,22 @@ import java.util.ListIterator;
 import static java.util.Collections.emptyList;
 
 public class ChainedResultSetWrapper extends ResultSetWrapper {
+    private final java.sql.Statement sqlStatement;
     private final List<ResultSet> resultSets;
     private ListIterator<ResultSet> lit;
     private boolean beforeFirst = true;
     private boolean afterLast = false;
 
-    public ChainedResultSetWrapper(List<ResultSet> resultSets, boolean indexByName) {
-        this(resultSets, emptyList(), indexByName);
+    public ChainedResultSetWrapper(java.sql.Statement sqlStatement, List<ResultSet> resultSets, boolean indexByName) {
+        this(sqlStatement, resultSets, emptyList(), indexByName);
     }
 
-    private ChainedResultSetWrapper(List<ResultSet> resultSets, List<DataColumn> columns, boolean indexByName) {
+    private ChainedResultSetWrapper(java.sql.Statement sqlStatement, List<ResultSet> resultSets, List<DataColumn> columns, boolean indexByName) {
         super(null, columns, indexByName);
+        this.sqlStatement = sqlStatement;
         this.resultSets = resultSets;
         lit = resultSets.listIterator();
-        rs = resultSets.isEmpty() ? new ListRecordSet(null, null, emptyList(), emptyList()) : lit.next();
+        rs = resultSets.isEmpty() ? new ListRecordSet(sqlStatement, null, null, emptyList(), emptyList()) : lit.next();
     }
 
 
@@ -95,7 +97,7 @@ public class ChainedResultSetWrapper extends ResultSetWrapper {
     @Override
     public void beforeFirst() throws SQLException {
         lit = resultSets.listIterator();
-        rs = resultSets.isEmpty() ? new ListRecordSet(null, null, emptyList(), emptyList()) : lit.next();
+        rs = resultSets.isEmpty() ? new ListRecordSet(sqlStatement, null, null, emptyList(), emptyList()) : lit.next();
     }
 
     @Override

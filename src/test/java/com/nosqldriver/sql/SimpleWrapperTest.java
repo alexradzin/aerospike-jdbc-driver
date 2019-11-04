@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SimpleWrapperTest {
     @Test
     void unwrap() throws SQLException {
-        ListRecordSet lrs = new ListRecordSet(null, null, emptyList(), emptyList());
+        ListRecordSet lrs = new ListRecordSet(null, null, null, emptyList(), emptyList());
         successful(lrs, ResultSet.class);
         failing(lrs, Runnable.class);
 

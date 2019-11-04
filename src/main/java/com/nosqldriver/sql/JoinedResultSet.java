@@ -308,7 +308,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public Statement getStatement() throws SQLException {
-        return null;
+        return resultSet.getStatement();
     }
 
     @Override

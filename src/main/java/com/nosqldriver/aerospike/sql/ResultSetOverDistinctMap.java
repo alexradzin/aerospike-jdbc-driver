@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.query.ResultSet;
 import com.nosqldriver.sql.DataColumn;
 
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -45,8 +46,8 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     private boolean nextResult = false;
     private Map<String, Object> sampleRecord;
 
-    public ResultSetOverDistinctMap(String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier) {
-        super(schema, table, columns, rs, anyRecordSupplier);
+    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier) {
+        super(statement, schema, table, columns, rs, anyRecordSupplier);
     }
 
     @Override

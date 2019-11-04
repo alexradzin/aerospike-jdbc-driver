@@ -4,6 +4,7 @@ import com.aerospike.client.Record;
 import com.nosqldriver.sql.DataColumn;
 
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -14,8 +15,8 @@ public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
     private final Supplier<Record> anyRecordSupplier;
     private int currentIndex = -1;
 
-    public ResultSetOverAerospikeRecords(String schema, String table, List<DataColumn> columns, Record[] records, Supplier<Record> anyRecordSupplier) {
-        super(schema, table, columns, anyRecordSupplier);
+    public ResultSetOverAerospikeRecords(Statement statement, String schema, String table, List<DataColumn> columns, Record[] records, Supplier<Record> anyRecordSupplier) {
+        super(statement, schema, table, columns, anyRecordSupplier);
         this.records = Arrays.stream(records).filter(Objects::nonNull).toArray(Record[]::new);
         this.anyRecordSupplier = anyRecordSupplier;
     }

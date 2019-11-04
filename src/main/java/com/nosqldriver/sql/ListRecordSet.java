@@ -2,6 +2,7 @@ package com.nosqldriver.sql;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -18,12 +19,12 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
     private final Map<String, Integer> nameToIndex;
     private List<?> currentRecord = null;
 
-    public ListRecordSet(String schema, String table, List<DataColumn> columns, Iterable<List<?>> data) {
-        this(schema, table, columns, data, Collections::emptyList);
+    public ListRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, Iterable<List<?>> data) {
+        this(statement, schema, table, columns, data, Collections::emptyList);
     }
 
-    public ListRecordSet(String schema, String table, List<DataColumn> columns, Iterable<List<?>> data, Supplier<List<?>> anyRecordSupplier) {
-        super(schema, table, columns, anyRecordSupplier);
+    public ListRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, Iterable<List<?>> data, Supplier<List<?>> anyRecordSupplier) {
+        super(statement, schema, table, columns, anyRecordSupplier);
         this.it = data.iterator();
         nameToIndex = IntStream.range(0, columns.size()).boxed().collect(Collectors.toMap(i -> columns.get(i).getName(), i -> i));
     }

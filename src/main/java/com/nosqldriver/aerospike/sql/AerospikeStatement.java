@@ -50,7 +50,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 AerospikeQueryFactory aqf = statement.createQueryFactory();
-                Function<IAerospikeClient, ResultSet> query = aqf.createQueryPlan(sql).getQuery();
+                Function<IAerospikeClient, ResultSet> query = aqf.createQueryPlan(sql).getQuery(statement);
                 statement.set = aqf.getSet();
                 return query.apply(statement.client);
             }
@@ -64,7 +64,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
         INSERT {
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
                 AerospikeQueryFactory aqf = statement.createQueryFactory();
-                Function<IAerospikeClient, ResultSet> insert = aqf.createQueryPlan(sql).getQuery();
+                Function<IAerospikeClient, ResultSet> insert = aqf.createQueryPlan(sql).getQuery(statement);
                 insert.apply(statement.client);
                 statement.set = aqf.getSet();
                 statement.setUpdateCount(ofNullable(AerospikeInsertQuery.updatedRecordsCount.get()).orElse(0));
@@ -79,12 +79,12 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-                return new ListRecordSet(statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
+                return new ListRecordSet(statement, statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
             }
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
                 AerospikeQueryFactory aqf = statement.createQueryFactory();
-                Function<IAerospikeClient, Integer> update = aqf.createUpdate(sql);
+                Function<IAerospikeClient, Integer> update = aqf.createUpdate(statement, sql);
                 statement.set = aqf.getSet();
                 int count = update.apply(statement.client);
                 statement.setUpdateCount(count);
@@ -102,7 +102,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 String schema = execute(statement, sql) ? statement.schema.get() : null;
-                return new ListRecordSet(schema, null, emptyList(), emptyList(), Collections::emptyList);
+                return new ListRecordSet(statement, schema, null, emptyList(), emptyList(), Collections::emptyList);
             }
 
             @Override
@@ -123,7 +123,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-                return new ListRecordSet(statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
+                return new ListRecordSet(statement, statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
             }
             @Override
             boolean execute(AerospikeStatement statement, String sql) throws SQLException {
@@ -132,7 +132,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
                 List<String> indexes = new ArrayList<>();
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, indexes);
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes);
                 aqf.createQueryPlan(sql);
                 String[] index = aqf.getIndexes().iterator().next().split("\\.");
                 statement.client.createIndex(null, aqf.getSchema(), aqf.getSet(), index[4], index[3], IndexType.valueOf(index[0].toUpperCase()));
@@ -149,7 +149,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-                return new ListRecordSet(statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
+                return new ListRecordSet(statement, statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
             }
             @Override
             boolean execute(AerospikeStatement statement, String sql) throws SQLException {
@@ -158,7 +158,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
                 List<String> indexes = new ArrayList<>();
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement.schema.get(), statement.policyProvider, indexes);
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes);
                 aqf.createQueryPlan(sql);
                 String indexName = aqf.getIndexes().iterator().next().split("\\.")[2];
                 statement.client.dropIndex(null, aqf.getSchema(), aqf.getSet(), indexName);
@@ -377,7 +377,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
 
     @Override
     public ResultSet getGeneratedKeys() throws SQLException {
-        return new ListRecordSet(null, null, emptyList(), emptyList());
+        return new ListRecordSet(this, null, null, emptyList(), emptyList());
     }
 
     @Override
@@ -454,6 +454,6 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
 
 
     protected AerospikeQueryFactory createQueryFactory() {
-        return new AerospikeQueryFactory(schema.get(), policyProvider, indexes);
+        return new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes);
     }
 }

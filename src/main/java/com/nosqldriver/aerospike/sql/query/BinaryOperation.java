@@ -4,6 +4,7 @@ import com.aerospike.client.Key;
 import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
 
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -27,6 +28,7 @@ import static java.util.Arrays.asList;
 import static java.util.Optional.ofNullable;
 
 public class BinaryOperation {
+    private Statement statement;
     private String table;
     private String column;
     private List<Object> values = new ArrayList<>(2);
@@ -34,7 +36,8 @@ public class BinaryOperation {
     public BinaryOperation() {
     }
 
-    private BinaryOperation(String table, String column, List<Object> values) {
+    private BinaryOperation(Statement statement, String table, String column, List<Object> values) {
+        this.statement = statement;
         this.table = table;
         this.column = column;
         this.values = values;
@@ -48,7 +51,7 @@ public class BinaryOperation {
                     Object value = operation.values.get(0);
                     if ("PK".equals(operation.column)) {
                         final Key key = createKey(value, queries);
-                        queries.createPkQuery(key);
+                        queries.createPkQuery(operation.statement, key);
                     } else {
                         queries.setFilter(createEqFilter(value, operation.column), operation.column);
                     }
@@ -88,28 +91,28 @@ public class BinaryOperation {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 List<Object> values = asList(((Number) operation.values.get(0)).longValue() + 1, Long.MAX_VALUE);
-                return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
+                return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, values));
             }
         },
         GE(">=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 List<Object> values = asList(operation.values.get(0), Long.MAX_VALUE);
-                return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
+                return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, values));
             }
         },
         LT("<") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 List<Object> values = asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1);
-                return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
+                return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, values));
             }
         },
         LE("<=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 List<Object> values = asList(Long.MIN_VALUE, operation.values.get(0));
-                return BETWEEN.update(queries, new BinaryOperation(operation.table, operation.column, values));
+                return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, values));
             }
         },
         BETWEEN("BETWEEN") {
@@ -123,7 +126,7 @@ public class BinaryOperation {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 if ("PK".equals(operation.column)) {
-                    queries.createPkBatchQuery(operation.values.stream().map(v -> createKey(v, queries)).toArray(Key[]::new));
+                    queries.createPkBatchQuery(operation.statement, operation.values.stream().map(v -> createKey(v, queries)).toArray(Key[]::new));
                 } else {
                     int nValues = operation.values.size();
                     QueryHolder qh = queries.queries(operation.getTable());
@@ -218,6 +221,14 @@ public class BinaryOperation {
         public String operator() {
             return operator;
         }
+    }
+
+    public Statement getStatement() {
+        return statement;
+    }
+
+    public void setStatement(Statement statement) {
+        this.statement = statement;
     }
 
     public void setTable(String table) {
