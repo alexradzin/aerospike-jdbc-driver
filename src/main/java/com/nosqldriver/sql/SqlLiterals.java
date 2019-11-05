@@ -2,6 +2,7 @@ package com.nosqldriver.sql;
 
 import com.aerospike.client.query.PredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
+import scala.xml.Null;
 
 import java.sql.Types;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static java.sql.Types.NULL;
 import static java.util.Arrays.asList;
 import static java.util.Optional.ofNullable;
 
@@ -30,6 +32,7 @@ public class SqlLiterals {
         sqlTypes.put(java.sql.Time.class, Types.TIME);
         sqlTypes.put(java.sql.Timestamp.class, Types.TIMESTAMP);
         sqlTypes.put(ArrayList.class, Types.ARRAY);
+        sqlTypes.put(null, NULL);
     }
 
     public static final Map<Integer, String> sqlTypeNames = new HashMap<>();
@@ -99,5 +102,9 @@ public class SqlLiterals {
 
     public static String operatorKey(Class<?> type, String operand) {
         return ofNullable(type).map(Class::getName).orElse(null) + operand;
+    }
+
+    public static int getSqlType(Object value) {
+        return value == null ? NULL : sqlTypes.getOrDefault(value.getClass(), NULL);
     }
 }

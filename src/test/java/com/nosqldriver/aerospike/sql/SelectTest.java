@@ -14,6 +14,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.sql.ParameterMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -21,7 +22,9 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,6 +52,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.toListOfMaps;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.lang.String.format;
+import static java.lang.String.join;
 import static java.sql.ResultSet.CONCUR_READ_ONLY;
 import static java.sql.ResultSet.FETCH_FORWARD;
 import static java.sql.ResultSet.FETCH_REVERSE;
@@ -785,6 +789,51 @@ class SelectTest {
         assertPeople(rs, beatles, 1);
     }
 
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select id, first_name, last_name, year_of_birth, kids_count from people where PK=?",
+            "select * from people where PK=?"
+    })
+    void selectSpecificColumsUsingPreparedStatementAndValidateMetadata(String sql) throws SQLException {
+        PreparedStatement ps = testConn.prepareStatement(sql);
+
+        ResultSetMetaData psmd = ps.getMetaData();
+        assertNotNull(psmd);
+        int n = psmd.getColumnCount();
+        assertEquals(5, n);
+        Collection<String> columnInfo = new HashSet<>();
+        for (int i = 1; i <= n; i++) {
+            columnInfo.add(join(",", psmd.getCatalogName(i), psmd.getTableName(i), psmd.getColumnName(i), psmd.getColumnTypeName(i)));
+        }
+
+        System.out.println(columnInfo);
+        assertTrue(columnInfo.contains("test,people,id,long"));
+        assertTrue(columnInfo.contains("test,people,first_name,varchar"));
+        assertTrue(columnInfo.contains("test,people,last_name,varchar"));
+        assertTrue(columnInfo.contains("test,people,year_of_birth,long"));
+        assertTrue(columnInfo.contains("test,people,kids_count,long"));
+
+        ParameterMetaData pmd = ps.getParameterMetaData();
+        assertNotNull(pmd);
+        assertEquals(1, pmd.getParameterCount());
+        // PK type cannot be discovered
+        assertEquals(0, pmd.getParameterType(1));
+        assertNull(pmd.getParameterTypeName(1));
+        assertNull(pmd.getParameterClassName(1));
+        assertEquals(ParameterMetaData.parameterNullable, pmd.isNullable(1));
+        assertFalse(pmd.isSigned(1));
+        assertEquals(0, pmd.getPrecision(1));
+        assertEquals(0, pmd.getScale(1));
+        assertEquals(ParameterMetaData.parameterModeIn, pmd.getParameterMode(1));
+
+        ps.setInt(1, 1);
+        ResultSet rs = ps.executeQuery();
+        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertPeople(rs, beatles, 1);
+    }
+
+
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select * from people where PK=?",
@@ -811,6 +860,7 @@ class SelectTest {
         PreparedStatement ps = testConn.prepareStatement(sql);
         assertThrows(SQLException.class, () -> ps.setInt(0, 1));
         assertThrows(SQLException.class, () -> ps.setInt(2, 1));
+        assertThrows(SQLException.class, () -> ps.setTimestamp(1, new Timestamp(System.currentTimeMillis()), Calendar.getInstance()));
     }
 
     @Test

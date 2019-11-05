@@ -1,8 +1,14 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
+import com.aerospike.client.Record;
+import com.aerospike.client.policy.QueryPolicy;
+import com.aerospike.client.query.RecordSet;
+import com.aerospike.client.query.Statement;
 import com.nosqldriver.aerospike.sql.query.QueryContainer;
 import com.nosqldriver.sql.ByteArrayBlob;
+import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.DataColumnBasedResultSetMetaData;
 import com.nosqldriver.sql.SimpleParameterMetaData;
 import com.nosqldriver.sql.StringClob;
 import com.nosqldriver.util.IOUtils;
@@ -32,18 +38,27 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLXML;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
+import static com.nosqldriver.sql.SqlLiterals.getSqlType;
 import static java.lang.String.format;
 
 public class AerospikePreparedStatement extends AerospikeStatement implements PreparedStatement {
     private  final String sql;
     private Object[] parameterValues;
     private final QueryContainer<ResultSet> queryPlan;
+    private List<DataColumn> requestedDataColumns = null;
 
     public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql) throws SQLException {
         super(client, connection, schema, policyProvider);
@@ -52,6 +67,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
         parameterValues = new Object[n];
         Arrays.fill(parameterValues, Optional.empty());
         queryPlan = new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes).createQueryPlan(sql);
+        set = queryPlan.getSetName();
     }
 
     private int parametersCount(String sql) {
@@ -221,7 +237,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        throw new SQLFeatureNotSupportedException(); // TODO: think how to support this: extract metadata without code duplication and query execution.
+        return new DataColumnBasedResultSetMetaData(retrieveRequestedDataColumns());
     }
 
     @Override
@@ -251,7 +267,25 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     public ParameterMetaData getParameterMetaData() throws SQLException {
-        return new SimpleParameterMetaData(parameterValues.length);
+        // catalog:table:label -> column
+        Map<String, String> aliasToName = new HashMap<>();
+        for (DataColumn c : queryPlan.getRequestedColumns()) {
+            aliasToName.put(c.getLabel(), c.getName());
+        }
+
+        Map<String, DataColumn> columnByIdentifier = discoverType(Collections.singletonList(DATA.create(schema.get(), set, "*", "*"))).stream().collect(Collectors.toMap(c -> String.join(":", c.getCatalog(), c.getTable(), c.getLabel()), c -> c));
+        List<DataColumn> parameterColumns = queryPlan.getFilteredColumns().stream().map(c -> {
+            String id = String.join(":", c.getCatalog(), c.getTable(), c.getLabel());
+            String name = aliasToName.getOrDefault(c.getLabel(), c.getLabel());
+            DataColumn discoverdColumn = columnByIdentifier.get(id);
+            DataColumn column = DATA.create(c.getCatalog(), c.getTable(), name, c.getLabel());
+            if (discoverdColumn != null) {
+                column.withType(discoverdColumn.getType());
+            }
+            return column;
+        }).collect(Collectors.toList());
+
+        return new SimpleParameterMetaData(parameterColumns);
     }
 
     @Override
@@ -386,5 +420,41 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
                 return qc;
             }
         };
+    }
+
+    private List<DataColumn> retrieveRequestedDataColumns() {
+        if (requestedDataColumns == null) {
+            requestedDataColumns = discoverType(queryPlan.getRequestedColumns());
+        }
+        return requestedDataColumns;
+    }
+
+
+    private List<DataColumn> discoverType(List<DataColumn> columns) {
+        boolean all = columns.size() == 1 && "*".equals(columns.get(0).getName());
+
+        List<DataColumn> result = all ? new ArrayList<>() : columns;
+        Map<String[], List<DataColumn>> columnsByTable = columns.stream().collect(Collectors.groupingBy(c -> new String[] {c.getCatalog(), c.getTable()}));
+        for (Map.Entry<String[], List<DataColumn>> ctd : columnsByTable.entrySet()) {
+            String[] ct = ctd.getKey();
+            String catalog = ct[0];
+            String table = ct[1];
+            Statement statement = new Statement();
+            statement.setNamespace(catalog);
+            statement.setSetName(table);
+            RecordSet rs = client.query(new QueryPolicy(), statement);
+            if (rs.next()) {
+                Record r = rs.getRecord();
+                if (all) {
+                    result.addAll(r.bins.entrySet().stream()
+                            .map(e -> DATA.create(catalog, table, e.getKey(), e.getKey()).withType(getSqlType(e.getValue())))
+                            .collect(Collectors.toList()));
+                } else {
+                    ctd.getValue().forEach(c -> c.withType(getSqlType(r.getValue(c.getName()))));
+                }
+            }
+        }
+
+        return result;
     }
 }

@@ -756,6 +756,21 @@ public class AerospikeQueryFactory {
                 public void setParameters(Statement statement, Object... parameters) {
                     //TODO: update parameter values in keyPredicate and recordPredicate
                 }
+
+                @Override
+                public List<DataColumn> getRequestedColumns() {
+                    throw new  IllegalStateException(); // this method should not be called here
+                }
+
+                @Override
+                public List<DataColumn> getFilteredColumns() {
+                    throw new UnsupportedOperationException(); //TODO: IMPLEMENT THIS!
+                }
+
+                @Override
+                public String getSetName() {
+                    return null;
+                }
             };
         } catch (JSQLParserException e) {
             throw new SQLException(e);

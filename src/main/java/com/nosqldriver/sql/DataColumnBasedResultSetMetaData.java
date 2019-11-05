@@ -20,7 +20,7 @@ import static java.util.Optional.ofNullable;
 public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, SimpleWrapper {
     private static final int MAX_BLOCK_SIZE = 128 * 1024;
     private static final int MAX_DATE_SIZE = "2019.09.10 22:18:39.000 IDT".length();
-    private static final Map<Integer, Integer> precisionByType = new HashMap<>();
+    public static final Map<Integer, Integer> precisionByType = new HashMap<>();
     static {
         precisionByType.put(Types.BIT, 8);
         precisionByType.put(Types.TINYINT, 8);

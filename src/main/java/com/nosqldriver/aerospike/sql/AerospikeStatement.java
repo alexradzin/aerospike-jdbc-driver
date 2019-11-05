@@ -33,10 +33,10 @@ import static java.util.Collections.emptyList;
 import static java.util.Optional.ofNullable;
 
 public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
-    private final IAerospikeClient client;
+    protected final IAerospikeClient client;
     private final Connection connection;
     protected final AtomicReference<String> schema;
-    private String set;
+    protected String set;
     private int maxRows = Integer.MAX_VALUE;
     private int queryTimeout = 0;
     private volatile SQLWarning sqlWarning;

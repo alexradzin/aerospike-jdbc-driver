@@ -6,6 +6,7 @@ import java.sql.ParameterMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Wrapper;
+import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
 
@@ -28,7 +29,7 @@ class SimpleWrapperTest {
         failing(brs, Callable.class);
 
 
-        SimpleParameterMetaData pmd = new SimpleParameterMetaData(0);
+        SimpleParameterMetaData pmd = new SimpleParameterMetaData(Collections.emptyList());
         successful(pmd, ParameterMetaData.class);
         failing(pmd, Function.class);
     }

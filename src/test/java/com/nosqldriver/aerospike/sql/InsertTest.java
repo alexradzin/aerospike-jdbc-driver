@@ -520,7 +520,6 @@ class InsertTest {
 
         assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setRef(1, null));
         assertThrows(SQLFeatureNotSupportedException.class, ps::addBatch);
-        assertThrows(SQLFeatureNotSupportedException.class, ps::getMetaData);
         long now = currentTimeMillis();
         assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setDate(1, new java.sql.Date(now), Calendar.getInstance()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> ps.setTime(1, new Time(now), Calendar.getInstance()));

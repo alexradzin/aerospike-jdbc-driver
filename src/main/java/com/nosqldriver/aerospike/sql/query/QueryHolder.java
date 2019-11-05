@@ -56,6 +56,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKey;
@@ -729,6 +730,22 @@ public class QueryHolder implements QueryContainer {
     public void setWhereExpression(String whereExpression) {
         this.whereExpression = whereExpression;
     }
+
+
+    @Override
+    public List<DataColumn> getRequestedColumns() {
+        return columns.isEmpty() ? Collections.singletonList(HIDDEN.create(schema, set, "*", "*")) : columns;
+    }
+
+    public List<DataColumn> getFilteredColumns() {
+        return predExps.stream().filter(exp -> exp instanceof ColumnRefPredExp)
+                .map(e -> (ColumnRefPredExp)e)
+                .map(c -> DATA.create(schema, c.getTable(), null, c.getName()))
+                .collect(Collectors.toList());
+    }
+
+
+
 
     private static class ResultSetMetadataSupplier implements Supplier<ResultSetMetaData> {
         private final java.sql.Statement sqlStatement;

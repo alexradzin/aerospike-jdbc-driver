@@ -3,17 +3,21 @@ package com.nosqldriver.sql;
 import java.sql.ParameterMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.List;
+import java.util.Optional;
+
+import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
 
 public class SimpleParameterMetaData implements ParameterMetaData, SimpleWrapper {
-    private final int count;
+    private final List<DataColumn> columns;
 
-    public SimpleParameterMetaData(int count) {
-        this.count = count;
+    public SimpleParameterMetaData(List<DataColumn> columns) {
+        this.columns = columns;
     }
 
     @Override
     public int getParameterCount() throws SQLException {
-        return count;
+        return columns.size();
     }
 
     @Override
@@ -23,32 +27,32 @@ public class SimpleParameterMetaData implements ParameterMetaData, SimpleWrapper
 
     @Override
     public boolean isSigned(int param) throws SQLException {
-        return false; //TODO: think what to do here in case of schema-less DB. It should be true for numbers and false otherwise.
+        return false;
     }
 
     @Override
     public int getPrecision(int param) throws SQLException {
-        return 0; //TODO: think what to do here in case of schema-less DB. It should be true for numbers and false otherwise.
+        return DataColumnBasedResultSetMetaData.precisionByType.getOrDefault(getParameterType(param), 0);
     }
 
     @Override
     public int getScale(int param) throws SQLException {
-        return 0; //TODO: think what to do here in case of schema-less DB. It should be true for numbers and false otherwise.
+        return 0;
     }
 
     @Override
     public int getParameterType(int param) throws SQLException {
-        return Types.OTHER; //TODO: think what to do here in case of schema-less DB. It should be true for numbers and false otherwise.
+        return columns.get(param - 1).getType();
     }
 
     @Override
     public String getParameterTypeName(int param) throws SQLException {
-        return "OTHER"; //TODO: think what to do here in case of schema-less DB. It should be true for numbers and false otherwise.
+        return sqlTypeNames.get(getParameterType(param));
     }
 
     @Override
     public String getParameterClassName(int param) throws SQLException {
-        return Object.class.getName(); //TODO: think what to do here in case of schema-less DB. It should be true for numbers and false otherwise.
+        return Optional.ofNullable(SqlLiterals.sqlToJavaTypes.get(getParameterType(param))).map(Class::getName).orElse(null);
     }
 
     @Override
