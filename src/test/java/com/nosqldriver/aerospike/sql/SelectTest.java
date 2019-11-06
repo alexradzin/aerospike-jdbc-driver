@@ -162,6 +162,15 @@ class SelectTest {
     }
 
     @Test
+    void wrongCall() throws SQLException {
+        try(ResultSet rs = testConn.createStatement().executeQuery("select first_name, year_of_birth from people limit 1")) {
+            assertThrows(SQLException.class, () -> rs.getString("doesnotexist"));
+            assertThrows(SQLException.class, () -> rs.getInt("first_name"));
+            assertThrows(SQLException.class, () -> rs.getString("year_of_birth"));
+        }
+    }
+
+    @Test
     void validateStatementFields() throws SQLException {
         try(Statement statement = testConn.createStatement()) {
             assertEquals(Integer.MAX_VALUE, statement.getMaxRows());

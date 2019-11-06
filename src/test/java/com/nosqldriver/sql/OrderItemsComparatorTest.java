@@ -108,6 +108,9 @@ class OrderItemsComparatorTest {
         assertAnyValue(DESC, "a".getBytes(), "b".getBytes(), 1);
         assertAnyValue(ASC, "abc".getBytes(), "ab".getBytes(), 1);
         assertAnyValue(ASC, "abc".getBytes(), "abd".getBytes(), -1);
+        assertAnyValue(ASC, null, "abd".getBytes(), -1);
+        assertAnyValue(ASC, "abc".getBytes(), null, 1);
+        assertAnyValue(ASC, null, null, 0);
     }
 
 

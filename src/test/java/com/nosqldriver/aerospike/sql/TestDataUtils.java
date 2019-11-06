@@ -44,6 +44,7 @@ public class TestDataUtils {
     @VisibleForPackage static final String GUITARS = "guitars";
     @VisibleForPackage static final String KEYBOARDS = "keyboards";
     @VisibleForPackage static final String SUBJECT_SELECTION = "subject_selection";
+    @VisibleForPackage static final String DATA = "data";
     @VisibleForPackage static final String SELECT_ALL = "select * from people";
 
     static {
@@ -153,6 +154,14 @@ public class TestDataUtils {
         write(PEOPLE, writePolicy, 3, person(3, "George", "Harrison", 1943, 1));
         write(PEOPLE, writePolicy, 4, person(4, "Ringo", "Starr", 1940, 3));
     }
+
+
+    @VisibleForPackage static void writeData() {
+        WritePolicy writePolicy = new WritePolicy();
+        write(writePolicy, new Key(NAMESPACE, DATA, "one"), new Bin("string", "hello"));
+    }
+
+
 
     //Juliawrin Lennon 1963
     //Sean Lennon 1975

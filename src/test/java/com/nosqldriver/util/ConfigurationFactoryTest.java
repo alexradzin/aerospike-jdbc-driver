@@ -23,6 +23,20 @@ class ConfigurationFactoryTest {
     }
 
     @Test
+    void copySpecialToGeneralPolicy() {
+        QueryPolicy queryPolicy = new QueryPolicy();
+        queryPolicy.totalTimeout = 1024;
+        queryPolicy.maxRetries = 123;
+        queryPolicy.maxConcurrentNodes = 345; // defined in QueryPolicy; absent in Policy
+        Policy policy = new Policy();
+        ConfigurationFactory.copy(queryPolicy, policy);
+        assertEquals(policy.totalTimeout, queryPolicy.totalTimeout);
+        assertEquals(policy.maxRetries, queryPolicy.maxRetries);
+        assertEquals(345, queryPolicy.maxConcurrentNodes);
+    }
+
+
+    @Test
     void copyProperties() {
         Properties props = new Properties();
         props.setProperty("totalTimeout", "2048");

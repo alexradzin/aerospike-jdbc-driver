@@ -78,10 +78,12 @@ public class OrderItemsComparator<T> implements Comparator<T> {
             Object v1 = getter.apply(o1, name);
             Object v2 = getter.apply(o2, name);
             Class baseType = getClass(v1, v2);
-            //noinspection unchecked
-            int comparison = typedComparators.get(baseType).compare(typedConverters.get(baseType).apply(v1), typedConverters.get(baseType).apply(v2));
-            if (comparison != 0) {
-                return comparison * sign.get(orderItem.getDirection());
+            if (baseType != null) {
+                //noinspection unchecked
+                int comparison = typedComparators.get(baseType).compare(typedConverters.get(baseType).apply(v1), typedConverters.get(baseType).apply(v2));
+                if (comparison != 0) {
+                    return comparison * sign.get(orderItem.getDirection());
+                }
             }
         }
         return 0;

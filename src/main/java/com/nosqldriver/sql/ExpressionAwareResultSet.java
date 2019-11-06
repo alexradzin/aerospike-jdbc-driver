@@ -357,6 +357,10 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
 
     private <T> T getValue(Optional<T> value, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
-        return wasNull(value.isPresent() ? value.get() : superGetter.get());
+        try {
+            return wasNull(value.isPresent() ? value.get() : superGetter.get());
+        } catch (RuntimeException e) {
+            throw new SQLException(e);
+        }
     }
 }

@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Map;
 
 import static com.nosqldriver.TestUtils.getDisplayName;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.DATA;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.INSTRUMENTS;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -23,6 +24,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.SUBJECT_SELECTION;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.writeData;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeMainPersonalInstruments;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeSubjectSelection;
 import static org.junit.Assert.assertFalse;
@@ -43,6 +45,7 @@ class SpecialSelectTest {
         deleteAllRecords(NAMESPACE, PEOPLE);
         deleteAllRecords(NAMESPACE, INSTRUMENTS);
         deleteAllRecords(NAMESPACE, SUBJECT_SELECTION);
+        deleteAllRecords(NAMESPACE, DATA);
     }
 
     @Test
@@ -129,4 +132,14 @@ class SpecialSelectTest {
         assertEquals("drums", result.get("Ringo"));
     }
 
+
+    @Test
+    void stringPK() throws SQLException {
+        writeData();
+        ResultSet rs = testConn.createStatement().executeQuery("select * from data where PK='one'");
+        assertTrue(rs.next());
+        assertEquals("hello", rs.getString(1));
+        assertFalse(rs.next());
+        rs.close();
+    }
 }
