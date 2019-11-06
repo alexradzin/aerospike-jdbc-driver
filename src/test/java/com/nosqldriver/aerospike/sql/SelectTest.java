@@ -3,6 +3,8 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.query.IndexType;
 import com.nosqldriver.Person;
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.sql.DataColumnBasedResultSetMetaData;
+import com.nosqldriver.sql.SqlLiterals;
 import com.nosqldriver.util.VariableSource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -23,6 +25,7 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -31,6 +34,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -795,7 +799,23 @@ class SelectTest {
             "select id, first_name, last_name, year_of_birth, kids_count from people where PK=?",
             "select * from people where PK=?"
     })
-    void selectSpecificColumsUsingPreparedStatementAndValidateMetadata(String sql) throws SQLException {
+    void selectSpecificColumsUsingPreparedStatementFilteredByPrimaryKeyAndValidateMetadata(String sql) throws SQLException {
+        selectSpecificColumsUsingPreparedStatementAndValidateMetadata(sql, 1, 0 /*PK type cannot be discovered*/);
+        selectSpecificColumsUsingPreparedStatementAndValidateMetadata(sql, 2, 0 /*PK type cannot be discovered*/);
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select id, first_name, last_name, year_of_birth, kids_count from people where id=?",
+            "select * from people where id=?"
+    })
+    void selectSpecificColumsUsingPreparedStatementFilteredByFieldAndValidateMetadata(String sql) throws SQLException {
+        selectSpecificColumsUsingPreparedStatementAndValidateMetadata(sql, 1, BIGINT);
+        selectSpecificColumsUsingPreparedStatementAndValidateMetadata(sql, 2, BIGINT);
+    }
+
+
+    void selectSpecificColumsUsingPreparedStatementAndValidateMetadata(String sql, int paramValue, int expectedParamType) throws SQLException {
         PreparedStatement ps = testConn.prepareStatement(sql);
 
         ResultSetMetaData psmd = ps.getMetaData();
@@ -817,21 +837,21 @@ class SelectTest {
         ParameterMetaData pmd = ps.getParameterMetaData();
         assertNotNull(pmd);
         assertEquals(1, pmd.getParameterCount());
-        // PK type cannot be discovered
-        assertEquals(0, pmd.getParameterType(1));
-        assertNull(pmd.getParameterTypeName(1));
-        assertNull(pmd.getParameterClassName(1));
+        assertEquals(expectedParamType, pmd.getParameterType(1));
+        assertEquals(SqlLiterals.sqlTypeNames.get(expectedParamType), pmd.getParameterTypeName(1));
+        assertEquals(Optional.ofNullable(SqlLiterals.sqlToJavaTypes.get(expectedParamType)).map(Class::getName).orElse(null), pmd.getParameterClassName(1));
         assertEquals(ParameterMetaData.parameterNullable, pmd.isNullable(1));
         assertFalse(pmd.isSigned(1));
-        assertEquals(0, pmd.getPrecision(1));
+        assertEquals(DataColumnBasedResultSetMetaData.precisionByType.getOrDefault(expectedParamType, 0).intValue(), pmd.getPrecision(1));
         assertEquals(0, pmd.getScale(1));
         assertEquals(ParameterMetaData.parameterModeIn, pmd.getParameterMode(1));
 
-        ps.setInt(1, 1);
+        ps.setInt(1, paramValue);
         ResultSet rs = ps.executeQuery();
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
-        assertPeople(rs, beatles, 1);
+        assertPeople(rs, beatles, paramValue);
     }
+
 
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
