@@ -164,9 +164,11 @@ public class TypeTransformer {
                 str = str.substring(6, str.length() - 1);
                 return (T)sqlDateFormat.format(Date.from(Instant.parse(str)));
             }
-            return (T)obj.toString();
         }
-        return (T)obj;
+        if (obj == null || type.isAssignableFrom(obj.getClass())) {
+            return (T)obj;
+        }
+        throw new ClassCastException(format("lass %s cannot be cast to class %s", obj.getClass(), type));
     }
 
 
@@ -188,5 +190,4 @@ public class TypeTransformer {
         cal.setTime(new java.util.Date(epoch));
         return factory.apply(cal.getTime().getTime());
     }
-
 }

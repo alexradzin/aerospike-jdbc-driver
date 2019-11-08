@@ -33,6 +33,12 @@ public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statemen
                         next = false;
                     }
                 }
+
+                @Override
+                public void close() {
+                    // do nothing here
+                    // This method prevents NullPointerException being thrown otherwise because wrapped result set is null
+                }
             };
         }
         return new ResultSetOverAerospikeRecordSet(statement, schema, set, columns, client.query(policy, criteria), () -> anyRecordSupplier.apply(client, policy));

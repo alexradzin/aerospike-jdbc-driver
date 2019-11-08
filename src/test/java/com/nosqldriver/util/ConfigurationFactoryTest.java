@@ -5,9 +5,11 @@ import com.aerospike.client.policy.Priority;
 import com.aerospike.client.policy.QueryPolicy;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConfigurationFactoryTest {
@@ -53,7 +55,7 @@ class ConfigurationFactoryTest {
     @Test
     void copyNotExistingProperty() {
         Properties props = new Properties();
-        props.setProperty("doesNotExist", "n/a"); // not existinbg property does not make the process to fail
+        props.setProperty("doesNotExist", "n/a"); // not existing property does not make the process to fail
         props.setProperty("totalTimeout", "2048");
 
         QueryPolicy queryPolicy = new QueryPolicy();
@@ -61,4 +63,17 @@ class ConfigurationFactoryTest {
         assertEquals(queryPolicy.totalTimeout, queryPolicy.totalTimeout);
     }
 
+    @Test
+    void copyPropertyOfWrongType() {
+        Properties props = new Properties();
+        props.setProperty("list", "a, b, c");
+        // Special case: WrongPolicy.list is of type List. Only primiteves and enums are supported; attempt to copy values to list should throw exception.
+        WrongPolicy policy = new WrongPolicy();
+        assertThrows(IllegalArgumentException.class, () -> ConfigurationFactory.copy(props, policy));
+    }
+
+
+    private static class WrongPolicy {
+        public List<String> list;
+    }
 }

@@ -131,6 +131,36 @@ class SelectTest {
         assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("select * from people where first_name between 'Adam' and 'Abel'"));
     }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            SELECT_ALL,
+            "select * from people as p",
+            "select * from people where 0=0",
+            "select * from (select * from people)",
+            "select * from (select * from people where 0=0)",
+            "select * from (select * from people) where 1=1",
+            "select * from (select * from people where 0=0) where 1=1",
+            "select * from people where id>0",
+            "select * from people where id=1",
+            "select id, first_name from people",
+            "select id, first_name, 2+2 as four from people",
+            "select 1 as id, 'John' as first_name",
+    })
+    void callGetOfWrongType(String sql) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertThrows(SQLException.class, () -> rs.getString("id"));
+        assertThrows(SQLException.class, () -> rs.getInt("first_name"));
+
+        assertThrows(SQLException.class, () -> rs.getString("doesnotexist"));
+        assertThrows(SQLException.class, () -> rs.getBoolean("doesnotexist"));
+        assertThrows(SQLException.class, () -> rs.getInt("doesnotexist"));
+        assertThrows(SQLException.class, () -> rs.getLong("doesnotexist"));
+        assertThrows(SQLException.class, () -> rs.getTime("doesnotexist"));
+
+        rs.close();
+    }
+
     @Test
     void checkMetadata() throws SQLException {
         try(ResultSet rs = testConn.createStatement().executeQuery("select first_name, year_of_birth from people limit 1")) {

@@ -8,8 +8,10 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Executors;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static java.lang.String.format;
 import static java.sql.Connection.TRANSACTION_NONE;
 import static java.sql.Connection.TRANSACTION_READ_UNCOMMITTED;
 import static java.sql.ResultSet.CLOSE_CURSORS_AT_COMMIT;
@@ -17,6 +19,8 @@ import static java.sql.ResultSet.CONCUR_READ_ONLY;
 import static java.sql.ResultSet.HOLD_CURSORS_OVER_COMMIT;
 import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static java.sql.Statement.RETURN_GENERATED_KEYS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -25,9 +29,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AerospikeConnectionTest {
+    private final String JDBC_LOCAL = "jdbc:aerospike:localhost";
+    private final String JDBC_LOCAL_TEST = format("%s/%s", JDBC_LOCAL, "test");
     @Test
     void createValidConnectionWithoutNamespace() throws SQLException {
-        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost", new Properties());
+        Connection conn = new AerospikeConnection(JDBC_LOCAL, new Properties());
         assertTrue(conn.isValid(1));
         conn.setReadOnly(true);
         assertTrue(conn.isReadOnly());
@@ -48,18 +54,18 @@ class AerospikeConnectionTest {
 
     @Test
     void createValidConnectionWithPort() throws SQLException {
-        assertConnectionIsClosed("jdbc:aerospike:localhost:3000", new Properties());
+        assertConnectionIsClosed(format("%s:%d", JDBC_LOCAL, 3000), new Properties());
     }
 
 
     @Test
     void createValidConnectionWithNamespace() throws SQLException {
-        assertConnectionIsClosed("jdbc:aerospike:localhost/test", new Properties());
+        assertConnectionIsClosed(JDBC_LOCAL_TEST, new Properties());
     }
 
     @Test
     void validateNetworkTimeout() throws SQLException {
-        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost", new Properties());
+        Connection conn = new AerospikeConnection(JDBC_LOCAL, new Properties());
         int defaultTimeout = conn.getNetworkTimeout();
         assertEquals(0, defaultTimeout);
         conn.setNetworkTimeout(null, 12345);
@@ -80,7 +86,7 @@ class AerospikeConnectionTest {
 
     @Test
     void createInValidConnectionWrongPort() {
-        assertThrows(SQLException.class, () -> new AerospikeConnection("jdbc:aerospike:localhost:4321", new Properties()));
+        assertThrows(SQLException.class, () -> new AerospikeConnection(format("%s:%d", JDBC_LOCAL, 4321), new Properties()));
     }
 
 
@@ -179,18 +185,19 @@ class AerospikeConnectionTest {
 
     @Test
     void validateClientInfo() throws SQLException {
-        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost", new Properties());
+        Connection conn = new AerospikeConnection(JDBC_LOCAL, new Properties());
         assertTrue(conn.getClientInfo().isEmpty());
         conn.setClientInfo("test1", "value1");
         Properties info1 = conn.getClientInfo();
         assertEquals(1, info1.size());
         assertEquals("value1", info1.getProperty("test1"));
+        assertEquals("value1", conn.getClientInfo("test1"));
         conn.close();
     }
 
     @Test
     void validateClientInfoSetAll() throws SQLException {
-        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost", new Properties());
+        Connection conn = new AerospikeConnection(JDBC_LOCAL, new Properties());
         assertTrue(conn.getClientInfo().isEmpty());
 
         Properties props = new Properties();
@@ -205,10 +212,20 @@ class AerospikeConnectionTest {
         conn.close();
     }
 
+    @Test
+    void validateClosedConnection() throws SQLException {
+        Connection conn = new AerospikeConnection(JDBC_LOCAL, new Properties());
+        conn.setHoldability(HOLD_CURSORS_OVER_COMMIT); // success
+        conn.close();
+        // same call on closed connection fails
+        assertThrows(SQLException.class, () -> conn.setHoldability(HOLD_CURSORS_OVER_COMMIT));
+    }
+
+
 
     @Test
     void validateTypeMap() throws SQLException {
-        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost", new Properties());
+        Connection conn = new AerospikeConnection(JDBC_LOCAL, new Properties());
         assertTrue(conn.getTypeMap().isEmpty());
         class Athletes {}
         conn.setTypeMap(Collections.singletonMap("mySchemaName.ATHLETES", Athletes.class));
@@ -227,21 +244,30 @@ class AerospikeConnectionTest {
 
     @Test
     void noShema() throws SQLException {
-        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost", new Properties());
+        Connection conn = new AerospikeConnection(JDBC_LOCAL, new Properties());
         assertNull(conn.getSchema());
     }
 
     @Test
     void shema() throws SQLException {
-        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost/test", new Properties());
+        Connection conn = new AerospikeConnection(JDBC_LOCAL_TEST, new Properties());
         assertEquals("test", conn.getSchema());
     }
 
     @Test
     void changeShema() throws SQLException {
-        Connection conn = new AerospikeConnection("jdbc:aerospike:localhost/test", new Properties());
+        Connection conn = new AerospikeConnection(JDBC_LOCAL_TEST, new Properties());
         assertEquals("test", conn.getSchema());
         conn.setSchema("test2");
         assertEquals("test2", conn.getSchema());
+    }
+
+    @Test
+    void abort() throws SQLException {
+        Connection conn = new AerospikeConnection(JDBC_LOCAL_TEST, new Properties());
+        assertFalse(conn.isClosed());
+        conn.abort(Executors.newSingleThreadExecutor());
+        await().atMost(5, SECONDS).until(conn::isClosed, c -> c);
+        assertTrue(conn.isClosed());
     }
 }

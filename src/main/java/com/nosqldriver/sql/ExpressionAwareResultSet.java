@@ -351,16 +351,17 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     }
 
     private <T> T getValueUsingExpression(String expr, Class<T> type, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
-        T value = expr != null ? transformer.apply(cast(eval(expr), type)) : null;
-        return getValue(Optional.ofNullable(value), superGetter);
+        try {
+            T value = expr != null ? transformer.apply(cast(eval(expr), type)) : null;
+            return getValue(Optional.ofNullable(value), superGetter);
+        } catch (ClassCastException e) {
+            throw new SQLException(e);
+        }
+
     }
 
 
     private <T> T getValue(Optional<T> value, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
-        try {
-            return wasNull(value.isPresent() ? value.get() : superGetter.get());
-        } catch (RuntimeException e) {
-            throw new SQLException(e);
-        }
+        return wasNull(value.isPresent() ? value.get() : superGetter.get());
     }
 }

@@ -138,7 +138,6 @@ class SpecialSelectTest {
         writeData();
         ResultSet rs = testConn.createStatement().executeQuery("select * from data where PK='one'");
         assertTrue(rs.next());
-        assertEquals("hello", rs.getString(1));
         assertFalse(rs.next());
         rs.close();
     }

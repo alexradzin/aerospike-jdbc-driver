@@ -68,7 +68,7 @@ public class ConfigurationFactory {
             //noinspection unchecked
             value = Enum.valueOf((Class<? extends Enum>)field.getType(), strValue);
         } else {
-            throw new IllegalAccessException(field.getType().getName());
+            throw new IllegalArgumentException(field.getType().getName());
         }
         field.set(object, value);
     }
