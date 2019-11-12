@@ -3,6 +3,8 @@ package com.nosqldriver.sql;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -10,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
@@ -88,33 +91,40 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
     }
 
     public DataColumnBasedResultSetMetaData updateData(ResultSetMetaData md) throws SQLException {
-        int n = md.getColumnCount();
-        for (int i = 0; i < n; i++) {
-            int index = i + 1;
-            String catalog = md.getCatalogName(index);
-            String table = md.getTableName(index);
-            String label = md.getColumnLabel(index);
-            int type = md.getColumnType(index);
+        List<DataColumn> additionalColumns = new ArrayList<>();
 
+        for(DataColumn c  : ((DataColumnBasedResultSetMetaData)md).columns) {
+            String catalog = c.getCatalog();
+            String table = c.getTable();
+            String label = Stream.of(c.getLabel(), c.getName()).filter(Objects::nonNull).findFirst().orElse(null);
+            int type = c.getType();
+
+            boolean updated = false;
             for (DataColumn column : columns) {
+
+
                 if (Objects.equals(column.getName(), label)) {
-                    if (column.getCatalog() == null) {
-                        column.withCatalog(catalog);
-                    }
-                    if (column.getTable() == null) {
-                        column.withTable(table);
-                    }
-                    if (Objects.equals(column.getCatalog(), catalog) && Objects.equals(column.getTable(), table) && column.getType() == 0) {
-                        column.withType(type);
+                    String t = column.getTable();
+                    if (t == null || table.equals(t)) {
+                        if (column.getCatalog() == null) {
+                            column.withCatalog(catalog);
+                        }
+                        if (column.getTable() == null) {
+                            column.withTable(table);
+                        }
+                        if (Objects.equals(column.getCatalog(), catalog) && Objects.equals(column.getTable(), table) && column.getType() == 0) {
+                            column.withType(type);
+                        }
+                        updated = true;
                     }
                 }
             }
 
-//            columns.stream()
-//                    .filter(c -> Objects.equals(c.getCatalog(), catalog) && Objects.equals(c.getTable(), table) && Objects.equals(c.getName(), name))
-//                    .findFirst().map(c -> c.withType(type));
+            if (!updated) {
+                additionalColumns.add(c);
+            }
         }
-        return new DataColumnBasedResultSetMetaData(columns);
+        return new DataColumnBasedResultSetMetaData(Stream.of(columns, additionalColumns).flatMap(Collection::stream).collect(Collectors.toList()));
     }
 
     public void setDiscovered(boolean discovered) {

@@ -2,6 +2,8 @@ package com.nosqldriver.aerospike.sql.query;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.policy.Policy;
+import com.aerospike.client.policy.QueryPolicy;
+import com.aerospike.client.query.KeyRecord;
 import com.nosqldriver.sql.DataColumn;
 
 import java.sql.ResultSet;
@@ -32,4 +34,13 @@ abstract class AerospikeQuery<C, P extends Policy, R> implements Function<IAeros
 
     @Override
     public abstract ResultSet apply(IAerospikeClient client);
+
+    protected BiFunction<String, String, Iterable<KeyRecord>> createKeyRecordsFetcher(IAerospikeClient client, String catalog, String table) {
+        return (s, s2) -> {
+            com.aerospike.client.query.Statement statement = new com.aerospike.client.query.Statement();
+            statement.setNamespace(catalog);
+            statement.setSetName(table);
+            return client.query(new QueryPolicy(), statement);
+        };
+    };
 }

@@ -1,10 +1,12 @@
 package com.nosqldriver.sql;
 
+import java.util.Objects;
+
 public class DataColumn {
     private String catalog;
     private String table;
     private final String name;
-    private final String label;
+    private String label;
     private final String expression;
     private int type;
 
@@ -50,6 +52,11 @@ public class DataColumn {
         return this;
     }
 
+    public DataColumn withLabel(String label) {
+        this.label = label;
+        return this;
+    }
+
     public String getCatalog() {
         return catalog;
     }
@@ -76,5 +83,24 @@ public class DataColumn {
 
     public DataColumnRole getRole() {
         return role;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DataColumn that = (DataColumn) o;
+        return type == that.type &&
+                Objects.equals(catalog, that.catalog) &&
+                Objects.equals(table, that.table) &&
+                Objects.equals(name, that.name) &&
+                Objects.equals(label, that.label) &&
+                Objects.equals(expression, that.expression) &&
+                role == that.role;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(catalog, table, name, label, expression, type, role);
     }
 }

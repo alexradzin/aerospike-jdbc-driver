@@ -218,7 +218,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
                 metadata = new DataColumnBasedResultSetMetaData(allColumns);
             } else {
                 for (JoinHolder jh : joinHolders) {
-                    metadata.updateData(jh.getMetaDataSupplier().get());
+                    metadata = metadata.updateData(jh.getMetaDataSupplier().get());
                 }
             }
         }

@@ -1,16 +1,13 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
-import com.aerospike.client.Record;
-import com.aerospike.client.policy.QueryPolicy;
-import com.aerospike.client.query.RecordSet;
-import com.aerospike.client.query.Statement;
 import com.nosqldriver.aerospike.sql.query.QueryContainer;
 import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.DataColumnBasedResultSetMetaData;
 import com.nosqldriver.sql.SimpleParameterMetaData;
 import com.nosqldriver.sql.StringClob;
+import com.nosqldriver.sql.TypeDiscoverer;
 import com.nosqldriver.util.IOUtils;
 
 import java.io.DataInputStream;
@@ -38,7 +35,6 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLXML;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
@@ -51,7 +47,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
-import static com.nosqldriver.sql.SqlLiterals.getSqlType;
 import static java.lang.String.format;
 
 public class AerospikePreparedStatement extends AerospikeStatement implements PreparedStatement {
@@ -59,6 +54,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
     private Object[] parameterValues;
     private final QueryContainer<ResultSet> queryPlan;
     private List<DataColumn> requestedDataColumns = null;
+    private final TypeDiscoverer discoverer;
 
     public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql) throws SQLException {
         super(client, connection, schema, policyProvider);
@@ -68,6 +64,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
         Arrays.fill(parameterValues, Optional.empty());
         queryPlan = new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes).createQueryPlan(sql);
         set = queryPlan.getSetName();
+        discoverer = new AerospikeTypeDiscoverer(client);
     }
 
     private int parametersCount(String sql) {
@@ -332,7 +329,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
             }
             setBytes(parameterIndex, bytes);
         } catch (EOFException e) {
-            throw new SQLException(format("Source contains less bytes than required %d", length));
+            throw new SQLException(format("Source contains less bytes than required %d", length), e);
         } catch (IOException e) {
             throw new SQLException(e);
         }
@@ -431,30 +428,6 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
 
     private List<DataColumn> discoverType(List<DataColumn> columns) {
-        boolean all = columns.size() == 1 && "*".equals(columns.get(0).getName());
-
-        List<DataColumn> result = all ? new ArrayList<>() : columns;
-        Map<String[], List<DataColumn>> columnsByTable = columns.stream().collect(Collectors.groupingBy(c -> new String[] {c.getCatalog(), c.getTable()}));
-        for (Map.Entry<String[], List<DataColumn>> ctd : columnsByTable.entrySet()) {
-            String[] ct = ctd.getKey();
-            String catalog = ct[0];
-            String table = ct[1];
-            Statement statement = new Statement();
-            statement.setNamespace(catalog);
-            statement.setSetName(table);
-            RecordSet rs = client.query(new QueryPolicy(), statement);
-            if (rs.next()) {
-                Record r = rs.getRecord();
-                if (all) {
-                    result.addAll(r.bins.entrySet().stream()
-                            .map(e -> DATA.create(catalog, table, e.getKey(), e.getKey()).withType(getSqlType(e.getValue())))
-                            .collect(Collectors.toList()));
-                } else {
-                    ctd.getValue().forEach(c -> c.withType(getSqlType(r.getValue(c.getName()))));
-                }
-            }
-        }
-
-        return result;
+        return discoverer.discoverType(columns);
     }
 }

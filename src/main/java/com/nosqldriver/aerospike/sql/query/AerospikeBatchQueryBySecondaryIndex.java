@@ -41,6 +41,6 @@ public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statemen
                 }
             };
         }
-        return new ResultSetOverAerospikeRecordSet(statement, schema, set, columns, client.query(policy, criteria), () -> anyRecordSupplier.apply(client, policy));
+        return new ResultSetOverAerospikeRecordSet(statement, schema, set, columns, client.query(policy, criteria), () -> anyRecordSupplier.apply(client, policy), createKeyRecordsFetcher(client, schema, set));
     }
 }

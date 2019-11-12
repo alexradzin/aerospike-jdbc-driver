@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
 import com.aerospike.client.query.IndexType;
+import com.aerospike.client.task.IndexTask;
 import com.nosqldriver.aerospike.sql.query.AerospikeInsertQuery;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.SimpleWrapper;
@@ -135,7 +136,13 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
                 AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes);
                 aqf.createQueryPlan(sql);
                 String[] index = aqf.getIndexes().iterator().next().split("\\.");
-                statement.client.createIndex(null, aqf.getSchema(), aqf.getSet(), index[4], index[3], IndexType.valueOf(index[0].toUpperCase()));
+                IndexTask task = statement.client.createIndex(null, aqf.getSchema(), aqf.getSet(), index[4], index[3], IndexType.valueOf(index[0].toUpperCase()));
+                int timeout = statement.client.getWritePolicyDefault().totalTimeout;
+                if(timeout > 0) {
+                    task.waitTillComplete(timeout);
+                } else {
+                    task.waitTillComplete();
+                }
                 return 1;
             }
 

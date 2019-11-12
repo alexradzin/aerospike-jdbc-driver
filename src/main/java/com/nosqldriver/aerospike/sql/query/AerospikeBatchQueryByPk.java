@@ -18,6 +18,6 @@ public class AerospikeBatchQueryByPk extends AerospikeQuery<Key[], BatchPolicy, 
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, client.get(policy, criteria), () -> anyRecordSupplier.apply(client, policy));
+        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, client.get(policy, criteria), () -> anyRecordSupplier.apply(client, policy), createKeyRecordsFetcher(client, schema, set));
     }
 }

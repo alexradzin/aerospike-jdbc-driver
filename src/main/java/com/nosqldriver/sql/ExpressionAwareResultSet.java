@@ -239,15 +239,17 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
         DataColumnBasedResultSetMetaData md = (DataColumnBasedResultSetMetaData)rs.getMetaData();
+        List<DataColumn> dataColumns = md.getColumns().stream().filter(c -> !DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).collect(Collectors.toList());
         List<DataColumn> expressions = md.getColumns().stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getType() == 0).collect(Collectors.toList());
         if (!expressions.isEmpty()) {
             Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
             Collection<String> bound = bind(rs, columns, bindings);
             int n = md.getColumnCount();
-            for (int i = 0; i < n; i++) {
-                String name = md.getColumnName(i + 1);
+
+            for (DataColumn column : dataColumns) {
+                String name = column.getName();
                 if (name != null && !bound.contains(name)) {
-                    int type = md.getColumnType(i + 1);
+                    int type = column.getType();
                     Object value = null;
                     switch (type) {
                         case Types.BIGINT:
