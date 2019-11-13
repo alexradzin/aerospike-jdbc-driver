@@ -25,16 +25,11 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
 
     private static final Function<Record, Map<String, Object>> recordDataExtractor = record -> record != null ? record.bins : emptyMap();
     private static final Function<KeyRecord, Map<String, Object>> keyRecordDataExtractor = keyRecord -> keyRecord != null ? recordDataExtractor.apply(keyRecord.record) : emptyMap();
-
     private final RecordSet rs;
-    private final TypeDiscoverer typeDiscoverer;
-    private final List<DataColumn> columnsForMetadata = columns.stream().anyMatch(c -> DataColumn.DataColumnRole.DATA.equals(c.getRole())) ? columns : singletonList(DataColumn.DataColumnRole.DATA.create(schema, table, "*", "*"));
-    private volatile ResultSetMetaData metadata = null;
 
     public ResultSetOverAerospikeRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, RecordSet rs, Supplier<Record> anyRecordSupplier, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
-        super(statement, schema, table, columns, anyRecordSupplier);
+        super(statement, schema, table, columns, anyRecordSupplier, new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor));
         this.rs = rs;
-        typeDiscoverer = new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor);
     }
 
 
@@ -59,13 +54,4 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
             return null;
         }
     }
-
-    @Override
-    public ResultSetMetaData getMetaData() throws SQLException {
-        if (metadata == null) {
-            metadata = new DataColumnBasedResultSetMetaData(typeDiscoverer.discoverType(columnsForMetadata));
-        }
-        return metadata;
-    }
-
 }

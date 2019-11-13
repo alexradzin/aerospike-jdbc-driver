@@ -15,6 +15,7 @@ import static com.nosqldriver.sql.TypeTransformer.cast;
 
 public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map<String, Object>> {
     protected final ResultSet rs;
+
     public ResultSetOverAerospikeResultSet(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier) {
         super(statement, schema, table, columns, anyRecordSupplier);
         this.rs = rs;
