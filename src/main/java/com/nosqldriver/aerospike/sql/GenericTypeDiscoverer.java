@@ -36,9 +36,9 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
         boolean all = columns.size() == 1 && "*".equals(columns.get(0).getName());
 
         List<DataColumn> result = all ? new ArrayList<>() : columns;
-        Map<String[], List<DataColumn>> columnsByTable = columns.stream().collect(Collectors.groupingBy(c -> new String[] {c.getCatalog(), c.getTable()}));
-        for (Map.Entry<String[], List<DataColumn>> ctd : columnsByTable.entrySet()) {
-            String[] ct = ctd.getKey();
+        Map<String, List<DataColumn>> columnsByTable = columns.stream().collect(Collectors.groupingBy(c -> c.getCatalog() + "." + c.getTable()));
+        for (Map.Entry<String, List<DataColumn>> ctd : columnsByTable.entrySet()) {
+            String[] ct = ctd.getKey().split("\\.");
             String catalog = ct[0];
             String table = ct[1];
             Statement statement = new Statement();

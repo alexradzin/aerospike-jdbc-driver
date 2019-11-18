@@ -1,23 +1,88 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.aerospike.client.Record;
+import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.ResultSet;
 import com.nosqldriver.sql.BaseSchemalessResultSet;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.TypeDiscoverer;
 
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
+import static java.util.Collections.emptyMap;
 
 
 public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map<String, Object>> {
     protected final ResultSet rs;
+    private static final Function<Record, Map<String, Object>> recordDataExtractor = record -> record != null ? record.bins : emptyMap();
+    private static final Function<KeyRecord, Map<String, Object>> keyRecordDataExtractor = keyRecord -> keyRecord != null ? recordDataExtractor.apply(keyRecord.record) : emptyMap();
+    private static final Pattern functionOfField = Pattern.compile("\\w+\\(\\s*(\\w+)\\s*\\)");
 
-    public ResultSetOverAerospikeResultSet(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier) {
-        super(statement, schema, table, columns, anyRecordSupplier);
+
+    public ResultSetOverAerospikeResultSet(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier, TypeDiscoverer typeDiscoverer) {
+        super(statement, schema, table, columns, anyRecordSupplier, typeDiscoverer);
+        this.rs = rs;
+    }
+
+
+    public ResultSetOverAerospikeResultSet(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
+        super(statement, schema, table, columns, anyRecordSupplier,
+                columns1 -> {
+                            Collection<DataColumn> referencedFields = new HashSet<>();
+                            boolean shouldDiscoverData = false;
+                            for (DataColumn c : columns1) {
+                                String name = c.getName();
+                                if (name.startsWith("count(")) {
+                                    c.withType(Types.BIGINT);
+                                } else if (name.startsWith("avg(") || name.startsWith("sumsqs(")) {
+                                    c.withType(Types.DOUBLE);
+                                } else if(name.contains("(")) {
+                                    Matcher m = functionOfField.matcher(name);
+                                    if (m.find()) {
+                                        referencedFields.add(c);
+                                    }
+                                    shouldDiscoverData = true;
+                                }
+                            }
+
+                            if (shouldDiscoverData) {
+                                Stream<DataColumn> regularColumns = columns.stream().filter(c -> c.getType() == 0).filter(c -> !c.getName().contains("("));
+                                Collection<DataColumn> specialFunctions = referencedFields.stream().map(e -> {
+                                    Matcher m = functionOfField.matcher(e.getName());
+                                    return m.find() ? DataColumn.DataColumnRole.HIDDEN.create(e.getCatalog(), e.getTable(), m.group(1), null) : e;
+                                }).collect(Collectors.toList());
+                                Collection<DataColumn> uniqueSpecialColumns = new TreeSet<>(Comparator.comparing(DataColumn::getName));
+                                uniqueSpecialColumns.addAll(specialFunctions);
+                                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor).discoverType(Stream.concat(regularColumns, specialFunctions.stream()).collect(Collectors.toList()));
+                                Map<String, DataColumn> name2SpecialColumn = uniqueSpecialColumns.stream().collect(Collectors.toMap(DataColumn::getName, c -> c));
+
+                                for (DataColumn c : referencedFields) {
+                                    Matcher m = functionOfField.matcher(c.getName());
+                                    if (m.find()) {
+                                        String name = m.group(1);
+                                        c.withType(name2SpecialColumn.get(name).getType());
+                                    }
+                                }
+                            }
+                            return columns1;
+                });
         this.rs = rs;
     }
 

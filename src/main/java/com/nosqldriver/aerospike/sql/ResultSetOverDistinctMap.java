@@ -1,20 +1,26 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.aerospike.client.Record;
+import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.ResultSet;
+import com.nosqldriver.sql.CompositeTypeDiscoverer;
 import com.nosqldriver.sql.DataColumn;
 
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.lang.Double.parseDouble;
-import static java.lang.Integer.parseInt;
+import static java.lang.Long.parseLong;
+import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
 
 public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
@@ -22,6 +28,7 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     private static final String KEY_DELIMITER = "_nsqld_as_d_";
 
     private static final Map<String, Function<String, Object>> parsers = new HashMap<>();
+
     static {
         // The type names here are not Aerospike's but Lua's
         parsers.put("number", s ->
@@ -30,7 +37,7 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
                     if (s.contains(".")) {
                         return parseDouble(s);
                     }
-                    return parseInt(s);
+                    return parseLong(s);
                 }
         );
         parsers.put("string", s -> s);
@@ -46,8 +53,18 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     private boolean nextResult = false;
     private Map<String, Object> sampleRecord;
 
-    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier) {
-        super(statement, schema, table, columns, rs, anyRecordSupplier);
+    private static final Function<Record, Map<String, Object>> recordDataExtractor = record -> record != null ? record.bins : emptyMap();
+    private static final Function<KeyRecord, Map<String, Object>> keyRecordDataExtractor = keyRecord -> keyRecord != null ? recordDataExtractor.apply(keyRecord.record) : emptyMap();
+
+
+    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
+        super(statement, schema, table, columns, rs, anyRecordSupplier, new CompositeTypeDiscoverer(
+                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor),
+                columns1 -> {
+                    columns1.stream().filter(c -> c.getName().startsWith("count(")).forEach(c -> c.withType(Types.BIGINT));
+                    columns1.stream().filter(c -> !c.getName().contains("count(") && c.getName().contains("(")).forEach(c -> c.withType(Types.DOUBLE));
+                    return columns1;
+                }));
     }
 
     @Override
@@ -66,7 +83,6 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
         currentRecord = null;
         return currentIndex < row.size();
     }
-
 
 
     @Override
@@ -88,7 +104,7 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
         }
         Entry<Object, Object> e = entries.get(currentIndex);
         Object key = e.getKey();
-        Object[] keys = Arrays.stream(key instanceof String ? ((String)key).split(KEY_DELIMITER) : new Object[] {key}).map(this::cast).toArray();
+        Object[] keys = Arrays.stream(key instanceof String ? ((String) key).split(KEY_DELIMITER) : new Object[]{key}).map(this::cast).toArray();
 
         Map<String, Object> record = new HashMap<>();
         for (int i = 0; i < keys.length; i++) {
@@ -104,7 +120,7 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
 
     private Object cast(Object value) {
         if (value instanceof String) {
-            String key = (String)value;
+            String key = (String) value;
             String[] tk = key.split(":", 2);
             return ofNullable(parsers.get(tk[0])).map(p -> p.apply(tk[1])).orElseThrow(() -> new IllegalStateException("Cannot identify type: " + key));
         } else {
@@ -128,17 +144,15 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
 
     @Override
     protected Object getValue(Map<String, Object> record, String label) {
-        if(currentIndex < 0) {
+        if (currentIndex < 0) {
             return null; //TODO: is this correct? Should exception be thrown here?
         }
         return ofNullable(getRecord()).map(r -> r.get(label)).orElse(null);
     }
 
 
-
     @SuppressWarnings("unchecked")
     private <K, V> Map<K, V> toMap(Object obj) {
-        return (Map<K, V>)obj;
+        return (Map<K, V>) obj;
     }
-
 }

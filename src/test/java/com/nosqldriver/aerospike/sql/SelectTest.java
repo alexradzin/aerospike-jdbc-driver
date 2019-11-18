@@ -25,7 +25,6 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -1239,7 +1238,7 @@ class SelectTest {
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());
         assertEquals("year_of_birth", md.getColumnName(1));
-        assertEquals(INTEGER, md.getColumnType(1));
+        assertEquals(BIGINT, md.getColumnType(1));
         assertEquals("count(*)", md.getColumnName(2));
         assertEquals(BIGINT, md.getColumnType(2));
 
@@ -1271,7 +1270,7 @@ class SelectTest {
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());
         assertEquals("year_of_birth", md.getColumnName(1));
-        assertEquals(INTEGER, md.getColumnType(1));
+        assertEquals(BIGINT, md.getColumnType(1));
         assertEquals("count(*)", md.getColumnName(2));
         assertEquals(BIGINT, md.getColumnType(2));
 
@@ -1317,7 +1316,7 @@ class SelectTest {
     @Test
     @DisplayName("select year_of_birth, count(*) from people group by year_of_birth order by count(*) desc, year_of_birth")
     void groupByOrderByCountDesc() throws SQLException {
-        assertGroupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1940, 1942, 1943});
+        assertGroupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1940L, 1942L, 1943L});
     }
 
     @Test
@@ -1329,7 +1328,7 @@ class SelectTest {
     @Test
     @DisplayName("select year_of_birth, count(*) from people group by year_of_birth order by count(*), year_of_birth")
     void groupByOrderByCount() throws SQLException {
-        assertGroupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1942, 1943, 1940});
+        assertGroupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1942L, 1943L, 1940L});
     }
 
     private void assertGroupByOrderBy(String query, String column, Object[] expected) throws SQLException {

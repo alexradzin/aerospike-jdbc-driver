@@ -60,6 +60,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKey;
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.AGGREGATED;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
@@ -510,6 +511,7 @@ public class QueryHolder implements QueryContainer {
                     }
                     List<String> addition = ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(toList())).orElse(emptyList());
                     aggregatedFields.addAll(addition);
+                    // TODO should be AGGREGATED instead of DATA
                     columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
                 }
             },
@@ -536,9 +538,7 @@ public class QueryHolder implements QueryContainer {
                         aggregatedFields = new HashSet<>();
                     }
                     aggregatedFields.add("distinct" + expr.toString());
-                    // TODO: theoretically we shoould use AGGREGATED instead of DATA Here but this breaks tests. However this should be fixed.
-                    // Once this is fixed we could completely remove aggregatedFields and call statement.setBins(). when building result set
-                    columns.add(DATA.create(catalog, table, getText(expr), alias));
+                    columns.add(AGGREGATED.create(catalog, table, getText(expr), alias));
                 }
             },
     };

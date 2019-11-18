@@ -44,7 +44,7 @@ import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
-import static java.sql.Types.JAVA_OBJECT;
+import static java.util.Collections.singletonList;
 import static java.util.Optional.ofNullable;
 
 // TODO: extend this class from DelegatingResultSet, move all type transformations to TypeTransformer and remove getX() method from here.
@@ -63,6 +63,9 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     private boolean beforeFirst = true;
     private boolean afterLast = false;
+    private final TypeDiscoverer typeDiscoverer;
+    private volatile ResultSetMetaData metadata = null;
+    private final List<DataColumn> columnsForMetadata;
 
     private static final Map<Class, Function<Object[], Object[]>> collectionTransformers = new HashMap<>();
     static {
@@ -71,12 +74,15 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
 
 
-    protected BaseSchemalessResultSet(Statement statement, String schema, String table, List<DataColumn> columns, Supplier<R> anyRecordSupplier) {
+    protected BaseSchemalessResultSet(Statement statement, String schema, String table, List<DataColumn> columns, Supplier<R> anyRecordSupplier, TypeDiscoverer typeDiscoverer) {
         this.statement = statement;
         this.schema = schema;
         this.table = table;
         this.columns = Collections.unmodifiableList(columns);
         this.anyRecordSupplier = anyRecordSupplier;
+        this.typeDiscoverer = typeDiscoverer;
+
+        columnsForMetadata = columns.stream().anyMatch(c -> DataColumn.DataColumnRole.DATA.equals(c.getRole())) ? columns : singletonList(DataColumn.DataColumnRole.DATA.create(schema, table, "*", "*"));
     }
 
 
@@ -190,44 +196,11 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        String[] names = columns.stream().map(DataColumn::getName).toArray(String[]::new);
-        int[] types = new int[names.length];
-        boolean shouldDiscover = names.length == 0;
-        for (int i = 0; i < types.length; i++) {
-            int type = columns.get(i).getType();
-            types[i] = type;
-            if (type == 0) {
-                shouldDiscover = true;
-            }
+        if (metadata == null) {
+            metadata = new DataColumnBasedResultSetMetaData(typeDiscoverer.discoverType(columnsForMetadata));
         }
-
-        if (!shouldDiscover) {
-            return new DataColumnBasedResultSetMetaData(columns);
-        }
-
-
-        R sampleRecord = getSampleRecord();
-        if (sampleRecord == null) {
-            return new DataColumnBasedResultSetMetaData(schema, table);
-        }
-
-        Map<String, Object> data = getData(sampleRecord);
-
-        if (columns.stream().allMatch(c -> HIDDEN.equals(c.getRole()))) {
-            DataColumnBasedResultSetMetaData md = new DataColumnBasedResultSetMetaData(data.entrySet().stream().map(e -> DATA.create(schema, table, e.getKey(), e.getKey()).withType(e.getValue() != null ? sqlTypes.get(e.getValue().getClass()) : 0)).collect(Collectors.toList()));
-            md.setDiscovered(true);
-            return md;
-        }
-
-        columns.stream().filter(c -> c.getType() == 0).filter(c -> data.containsKey(c.getName())).forEach(c ->  ofNullable(sqlTypes.getOrDefault(getClassOf(data.get(c.getName())), JAVA_OBJECT)).map(c::withType));
-        return new DataColumnBasedResultSetMetaData(columns);
+        return metadata;
     }
-
-
-    private Class<?> getClassOf(Object obj) {
-        return obj == null ? null : obj.getClass();
-    }
-
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {

@@ -3,26 +3,16 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.Record;
 import com.nosqldriver.sql.BaseSchemalessResultSet;
 import com.nosqldriver.sql.DataColumn;
-import com.nosqldriver.sql.DataColumnBasedResultSetMetaData;
 import com.nosqldriver.sql.TypeDiscoverer;
 
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import static java.util.Collections.singletonList;
-
 abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> {
-    private final TypeDiscoverer typeDiscoverer;
-    private volatile ResultSetMetaData metadata = null;
-    private final List<DataColumn> columnsForMetadata = columns.stream().anyMatch(c -> DataColumn.DataColumnRole.DATA.equals(c.getRole())) ? columns : singletonList(DataColumn.DataColumnRole.DATA.create(schema, table, "*", "*"));
-
     protected AerospikeRecordResultSet(Statement statement, String schema, String table, List<DataColumn> columns, Supplier<Record> anyRecordSupplier, TypeDiscoverer typeDiscoverer) {
-        super(statement, schema, table, columns, anyRecordSupplier);
-        this.typeDiscoverer = typeDiscoverer;
+        super(statement, schema, table, columns, anyRecordSupplier, typeDiscoverer);
     }
 
     @Override
@@ -76,13 +66,5 @@ abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> 
     @Override
     protected double getDouble(Record record, String label) {
         return record.getDouble(label);
-    }
-
-    @Override
-    public ResultSetMetaData getMetaData() throws SQLException {
-        if (metadata == null) {
-            metadata = new DataColumnBasedResultSetMetaData(typeDiscoverer.discoverType(columnsForMetadata));
-        }
-        return metadata;
     }
 }

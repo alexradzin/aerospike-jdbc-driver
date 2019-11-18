@@ -18,6 +18,6 @@ public class AerospikeAggregationQuery extends AerospikeQuery<Statement, QueryPo
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeResultSet(statement, schema, set, columns, client.queryAggregate(policy, criteria), () -> anyRecordSupplier.apply(client, policy));
+        return new ResultSetOverAerospikeResultSet(statement, schema, set, columns, client.queryAggregate(policy, criteria), () -> anyRecordSupplier.apply(client, policy), createKeyRecordsFetcher(client, schema, set));
     }
 }
