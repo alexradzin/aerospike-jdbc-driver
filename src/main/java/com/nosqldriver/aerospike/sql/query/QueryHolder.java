@@ -2,13 +2,10 @@ package com.nosqldriver.aerospike.sql.query;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
-import com.aerospike.client.Record;
 import com.aerospike.client.Value;
 import com.aerospike.client.Value.StringValue;
-import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
-import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
@@ -42,7 +39,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -296,7 +292,7 @@ public class QueryHolder implements QueryContainer {
                     columns.stream().filter(c -> DATA.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
-            return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having), (c, p) -> new HashMap<>()); // TODO: implement BiFunction that returns fake record for schema discovery
+            return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having));
         }
 
         if (aggregatedFields != null) {
@@ -317,26 +313,26 @@ public class QueryHolder implements QueryContainer {
                 }
                 String groupField = m.group(1);
                 statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new StringValue(groupField));
-                return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), (client, policy) -> new HashMap<>()); // TODO: implement BiFunction that returns fake record for schema discovery
+                return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy());
             }
 
 
             statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", fieldsForAggregation);
-            return new AerospikeAggregationQuery(sqlStatement, schema, set, columns, statement, policyProvider.getQueryPolicy(), (client, policy) -> toMap(getAnyRecord(client, policy)));
+            return new AerospikeAggregationQuery(sqlStatement, schema, set, columns, statement, policyProvider.getQueryPolicy());
         }
 
 
-        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), this::getAnyRecord);
+        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy());
     }
 
     @VisibleForPackage
     void createPkQuery(java.sql.Statement statement, Key key) {
-        pkQuery = new AerospikeQueryByPk(statement, schema, columns, key, policyProvider.getPolicy(), (client, policy) -> getAnyRecord(client, policyProvider.getQueryPolicy()));
+        pkQuery = new AerospikeQueryByPk(statement, schema, columns, key, policyProvider.getPolicy());
     }
 
     @VisibleForPackage
     void createPkBatchQuery(java.sql.Statement statement, Key ... keys) {
-        pkBatchQuery = new AerospikeBatchQueryByPk(statement, schema, set, columns, keys, policyProvider.getBatchPolicy(), (client, policy) -> getAnyRecord(client, policyProvider.getQueryPolicy()));
+        pkBatchQuery = new AerospikeBatchQueryByPk(statement, schema, set, columns, keys, policyProvider.getBatchPolicy());
     }
 
     public String getSetName() {
@@ -678,20 +674,6 @@ public class QueryHolder implements QueryContainer {
 
 
     }
-
-
-    private Record getAnyRecord(IAerospikeClient client, QueryPolicy policy) {
-        Statement statement = new Statement();
-        statement.setNamespace(schema);
-        statement.setSetName(set);
-        RecordSet rs = client.query(policy, statement);
-        return rs.next() ? rs.getRecord() : null;
-    }
-
-    private Map<String, Object> toMap(Record record) {
-        return record == null ? Collections.emptyMap() : record.bins;
-    }
-
 
 
     public void copyColumnsForTable(String tableAlias, QueryHolder other) {

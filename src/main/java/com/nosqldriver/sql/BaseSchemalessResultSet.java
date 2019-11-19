@@ -34,12 +34,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
-import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
 import static com.nosqldriver.sql.TypeTransformer.cast;
@@ -53,7 +50,6 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     protected final String schema;
     protected final String table;
     protected final List<DataColumn> columns;
-    private final Supplier<R> anyRecordSupplier;
     private boolean wasNull = false;
     private volatile SQLWarning sqlWarning;
     private volatile int index = 0;
@@ -74,12 +70,11 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
 
 
-    protected BaseSchemalessResultSet(Statement statement, String schema, String table, List<DataColumn> columns, Supplier<R> anyRecordSupplier, TypeDiscoverer typeDiscoverer) {
+    protected BaseSchemalessResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer) {
         this.statement = statement;
         this.schema = schema;
         this.table = table;
         this.columns = Collections.unmodifiableList(columns);
-        this.anyRecordSupplier = anyRecordSupplier;
         this.typeDiscoverer = typeDiscoverer;
 
         columnsForMetadata = columns.stream().anyMatch(c -> DataColumn.DataColumnRole.DATA.equals(c.getRole())) ? columns : singletonList(DataColumn.DataColumnRole.DATA.create(schema, table, "*", "*"));
@@ -503,23 +498,6 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
         return result;
     }
 
-
-    protected R getSampleRecord() {
-        if (index > 0) {
-            return getRecord();
-        }
-
-        try {
-            if (next()) {
-                firstNextWasCalled = true;
-                return getRecord();
-            }
-        } catch (SQLException e) {
-            return null;
-        }
-
-        return anyRecordSupplier.get();
-    }
 
     private <T> T wasNull(T value) {
         wasNull = value == null;

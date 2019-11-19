@@ -20,11 +20,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
     private List<?> currentRecord = null;
 
     public ListRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, Iterable<List<?>> data) {
-        this(statement, schema, table, columns, data, Collections::emptyList);
-    }
-
-    public ListRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, Iterable<List<?>> data, Supplier<List<?>> anyRecordSupplier) {
-        super(statement, schema, table, columns, anyRecordSupplier, null);
+        super(statement, schema, table, columns, null);
         this.it = data.iterator();
         nameToIndex = IntStream.range(0, columns.size()).boxed().collect(Collectors.toMap(i -> columns.get(i).getName(), i -> i));
     }

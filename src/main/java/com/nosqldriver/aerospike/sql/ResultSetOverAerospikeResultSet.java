@@ -36,14 +36,14 @@ public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map
     private static final Pattern functionOfField = Pattern.compile("\\w+\\(\\s*(\\w+)\\s*\\)");
 
 
-    public ResultSetOverAerospikeResultSet(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier, TypeDiscoverer typeDiscoverer) {
-        super(statement, schema, table, columns, anyRecordSupplier, typeDiscoverer);
+    public ResultSetOverAerospikeResultSet(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, TypeDiscoverer typeDiscoverer) {
+        super(statement, schema, table, columns, typeDiscoverer);
         this.rs = rs;
     }
 
 
-    public ResultSetOverAerospikeResultSet(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
-        super(statement, schema, table, columns, anyRecordSupplier,
+    public ResultSetOverAerospikeResultSet(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
+        super(statement, schema, table, columns,
                 columns1 -> {
                             Collection<DataColumn> referencedFields = new HashSet<>();
                             boolean shouldDiscoverData = false;

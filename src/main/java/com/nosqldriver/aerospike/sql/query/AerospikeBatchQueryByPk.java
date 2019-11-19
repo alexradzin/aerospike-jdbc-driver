@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.function.BiFunction;
 
 public class AerospikeBatchQueryByPk extends AerospikeQuery<Key[], BatchPolicy, Record> {
-    public AerospikeBatchQueryByPk(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Key[] keys, BatchPolicy policy, BiFunction<IAerospikeClient, BatchPolicy, Record> anyRecordSupplier) {
-        super(sqlStatement, schema, set, columns, keys, policy, anyRecordSupplier);
+    public AerospikeBatchQueryByPk(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Key[] keys, BatchPolicy policy) {
+        super(sqlStatement, schema, set, columns, keys, policy);
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, client.get(policy, criteria), () -> anyRecordSupplier.apply(client, policy), createKeyRecordsFetcher(client, schema, set));
+        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, client.get(policy, criteria), createKeyRecordsFetcher(client, schema, set));
     }
 }

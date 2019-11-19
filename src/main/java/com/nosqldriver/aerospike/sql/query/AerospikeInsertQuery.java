@@ -111,7 +111,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
 
 
     public AerospikeInsertQuery(Statement statement, String schema, String set, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates) {
-        super(statement, schema, set, columns, data, policy, null);
+        super(statement, schema, set, columns, data, policy);
         this.skipDuplicates = skipDuplicates;
         columns.stream().map(DataColumn::getName).filter("PK"::equals).findFirst().orElseThrow(() -> new IllegalArgumentException("PK is not specified"));
 

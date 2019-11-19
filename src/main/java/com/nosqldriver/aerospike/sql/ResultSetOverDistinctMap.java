@@ -48,17 +48,17 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     private Map<Object, Object> row = null;
     private List<Entry<Object, Object>> entries = null;
     private int currentIndex = -1;
-    private Map<String, Object> currentRecord;
+//    private Map<String, Object> currentRecord;
     private boolean nextWasCalled = false;
     private boolean nextResult = false;
-    private Map<String, Object> sampleRecord;
+//    private Map<String, Object> sampleRecord;
 
     private static final Function<Record, Map<String, Object>> recordDataExtractor = record -> record != null ? record.bins : emptyMap();
     private static final Function<KeyRecord, Map<String, Object>> keyRecordDataExtractor = keyRecord -> keyRecord != null ? recordDataExtractor.apply(keyRecord.record) : emptyMap();
 
 
-    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, Supplier<Map<String, Object>> anyRecordSupplier, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
-        super(statement, schema, table, columns, rs, anyRecordSupplier, new CompositeTypeDiscoverer(
+    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
+        super(statement, schema, table, columns, rs, new CompositeTypeDiscoverer(
                 new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor),
                 columns1 -> {
                     columns1.stream().filter(c -> c.getName().startsWith("count(")).forEach(c -> c.withType(Types.BIGINT));
@@ -80,7 +80,7 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
         if (row == null) {
             getRecord();
         }
-        currentRecord = null;
+//        currentRecord = null;
         return currentIndex < row.size();
     }
 
@@ -113,7 +113,7 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
         if (e.getValue() instanceof Map) { // group by
             record.putAll(toMap(e.getValue()));
         }
-        currentRecord = record;
+//        currentRecord = record;
 
         return record;
     }
@@ -128,19 +128,19 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
         }
     }
 
-    @Override
-    protected Map<String, Object> getSampleRecord() {
-        if (sampleRecord != null) {
-            return sampleRecord;
-        }
-        if (next()) {
-            sampleRecord = getRecord();
-            currentIndex--;
-            return currentRecord;
-        }
-
-        return null;
-    }
+//    @Override
+//    protected Map<String, Object> getSampleRecord() {
+//        if (sampleRecord != null) {
+//            return sampleRecord;
+//        }
+//        if (next()) {
+//            sampleRecord = getRecord();
+//            currentIndex--;
+//            return currentRecord;
+//        }
+//
+//        return null;
+//    }
 
     @Override
     protected Object getValue(Map<String, Object> record, String label) {

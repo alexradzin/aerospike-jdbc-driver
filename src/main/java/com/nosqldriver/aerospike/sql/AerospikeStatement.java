@@ -17,7 +17,6 @@ import java.sql.SQLWarning;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -80,7 +79,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-                return new ListRecordSet(statement, statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
+                return new ListRecordSet(statement, statement.schema.get(), statement.set, emptyList(), emptyList());
             }
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
@@ -103,7 +102,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 String schema = execute(statement, sql) ? statement.schema.get() : null;
-                return new ListRecordSet(statement, schema, null, emptyList(), emptyList(), Collections::emptyList);
+                return new ListRecordSet(statement, schema, null, emptyList(), emptyList());
             }
 
             @Override
@@ -124,7 +123,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-                return new ListRecordSet(statement, statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
+                return new ListRecordSet(statement, statement.schema.get(), statement.set, emptyList(), emptyList());
             }
             @Override
             boolean execute(AerospikeStatement statement, String sql) throws SQLException {
@@ -156,7 +155,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
-                return new ListRecordSet(statement, statement.schema.get(), statement.set, emptyList(), emptyList(), Collections::emptyList);
+                return new ListRecordSet(statement, statement.schema.get(), statement.set, emptyList(), emptyList());
             }
             @Override
             boolean execute(AerospikeStatement statement, String sql) throws SQLException {

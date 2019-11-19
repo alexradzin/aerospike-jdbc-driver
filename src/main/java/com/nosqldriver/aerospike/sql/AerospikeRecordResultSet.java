@@ -11,8 +11,8 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> {
-    protected AerospikeRecordResultSet(Statement statement, String schema, String table, List<DataColumn> columns, Supplier<Record> anyRecordSupplier, TypeDiscoverer typeDiscoverer) {
-        super(statement, schema, table, columns, anyRecordSupplier, typeDiscoverer);
+    protected AerospikeRecordResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer) {
+        super(statement, schema, table, columns, typeDiscoverer);
     }
 
     @Override
