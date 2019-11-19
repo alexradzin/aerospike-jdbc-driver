@@ -4,6 +4,7 @@ import com.aerospike.client.Record;
 import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.RecordSet;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.SQLException;

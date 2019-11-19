@@ -5,6 +5,7 @@ import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.ResultSet;
 import com.nosqldriver.sql.CompositeTypeDiscoverer;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.GenericTypeDiscoverer;
 
 import java.sql.Statement;
 import java.sql.Types;
@@ -16,7 +17,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Long.parseLong;
@@ -48,10 +48,8 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     private Map<Object, Object> row = null;
     private List<Entry<Object, Object>> entries = null;
     private int currentIndex = -1;
-//    private Map<String, Object> currentRecord;
     private boolean nextWasCalled = false;
     private boolean nextResult = false;
-//    private Map<String, Object> sampleRecord;
 
     private static final Function<Record, Map<String, Object>> recordDataExtractor = record -> record != null ? record.bins : emptyMap();
     private static final Function<KeyRecord, Map<String, Object>> keyRecordDataExtractor = keyRecord -> keyRecord != null ? recordDataExtractor.apply(keyRecord.record) : emptyMap();
@@ -80,7 +78,6 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
         if (row == null) {
             getRecord();
         }
-//        currentRecord = null;
         return currentIndex < row.size();
     }
 
@@ -113,7 +110,6 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
         if (e.getValue() instanceof Map) { // group by
             record.putAll(toMap(e.getValue()));
         }
-//        currentRecord = record;
 
         return record;
     }
@@ -127,20 +123,6 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
             return value;
         }
     }
-
-//    @Override
-//    protected Map<String, Object> getSampleRecord() {
-//        if (sampleRecord != null) {
-//            return sampleRecord;
-//        }
-//        if (next()) {
-//            sampleRecord = getRecord();
-//            currentIndex--;
-//            return currentRecord;
-//        }
-//
-//        return null;
-//    }
 
     @Override
     protected Object getValue(Map<String, Object> record, String label) {

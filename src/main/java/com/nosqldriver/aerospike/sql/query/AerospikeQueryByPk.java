@@ -9,7 +9,6 @@ import com.nosqldriver.sql.DataColumn;
 
 import java.sql.ResultSet;
 import java.util.List;
-import java.util.function.BiFunction;
 
 public class AerospikeQueryByPk extends AerospikeQuery<Key, Policy, Record> {
     public AerospikeQueryByPk(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Key key, Policy policy) {
@@ -18,6 +17,6 @@ public class AerospikeQueryByPk extends AerospikeQuery<Key, Policy, Record> {
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, new Record[] {client.get(policy, criteria)}, createKeyRecordsFetcher(client, schema, set));
+        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, new Record[] {client.get(policy, criteria)}, keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set));
     }
 }

@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.Record;
 import com.aerospike.client.query.KeyRecord;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.GenericTypeDiscoverer;
 
 import java.sql.SQLException;
 import java.sql.Statement;

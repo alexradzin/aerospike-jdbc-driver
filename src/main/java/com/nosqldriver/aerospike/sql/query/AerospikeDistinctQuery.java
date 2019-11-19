@@ -36,7 +36,7 @@ public class AerospikeDistinctQuery extends AerospikeQuery<Statement, QueryPolic
                         set,
                         columns,
                         client.queryAggregate(policy, criteria),
-                        createKeyRecordsFetcher(client, schema, set)),
+                        keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set)),
                 columns,
                 having,
                 false);

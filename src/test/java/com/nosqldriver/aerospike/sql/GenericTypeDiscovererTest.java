@@ -5,6 +5,7 @@ import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.DataColumn.DataColumnRole;
+import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.sql.TypeDiscoverer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -30,19 +31,18 @@ import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class AerospikeTypeDiscovererTest {
+/**
+ * Although this is a test of GenericTypeDiscoverer that belongs to package {@code com.nosqldriver.sql}
+ * the test itself uses Aerospike and therefore is located here, in {@code com.nosqldriver.aerospike.sql}.
+ */
+class GenericTypeDiscovererTest {
     private static final BiFunction<String, String, Iterable<KeyRecord>> recordsFetcher = (catalog, table) -> {
         Statement statement = new Statement();
         statement.setNamespace(catalog);
         statement.setSetName(table);
         return client.query(new QueryPolicy(), statement);
     };
-    private static final Function<KeyRecord, Map<String, Object>> recordDataExtractor = new Function<KeyRecord, Map<String, Object>>() {
-        @Override
-        public Map<String, Object> apply(KeyRecord keyRecord) {
-            return keyRecord.record.bins;
-        }
-    };
+    private static final Function<KeyRecord, Map<String, Object>> recordDataExtractor = keyRecord -> keyRecord.record.bins;
 
 
     @AfterEach

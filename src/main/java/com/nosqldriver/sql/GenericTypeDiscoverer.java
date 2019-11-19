@@ -1,8 +1,4 @@
-package com.nosqldriver.aerospike.sql;
-
-import com.aerospike.client.query.Statement;
-import com.nosqldriver.sql.DataColumn;
-import com.nosqldriver.sql.TypeDiscoverer;
+package com.nosqldriver.sql;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -41,9 +37,6 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
             String[] ct = ctd.getKey().split("\\.");
             String catalog = ct[0];
             String table = ct[1];
-            Statement statement = new Statement();
-            statement.setNamespace(catalog);
-            statement.setSetName(table);
             Iterator<R> it =  recordsFetcher.apply(catalog, table).iterator();
 
             for (int i = 0; it.hasNext() && i < limit; i++) {

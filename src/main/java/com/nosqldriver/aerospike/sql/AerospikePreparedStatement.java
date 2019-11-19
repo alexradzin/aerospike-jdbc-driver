@@ -5,6 +5,7 @@ import com.nosqldriver.aerospike.sql.query.QueryContainer;
 import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.DataColumnBasedResultSetMetaData;
+import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.sql.SimpleParameterMetaData;
 import com.nosqldriver.sql.StringClob;
 import com.nosqldriver.sql.TypeDiscoverer;
@@ -50,6 +51,7 @@ import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.lang.String.format;
 
 public class AerospikePreparedStatement extends AerospikeStatement implements PreparedStatement {
+    private static final KeyRecordFetcherFactory keyRecordFetcherFactory = new KeyRecordFetcherFactory();
     private  final String sql;
     private Object[] parameterValues;
     private final QueryContainer<ResultSet> queryPlan;
@@ -64,7 +66,10 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
         Arrays.fill(parameterValues, Optional.empty());
         queryPlan = new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes).createQueryPlan(sql);
         set = queryPlan.getSetName();
-        discoverer = new AerospikeTypeDiscoverer(client);
+
+        discoverer = new GenericTypeDiscoverer<>(
+                keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema.get(), set),
+                keyRecord -> keyRecord.record.bins);
     }
 
     private int parametersCount(String sql) {

@@ -11,7 +11,6 @@ import com.nosqldriver.sql.ResultSetWrapper;
 
 import java.sql.ResultSet;
 import java.util.List;
-import java.util.function.BiFunction;
 
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy, Record> {
     @VisibleForPackage
@@ -41,6 +40,6 @@ public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statemen
                 }
             };
         }
-        return new ResultSetOverAerospikeRecordSet(statement, schema, set, columns, client.query(policy, criteria), createKeyRecordsFetcher(client, schema, set));
+        return new ResultSetOverAerospikeRecordSet(statement, schema, set, columns, client.query(policy, criteria), keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set));
     }
 }
