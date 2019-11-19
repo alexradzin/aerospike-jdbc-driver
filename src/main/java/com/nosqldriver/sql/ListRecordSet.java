@@ -1,17 +1,16 @@
 package com.nosqldriver.sql;
 
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
+import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
 import static java.lang.String.format;
 
 public class ListRecordSet extends ValueTypedResultSet<List<?>> {
@@ -20,7 +19,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
     private List<?> currentRecord = null;
 
     public ListRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, Iterable<List<?>> data) {
-        super(statement, schema, table, columns, null);
+        super(statement, schema, table, columns, columns1 -> discoverTypes(columns1, data));
         this.it = data.iterator();
         nameToIndex = IntStream.range(0, columns.size()).boxed().collect(Collectors.toMap(i -> columns.get(i).getName(), i -> i));
     }
@@ -49,19 +48,22 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
     }
 
 
+    private static List<DataColumn> discoverTypes(List<DataColumn> columns, Iterable<List<?>> data) {
+        if (columns.isEmpty() || (columns.size() == 1 && "*".equals(columns.get(0).getName()))) {
+            return Collections.emptyList();
+        }
 
-    @Override
-    public ResultSetMetaData getMetaData() {
-        return new DataColumnBasedResultSetMetaData(columns);
-    }
+        if(columns.stream().noneMatch(c -> c.getType() == 0)) {
+            return columns;
+        }
 
-    public static int[] discoverTypes(int nColumns, Iterable<List<?>> data) throws SQLException {
-        int[] types = new int[nColumns];
+        int nColumns = columns.size();
         int rowIndex = 0;
         for (List<?> row : data) {
             Integer[] rowTypes = row.stream().map(v -> v == null ? null : v.getClass()).map(c -> sqlTypes.getOrDefault(c, 0)).toArray(Integer[]::new);
             for (int i = 0; i < nColumns; i++) {
-                int type = types[i];
+                DataColumn column = columns.get(i);
+                int type = column.getType();
                 int rowType = rowTypes[i];
 
                 if (rowType == 0) {
@@ -69,16 +71,16 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
                 }
 
                 if (type == 0) {
-                    types[i] = rowType;
+                    type = rowType;
+                    column.withType(type);
                     continue;
                 }
                 if (type != rowType) {
-                    throw new SQLException(format("Type of value [%d,%d] %s does not match already discovered type %s", rowIndex, i, rowType, type));
+                    sneakyThrow(new SQLException(format("Type of value [%d,%d] %s does not match already discovered type %s", rowIndex, i, rowType, type)));
                 }
             }
             rowIndex++;
         }
-        return types;
+        return columns;
     }
-
 }

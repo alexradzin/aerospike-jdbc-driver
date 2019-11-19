@@ -21,6 +21,8 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static java.lang.String.format;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -93,7 +95,7 @@ class IndexTest {
 
     private <R> void assertCreateAndDropIndex(String column, String indexName, String indexType, ThrowingBiFunction<Statement, String, R, SQLException> executor, ThrowingConsumer<R, SQLException> validator) throws SQLException, IOException {
         TestDataUtils.writeBeatles();
-        assertFalse(Info.request(TestDataUtils.client.getNodes()[0], "sindex").contains(indexName));
+        await().atMost(5, SECONDS).until(() -> !Info.request(TestDataUtils.client.getNodes()[0], "sindex").contains(indexName));
         validator.accept(executor.apply(testConn.createStatement(), format("CREATE %s INDEX %s ON people (%s)", indexType, indexName, column)));
 
         Properties indexProps = new Properties();

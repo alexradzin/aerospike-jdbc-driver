@@ -19,10 +19,11 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
@@ -123,7 +124,19 @@ class ListRecordSetTest {
                 new java.sql.Date(currentTimeMillis()), new java.sql.Time(currentTimeMillis()),  new java.sql.Timestamp(currentTimeMillis()),
                 new ArrayList<>());
 
-        int[] actual = ListRecordSet.discoverTypes(data.size(), singletonList(data));
+
+        ResultSetMetaData md = new ListRecordSet(
+                null,
+                "schema",
+                "table",
+                Stream.of("short", "int", "long", "boolean", "float", "double", "string", "blob", "date", "time", "timestamp", "array")
+                        .map(name -> DATA.create("schema", "talbe", name, name))
+                        .collect(Collectors.toList()),
+                singletonList(data)).getMetaData();
+
+        //int[] actual = ListRecordSet.discoverTypes(data.size(), singletonList(data));
+        int[] actual = getTypes(md);
+
         int[] expected = {
                 Types.SMALLINT,
                 Types.INTEGER,
@@ -146,13 +159,13 @@ class ListRecordSetTest {
     @Test
     void discoverTypesUnknownType() throws SQLException {
         List<Object> data = singletonList(new Thread()); // Thread cannot be persisted in DB and its type cannot be discovered.
-        int[] actual = ListRecordSet.discoverTypes(data.size(), singletonList(data));
+        int[] actual = getTypes(new ListRecordSet(null, null, null, singletonList(DATA.create(null, null, "thread", "thread")), singletonList(data)).getMetaData());
         assertArrayEquals(new int[] {0}, actual);
     }
 
     @Test
     void discoverTypesDifferentTypesInSameColumn() {
-        assertThrows(SQLException.class, () -> ListRecordSet.discoverTypes(1, Arrays.asList(singletonList(1), singletonList("1"))));
+        assertThrows(SQLException.class, () -> new ListRecordSet(null, null, null, singletonList(DATA.create(null, null, "data", "data")), asList(singletonList(1), singletonList("1"))).getMetaData());
     }
 
 
@@ -286,5 +299,14 @@ class ListRecordSetTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNCharacterStream("field", new StringReader(""), 0));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNCharacterStream(1, new StringReader(""), 0L));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNCharacterStream("field", new StringReader(""), 0L));
+    }
+
+    private int[] getTypes(ResultSetMetaData md) throws SQLException {
+        int n = md.getColumnCount();
+        int[] types = new int[n];
+        for (int i = 0; i < n; i++) {
+            types[i] = md.getColumnType(i + 1);
+        }
+        return types;
     }
 }

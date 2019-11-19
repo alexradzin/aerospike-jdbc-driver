@@ -35,7 +35,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
-import static com.nosqldriver.sql.ListRecordSet.discoverTypes;
 import static java.lang.String.format;
 import static java.sql.Connection.TRANSACTION_NONE;
 import static java.sql.Types.BIGINT;
@@ -886,7 +885,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
                 );
 
 
-        return new ListRecordSet(null, "system", "table_info", systemColumns(columns, discoverTypes(columns.length, data)), data);
+        return new ListRecordSet(null, "system", "table_info", systemColumns(columns), data);
     }
 
     @Override
@@ -1169,6 +1168,15 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     private Manifest manifest(InputStream in) {
         return iosafe(() -> new Manifest(in));
+    }
+
+
+    private List<DataColumn> systemColumns(String[] names) {
+        return columns("system", null, names);
+    }
+
+    private List<DataColumn> columns(String catalog, String table, String[] names) {
+        return range(0, names.length).boxed().map(i -> DATA.create(catalog, table, names[i], names[i])).collect(toList());
     }
 
     private List<DataColumn> systemColumns(String[] names, int[] types) {
