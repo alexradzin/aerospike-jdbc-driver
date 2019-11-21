@@ -5,10 +5,10 @@ import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.RecordSet;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
-import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -22,16 +22,31 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
     private static final Function<Record, Map<String, Object>> recordDataExtractor = record -> record != null ? record.bins : emptyMap();
     private static final Function<KeyRecord, Map<String, Object>> keyRecordDataExtractor = keyRecord -> keyRecord != null ? recordDataExtractor.apply(keyRecord.record) : emptyMap();
     private final RecordSet rs;
+    private Iterator<KeyRecord> it;
+    private Record currentRecord;
 
     public ResultSetOverAerospikeRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, RecordSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
         super(statement, schema, table, columns, new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor));
         this.rs = rs;
     }
 
+    @Override
+    public boolean isLast() throws SQLException {
+        return it.hasNext();
+    }
 
     @Override
     protected boolean moveToNext() {
-        return rs.next();
+        if (it == null) {
+            it = rs.iterator();
+        }
+
+
+        if (it.hasNext()) {
+            currentRecord = it.next().record;
+            return true;
+        }
+        return false;
     }
 
 
@@ -43,11 +58,6 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
 
     @Override
     protected Record getRecord() {
-        try {
-            return rs.getRecord();
-        } catch (RuntimeException e) {
-            SneakyThrower.sneakyThrow(new SQLException(e));
-            return null;
-        }
+        return currentRecord;
     }
 }

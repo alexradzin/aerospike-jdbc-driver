@@ -7,8 +7,6 @@ import com.nosqldriver.sql.TypeDiscoverer;
 
 import java.sql.Statement;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Supplier;
 
 abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> {
     protected AerospikeRecordResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer) {
@@ -17,11 +15,6 @@ abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> 
 
     @Override
     protected abstract Record getRecord();
-
-    @Override
-    protected Map<String, Object> getData(Record record) {
-        return record.bins;
-    }
 
     @Override
     protected Object getValue(Record record, String label) {

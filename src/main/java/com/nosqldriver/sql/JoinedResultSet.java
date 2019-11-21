@@ -1,6 +1,7 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.aerospike.sql.query.JoinHolder;
+import com.nosqldriver.util.ThrowingFunction;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -112,83 +113,82 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public String getString(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getString(columnLabel));
+        return getValue(columnLabel, rs -> rs.getString(columnLabel));
     }
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getBoolean(columnLabel));
+        return getValue(columnLabel, rs -> rs.getBoolean(columnLabel));
     }
 
     @Override
     public byte getByte(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getByte(columnLabel));
+        return getValue(columnLabel, rs -> rs.getByte(columnLabel));
     }
 
     @Override
     public short getShort(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getShort(columnLabel));
+        return getValue(columnLabel, rs -> rs.getShort(columnLabel));
     }
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getInt(columnLabel));
+        return getValue(columnLabel, rs -> rs.getInt(columnLabel));
     }
 
     @Override
     public long getLong(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getLong(columnLabel));
-
+        return getValue(columnLabel, rs -> rs.getLong(columnLabel));
     }
 
     @Override
     public float getFloat(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getFloat(columnLabel));
+        return getValue(columnLabel, rs -> rs.getFloat(columnLabel));
     }
 
     @Override
     public double getDouble(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getDouble(columnLabel));
+        return getValue(columnLabel, rs -> rs.getDouble(columnLabel));
     }
 
     @Override
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getBigDecimal(columnLabel, scale));
+        return getValue(columnLabel, rs -> rs.getBigDecimal(columnLabel, scale));
     }
 
     @Override
     public byte[] getBytes(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getBytes(columnLabel));
+        return getValue(columnLabel, rs -> rs.getBytes(columnLabel));
     }
 
     @Override
     public Date getDate(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getDate(columnLabel));
+        return getValue(columnLabel, rs -> rs.getDate(columnLabel));
     }
 
     @Override
     public Time getTime(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getTime(columnLabel));
+        return getValue(columnLabel, rs -> rs.getTime(columnLabel));
     }
 
     @Override
     public Timestamp getTimestamp(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getTimestamp(columnLabel));
+        return getValue(columnLabel, rs -> rs.getTimestamp(columnLabel));
     }
 
     @Override
     public InputStream getAsciiStream(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getAsciiStream(columnLabel));
+        return getValue(columnLabel, rs -> rs.getAsciiStream(columnLabel));
     }
 
     @Override
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getUnicodeStream(columnLabel));
+        return getValue(columnLabel, rs -> rs.getUnicodeStream(columnLabel));
     }
 
     @Override
     public InputStream getBinaryStream(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getBinaryStream(columnLabel));
+        return getValue(columnLabel, rs -> rs.getBinaryStream(columnLabel));
     }
 
     @Override
@@ -227,7 +227,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getObject(columnLabel));
+        return getValue(columnLabel, rs -> rs.getObject(columnLabel));
     }
 
     @Override
@@ -237,27 +237,27 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public Reader getCharacterStream(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getCharacterStream(columnLabel));
+        return getValue(columnLabel, rs -> rs.getCharacterStream(columnLabel));
     }
 
     @Override
     public BigDecimal getBigDecimal(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getBigDecimal(columnLabel));
+        return getValue(columnLabel, rs -> rs.getBigDecimal(columnLabel));
     }
 
     @Override
     public boolean isBeforeFirst() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return resultSet.isBeforeFirst();
     }
 
     @Override
     public boolean isAfterLast() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return resultSet.isAfterLast();
     }
 
     @Override
     public boolean isFirst() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return resultSet.isFirst();
     }
 
     @Override
@@ -267,12 +267,12 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public void beforeFirst() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        resultSet.beforeFirst();
     }
 
     @Override
     public void afterLast() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        resultSet.afterLast();
     }
 
     @Override
@@ -288,7 +288,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public boolean last() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return resultSet.last();
     }
 
     @Override
@@ -298,12 +298,12 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public boolean absolute(int row) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return resultSet.absolute(row);
     }
 
     @Override
     public boolean relative(int rows) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return resultSet.relative(rows);
     }
 
     @Override
@@ -313,47 +313,47 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getObject(columnLabel, map));
+        return getValue(columnLabel, rs -> rs.getObject(columnLabel, map));
     }
 
     @Override
     public Ref getRef(String columnLabel) throws SQLException {
-        return findResultSet(columnLabel).getRef(columnLabel);
+        return getValue(columnLabel, rs -> rs.getRef(columnLabel));
     }
 
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getBlob(columnLabel));
+        return getValue(columnLabel, rs -> rs.getBlob(columnLabel));
     }
 
     @Override
     public Clob getClob(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getClob(columnLabel));
+        return getValue(columnLabel, rs -> rs.getClob(columnLabel));
     }
 
     @Override
     public Array getArray(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getArray(columnLabel));
+        return getValue(columnLabel, rs -> rs.getArray(columnLabel));
     }
 
     @Override
     public Date getDate(String columnLabel, Calendar cal) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getDate(columnLabel, cal));
+        return getValue(columnLabel, rs -> rs.getDate(columnLabel, cal));
     }
 
     @Override
     public Time getTime(String columnLabel, Calendar cal) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getTime(columnLabel, cal));
+        return getValue(columnLabel, rs -> rs.getTime(columnLabel, cal));
     }
 
     @Override
     public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getTimestamp(columnLabel, cal));
+        return getValue(columnLabel, rs -> rs.getTimestamp(columnLabel, cal));
     }
 
     @Override
     public URL getURL(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getURL(columnLabel));
+        return getValue(columnLabel, rs -> rs.getURL(columnLabel));
     }
 
     @Override
@@ -373,28 +373,33 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public NClob getNClob(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getNClob(columnLabel));
+        return getValue(columnLabel, rs -> rs.getNClob(columnLabel));
     }
 
     @Override
     public SQLXML getSQLXML(String columnLabel) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return getValue(columnLabel, rs -> rs.getSQLXML(columnLabel));
     }
 
     @Override
     public String getNString(String columnLabel) throws SQLException {
-        return getString(columnLabel);
+        return getValue(columnLabel, rs -> rs.getNString(columnLabel));
     }
 
     @Override
     public Reader getNCharacterStream(String columnLabel) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getNCharacterStream(columnLabel));
+        return getValue(columnLabel, rs -> rs.getNCharacterStream(columnLabel));
     }
 
 
     @Override
     public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
-        return wasNull(findResultSet(columnLabel).getObject(columnLabel, type));
+        return getValue(columnLabel, rs -> rs.getObject(columnLabel, type));
+    }
+
+    private <T> T getValue(String columnLabel, ThrowingFunction<ResultSet, T, SQLException> getter) throws SQLException {
+        ResultSet rs = findResultSet(columnLabel);
+        return wasNull(rs.isBeforeFirst() ? null : getter.apply(rs));
     }
 
     private ResultSet findResultSet(String alias) throws SQLException {

@@ -100,11 +100,6 @@ public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map
     }
 
     @Override
-    protected Map<String, Object> getData(Map<String, Object> record) {
-        return getRecord();
-    }
-
-    @Override
     protected Object getValue(Map<String, Object> record, String label) {
         return record.get(label);
     }

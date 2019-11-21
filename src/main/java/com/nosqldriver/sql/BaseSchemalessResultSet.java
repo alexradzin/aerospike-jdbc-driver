@@ -1,6 +1,7 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.util.ThrowingBiFunction;
+import com.nosqldriver.util.ThrowingSupplier;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -52,7 +53,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     protected final List<DataColumn> columns;
     private boolean wasNull = false;
     private volatile SQLWarning sqlWarning;
-    private volatile int index = 0;
+    protected volatile int index = 0;
     private volatile boolean done = false;
     private volatile boolean closed = false;
     private boolean firstNextWasCalled = false;
@@ -199,7 +200,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
-        return wasNull(ofNullable(getRecord()).map(r -> getValue(r, columnLabel)).orElse(null));
+        return getValue(columnLabel, (r, s) -> getValue(r, columnLabel));
     }
 
     @Override
@@ -223,7 +224,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public boolean isBeforeFirst() throws SQLException {
-        return beforeFirst;
+        return index == 0;
     }
 
     @Override
@@ -238,17 +239,19 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public boolean isLast() throws SQLException {
-        return done;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
     public void beforeFirst() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        if (index != 0) {
+            throw new SQLFeatureNotSupportedException();
+        }
     }
 
     @Override
     public void afterLast() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        while(next());
     }
 
     @Override
@@ -261,7 +264,18 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public boolean last() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        if (isAfterLast()) {
+            return false;
+        }
+        R lastRecord = null;
+        do {
+            lastRecord = getRecord();
+        } while(next());
+
+        if (lastRecord != null) {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -271,12 +285,19 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public boolean absolute(int row) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        return relative(row - index);
     }
 
     @Override
     public boolean relative(int rows) throws SQLException {
-        throw new SQLFeatureNotSupportedException();
+        ThrowingSupplier<Boolean, SQLException> supplier = rows >=0 ? this::next : this::previous;
+        int n = Math.abs(rows);
+        for(int i = 0; i < n; i++) {
+            if(!supplier.get()) {
+                return false;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -477,7 +498,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     }
 
     protected abstract R getRecord();
-    protected abstract Map<String, Object> getData(R record);
+//    protected abstract Map<String, Object> getData(R record);
 
     @Override
     public boolean next() throws SQLException {
@@ -505,6 +526,9 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     }
 
     private <V> V getValue(String columnLabel, ThrowingBiFunction<R, String, V, SQLException> getter) throws SQLException {
+        if (isBeforeFirst() || isAfterLast()) {
+            throw new SQLException("Cursor is not positioned on any row");
+        }
         R record = getRecord();
         return wasNull(record == null ? null : getter.apply(record, columnLabel));
     }

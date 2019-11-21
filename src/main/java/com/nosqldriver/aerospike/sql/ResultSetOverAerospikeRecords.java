@@ -35,7 +35,14 @@ public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
             return false;
         }
         currentIndex++;
+        index++;
         return true;
+    }
+
+
+    @Override
+    public boolean isLast() throws SQLException {
+        return currentIndex == records.length;
     }
 
 

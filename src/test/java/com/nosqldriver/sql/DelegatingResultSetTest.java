@@ -306,7 +306,8 @@ class DelegatingResultSetTest {
 
     @ParameterizedTest(name = "{1}")
     @VariableSource("resultSetsForUnsupported")
-    void unsupported(ResultSet rs, String name) {
+    void unsupported(ResultSet rs, String name) throws SQLException {
+        assertTrue(rs.first());
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getObject(1, Collections.emptyMap()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getObject("any", Collections.emptyMap()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRef(1));

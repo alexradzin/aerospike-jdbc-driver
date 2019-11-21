@@ -75,18 +75,12 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
             return false;
         }
         currentIndex++;
+        index++;
         if (row == null) {
             getRecord();
         }
         return currentIndex < row.size();
     }
-
-
-    @Override
-    protected Map<String, Object> getData(Map<String, Object> record) {
-        return record;
-    }
-
 
     @Override
     protected Map<String, Object> getRecord() {

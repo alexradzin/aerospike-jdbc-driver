@@ -29,10 +29,9 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
         return currentRecord;
     }
 
-
     @Override
-    protected Map<String, Object> getData(List<?> record) {
-        return IntStream.range(0, columns.size()).boxed().collect(Collectors.toMap(i -> columns.get(i).getName(), record::get));
+    public boolean isLast() throws SQLException {
+        return !isBeforeFirst() && it.hasNext();
     }
 
     @Override

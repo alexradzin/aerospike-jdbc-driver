@@ -115,6 +115,10 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public boolean first() throws SQLException {
+        if(buffer.isEmpty()) {
+            return next();
+        }
+
         row = 0;
         it = buffer.iterator();
         if (it.hasNext()) {

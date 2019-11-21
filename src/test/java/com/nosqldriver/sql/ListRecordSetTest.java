@@ -104,8 +104,13 @@ class ListRecordSetTest {
         assertEquals("Smith", rs.getString(2));
         assertEquals(1970, rs.getInt(3));
 
+        ResultSetMetaData md = rs.getMetaData();
+        int n = rs.getMetaData().getColumnCount();
+        Map<String, Object> actual = new HashMap<>();
+        for (int i = 1; i <= n; i++) {
+            actual.put(md.getColumnName(i), rs.getObject(i));
+        }
 
-        Map<String, Object> actual = rs.getData(rs.getRecord());
         Map<String, Object> expected = new HashMap<>();
         expected.put("first_name", "John");
         expected.put("last_name", "Smith");

@@ -193,9 +193,12 @@ class SelectTest {
     @Test
     void wrongCall() throws SQLException {
         try(ResultSet rs = testConn.createStatement().executeQuery("select first_name, year_of_birth from people limit 1")) {
-            assertThrows(SQLException.class, () -> rs.getString("doesnotexist"));
-            assertThrows(SQLException.class, () -> rs.getInt("first_name"));
-            assertThrows(SQLException.class, () -> rs.getString("year_of_birth"));
+            assertEquals("Cursor is not positioned on any row", assertThrows(SQLException.class, () -> rs.getString("first_name")).getMessage());
+            assertTrue(rs.next());
+            assertNotNull(rs.getString("first_name"));
+            assertEquals("Column 'doesnotexist' not found", assertThrows(SQLException.class, () -> rs.getString("doesnotexist")).getMessage());
+            assertTrue(assertThrows(SQLException.class, () -> rs.getInt("first_name")).getMessage().contains("class java.lang.String cannot be cast to class java.lang.Long"));
+            assertTrue(assertThrows(SQLException.class, () -> rs.getString("year_of_birth")).getMessage().contains("class java.lang.Long cannot be cast to class java.lang.String"));
         }
     }
 
@@ -310,11 +313,17 @@ class SelectTest {
         assertEquals("George Harrison 1943", selectedPeople.get(3));
         assertEquals("Ringo Starr 1940", selectedPeople.get(4));
 
+        assertTrue(rs.isAfterLast());
         assertThrows(SQLException.class, rs::first);
-        assertThrows(SQLFeatureNotSupportedException.class, rs::last);
+        assertFalse(rs.last());
+        assertTrue(rs.isAfterLast()); // check again after calling rs.last()
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.absolute(1));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.relative(1));
+        assertFalse(rs.relative(1));
         assertThrows(SQLFeatureNotSupportedException.class, rs::previous);
+
+        assertFalse(rs.isFirst());
+        assertFalse(rs.isLast());
+        assertFalse(rs.isBeforeFirst());
 
         assertFalse(rs.isClosed());
         rs.close();
