@@ -7,6 +7,7 @@ import com.nosqldriver.sql.CompositeTypeDiscoverer;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
 
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -66,7 +67,8 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     }
 
     @Override
-    public boolean next() {
+    public boolean next() throws SQLException {
+        assertClosed();
         if (!nextWasCalled) {
             nextResult = rs.next();
             nextWasCalled = true;
@@ -80,6 +82,11 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
             getRecord();
         }
         return currentIndex < row.size();
+    }
+
+    @Override
+    public boolean isLast() throws SQLException {
+        return currentIndex == row.size();
     }
 
     @Override

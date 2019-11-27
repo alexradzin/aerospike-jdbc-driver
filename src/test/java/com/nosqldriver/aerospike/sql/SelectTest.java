@@ -413,9 +413,9 @@ class SelectTest {
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @VariableSource("orderBy")
     void selectWithOrderBy(String query, String[] expected) throws SQLException {
-        Statement staatement = testConn.createStatement();
-        ResultSet rs = staatement.executeQuery(query);
-        assertSame(staatement, rs.getStatement());
+        Statement statement = testConn.createStatement();
+        ResultSet rs = statement.executeQuery(query);
+        assertSame(statement, rs.getStatement());
         assertArrayEquals(expected, toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).toArray(String[]::new));
     }
 
@@ -1404,6 +1404,113 @@ class SelectTest {
         assertEquals(new HashSet<>(asList("John", "Ringo", "Paul", "George")), new HashSet<>(selectedPeople));
     }
 
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people",
+            "select * from people where PK in (1,2,3,4)",
+            "select * from people where id>=1",
+            "select * from people where id>=1+0",
+            "select * from (select * from people)",
+            "select * from people limit 100",
+    })
+    void notEmptyNavigation(String query) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        rs.beforeFirst();
+        assertTrue(rs.isBeforeFirst());
+        assertTrue(rs.first());
+        assertThrows(SQLFeatureNotSupportedException.class, rs::beforeFirst);
+
+        assertTrue(rs.last());
+        assertTrue(rs.isLast());
+        assertFalse(rs.isAfterLast());
+        assertThrows(SQLFeatureNotSupportedException.class, rs::beforeFirst);
+        assertEquals("Cannot rewind result set", assertThrows(SQLException.class, rs::first).getMessage());
+
+        rs.afterLast();
+        assertTrue(rs.isAfterLast());
+        assertFalse(rs.isLast());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people order by first_name",
+    })
+    void notEmptyBufferedNavigation(String query) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        rs.beforeFirst();
+        assertTrue(rs.isBeforeFirst());
+        assertTrue(rs.first());
+        rs.beforeFirst();
+        assertTrue(rs.isBeforeFirst());
+
+        assertTrue(rs.last());
+        assertTrue(rs.isLast());
+        assertFalse(rs.isAfterLast());
+
+        rs.beforeFirst();
+        assertTrue(rs.isBeforeFirst());
+
+        rs.afterLast();
+        assertTrue(rs.isAfterLast());
+        assertFalse(rs.isLast());
+    }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people as p1 left join people as p2 on p1.id=p2.id",
+    })
+    void notEmptyJoinLeftNavigation(String query) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        rs.beforeFirst();
+        assertTrue(rs.isBeforeFirst());
+        assertTrue(rs.first());
+        assertThrows(SQLFeatureNotSupportedException.class, rs::beforeFirst);
+
+        assertTrue(rs.last());
+        assertTrue(rs.isLast());
+
+        assertFalse(rs.isAfterLast());
+        assertThrows(SQLFeatureNotSupportedException.class, rs::beforeFirst);
+
+        rs.afterLast();
+        assertTrue(rs.isAfterLast());
+        assertFalse(rs.isLast());
+    }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people where PK=0",
+            "select * from people where PK in (10,20,30,40)",
+            "select * from people where id>=100",
+            "select * from people where id>=5+6",
+            "select * from (select * from people where id=123)",
+            "select * from people limit 0",
+            "select * from people where id>100 order by first_name",
+    })
+    void emptyNavigation(String query) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        assertTrue(rs.isBeforeFirst());
+        assertFalse(rs.isAfterLast());
+        assertFalse(rs.isFirst());
+        assertFalse(rs.isLast());
+
+        assertFalse(rs.first());
+        assertFalse(rs.last());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people",
+            "select count(*) from people",
+    })
+    void closed(String query) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        rs.close();
+        assertThrows(SQLException.class, rs::next);
+    }
 
 
     private int assertCounts(ResultSet rs) throws SQLException {

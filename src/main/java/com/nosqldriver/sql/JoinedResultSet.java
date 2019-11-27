@@ -39,11 +39,13 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     private boolean wasNull = false;
     private int row = 0;
+    private final boolean pureLeftJoin;
 
 
     public JoinedResultSet(ResultSet resultSet, List<JoinHolder> joinHolders) {
         this.resultSet = resultSet;
         this.joinHolders = joinHolders;
+        pureLeftJoin = !joinHolders.stream().anyMatch(JoinHolder::isSkipIfMissing);
     }
 
     @Override
@@ -262,6 +264,9 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public boolean isLast() throws SQLException {
+        if (pureLeftJoin) {
+            return resultSet.isLast();
+        }
         throw new SQLFeatureNotSupportedException();
     }
 
@@ -288,7 +293,10 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public boolean last() throws SQLException {
-        return resultSet.last();
+        if (pureLeftJoin) {
+            return resultSet.last();
+        }
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override

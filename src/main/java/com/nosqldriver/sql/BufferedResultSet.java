@@ -23,6 +23,8 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
     private ResultSetMetaData md;
     private boolean bufferIsFull = false;
     private boolean wasNull = false;
+    private boolean afterLast = false;
+    private boolean atLast = false;
 
     protected BufferedResultSet(ResultSet rs, Collection<Map<String, Object>> buffer) {
         this.rs = rs;
@@ -50,7 +52,11 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
         bufferIsFull = true;
         row++;
         absolute(row);
-        return !buffer.isEmpty();
+        boolean result = !buffer.isEmpty();
+        if (!result) {
+            afterLast = true;
+        }
+        return result;
 
     }
 
@@ -89,32 +95,35 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public boolean isAfterLast() throws SQLException {
-        return false;
+        return afterLast;
     }
 
     @Override
     public boolean isFirst() throws SQLException {
-        return row == 0;
+        return row == 1;
     }
 
     @Override
     public boolean isLast() throws SQLException {
-        return false;
+        return atLast;
     }
 
     @Override
     public void beforeFirst() throws SQLException {
-        row = -1;
+        row = 0;
         it = buffer.iterator();
     }
 
     @Override
     public void afterLast() throws SQLException {
-
+        while(next());
+        afterLast = true;
+        atLast = false;
     }
 
     @Override
     public boolean first() throws SQLException {
+        atLast = false;
         if(buffer.isEmpty()) {
             return next();
         }
@@ -131,7 +140,16 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public boolean last() throws SQLException {
-        return false;
+        while(next());
+
+        Map<String, Object> lastRecord = null;
+        do {
+            lastRecord = current;
+        } while(next());
+        current = lastRecord;
+        afterLast = current == null;
+        atLast = true;
+        return current != null;
     }
 
     @Override

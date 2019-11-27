@@ -54,9 +54,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     private boolean wasNull = false;
     private volatile SQLWarning sqlWarning;
     protected volatile int index = 0;
-    private volatile boolean done = false;
     private volatile boolean closed = false;
-    private boolean firstNextWasCalled = false;
 
     private boolean beforeFirst = true;
     private boolean afterLast = false;
@@ -252,6 +250,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     @Override
     public void afterLast() throws SQLException {
         while(next());
+        afterLast = true;
     }
 
     @Override
@@ -273,6 +272,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
         } while(next());
 
         if (lastRecord != null) {
+            afterLast = false;
             return true;
         }
         return false;
@@ -498,22 +498,15 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     }
 
     protected abstract R getRecord();
-//    protected abstract Map<String, Object> getData(R record);
 
     @Override
     public boolean next() throws SQLException {
-        if (firstNextWasCalled && index == 1) {
-            firstNextWasCalled = false;
-            beforeFirst = false;
-            clearWarnings();
-            return true;
-        }
+        assertClosed();
         boolean result = moveToNext();
         if (result) {
             clearWarnings();
             index++;
         } else {
-            done = true;
             afterLast = true;
         }
         return result;

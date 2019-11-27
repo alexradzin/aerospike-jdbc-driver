@@ -42,13 +42,13 @@ public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
 
     @Override
     public boolean isLast() throws SQLException {
-        return currentIndex == records.length;
+        return !isAfterLast() && (currentIndex == records.length - 1 && records.length > 0);
     }
 
 
     @Override
     protected Record getRecord() {
-        return records[currentIndex];
+        return records.length > 0 ? records[currentIndex] : null;
     }
 
     // This method just throws exception. It is not implemented here since this class implements getSampleRecord() and next() itself without using the base calss' implementation

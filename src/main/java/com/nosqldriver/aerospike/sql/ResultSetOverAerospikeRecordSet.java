@@ -32,7 +32,10 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
 
     @Override
     public boolean isLast() throws SQLException {
-        return it.hasNext();
+        if (isAfterLast()) {
+            return false;
+        }
+        return it != null && !it.hasNext();
     }
 
     @Override
