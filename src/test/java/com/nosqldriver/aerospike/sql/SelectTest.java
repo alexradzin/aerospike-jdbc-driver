@@ -1463,11 +1463,14 @@ class SelectTest {
     @ValueSource(strings = {
             "select * from people as p1 left join people as p2 on p1.id=p2.id",
     })
-    void notEmptyJoinLeftNavigation(String query) throws SQLException {
+    void notEmptyLeftJoinNavigation(String query) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(query);
         rs.beforeFirst();
         assertTrue(rs.isBeforeFirst());
         assertTrue(rs.first());
+        assertTrue(rs.isFirst());
+        assertTrue(rs.first());
+        assertTrue(rs.isFirst());
         assertThrows(SQLFeatureNotSupportedException.class, rs::beforeFirst);
 
         assertTrue(rs.last());
@@ -1479,6 +1482,72 @@ class SelectTest {
         rs.afterLast();
         assertTrue(rs.isAfterLast());
         assertFalse(rs.isLast());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people as p1 join people as p2 on p1.id=p2.id",
+    })
+    void notEmptyJoinNavigation(String query) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        assertEquals(0, rs.getRow());
+        rs.beforeFirst();
+        assertEquals(0, rs.getRow());
+        assertTrue(rs.isBeforeFirst());
+        assertTrue(rs.first());
+        assertTrue(rs.isFirst());
+        assertTrue(rs.first());
+        assertTrue(rs.isFirst());
+        assertEquals(1, rs.getRow());
+        assertThrows(SQLFeatureNotSupportedException.class, rs::beforeFirst);
+
+        assertThrows(SQLFeatureNotSupportedException.class, rs::last);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::isLast);
+
+        assertFalse(rs.isAfterLast());
+        assertThrows(SQLFeatureNotSupportedException.class, rs::beforeFirst);
+
+        rs.afterLast();
+        assertTrue(rs.isAfterLast());
+        assertEquals(0, rs.getRow());
+        assertThrows(SQLFeatureNotSupportedException.class, rs::isLast);
+    }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people as p1 left join people as p2 on p1.id=p2.id",
+            "select * from people as p1 join people as p2 on p1.id=p2.id",
+    })
+    void notEmptyJoinAbsoluteNavigation(String query) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        assertTrue(rs.absolute(1));
+        assertTrue(rs.isFirst());
+        assertEquals(1, rs.getRow());
+        assertTrue(rs.absolute(2));
+        assertEquals(2, rs.getRow());
+        assertFalse(rs.isFirst());
+        assertFalse(rs.absolute(10));
+        assertEquals(0, rs.getRow());
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.absolute(1)); // cannot rewind
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people as p1 left join people as p2 on p1.id=p2.id",
+            "select * from people as p1 join people as p2 on p1.id=p2.id",
+    })
+    void notEmptyJoinRelativeNavigation(String query) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        assertTrue(rs.relative(1));
+        assertEquals(1, rs.getRow());
+        assertTrue(rs.isFirst());
+        assertTrue(rs.relative(0));
+        assertTrue(rs.isFirst());
+        assertTrue(rs.relative(1));
+        assertEquals(2, rs.getRow());
+        assertFalse(rs.isFirst());
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.relative(-1)); // cannot rewind
     }
 
 

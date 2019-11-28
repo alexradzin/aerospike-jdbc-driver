@@ -61,7 +61,7 @@ public class FilteredResultSet extends ResultSetWrapper {
 
     @Override
     public int getRow() throws SQLException {
-        return row;
+        return isAfterLast() ? 0 : row;
     }
 
     //TODO: should absolute() and relative() be overloaded too?

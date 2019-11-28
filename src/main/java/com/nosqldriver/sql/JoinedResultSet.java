@@ -259,7 +259,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public boolean isFirst() throws SQLException {
-        return resultSet.isFirst();
+        return row == 1;
     }
 
     @Override
@@ -301,17 +301,25 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
 
     @Override
     public int getRow() throws SQLException {
-        return row;
+        return isAfterLast() ? 0 : row;
     }
 
     @Override
     public boolean absolute(int row) throws SQLException {
-        return resultSet.absolute(row);
+        if (resultSet.absolute(row)) {
+            this.row = row;
+            return true;
+        }
+        return false;
     }
 
     @Override
     public boolean relative(int rows) throws SQLException {
-        return resultSet.relative(rows);
+        if (resultSet.relative(rows)) {
+            this.row = row + rows;
+            return true;
+        }
+        return false;
     }
 
     @Override

@@ -154,7 +154,7 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public int getRow() throws SQLException {
-        return row;
+        return afterLast ? 0 : row;
     }
 
     @Override

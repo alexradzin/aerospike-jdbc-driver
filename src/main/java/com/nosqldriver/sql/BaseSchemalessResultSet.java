@@ -280,7 +280,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public int getRow() throws SQLException {
-        return index;
+        return afterLast ? 0 : index;
     }
 
     @Override
@@ -297,7 +297,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
                 return false;
             }
         }
-        return false;
+        return true;
     }
 
     @Override
