@@ -824,12 +824,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
                 .map(s -> s.replace(":", newLine))
                 .map(s -> {
                     Properties props = new Properties();
-                    try {
-                        props.load(new StringReader(s));
-                        return props;
-                    } catch (IOException e) {
-                        throw new IllegalStateException(e);
-                    }
+                    return iosafe(() -> {props.load(new StringReader(s)); return props;});
                 });
     }
 
@@ -904,11 +899,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     }
 
     private ResultSetMetaData getMetadata(String namespace, String table) {
-        try {
-            return connection.createStatement().executeQuery(format("select * from %s.%s limit 1", namespace, table)).getMetaData();
-        } catch (SQLException e) {
-            throw new IllegalStateException(e);
-        }
+        return sqlsafe(() -> connection.createStatement().executeQuery(format("select * from %s.%s limit 1", namespace, table)).getMetaData());
     }
 
     @Override
@@ -1158,11 +1149,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     }
 
     private InputStream stream(URL url) {
-        try {
-            return url.openStream();
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
+        return iosafe(url::openStream);
     }
 
 
@@ -1191,6 +1178,14 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         try {
             return supplier.get();
         } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private <R> R sqlsafe(ThrowingSupplier<R, SQLException> supplier) {
+        try {
+            return supplier.get();
+        } catch (SQLException e) {
             throw new IllegalStateException(e);
         }
     }

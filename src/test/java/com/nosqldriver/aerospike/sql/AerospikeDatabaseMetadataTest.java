@@ -6,7 +6,10 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.RowIdLifetime;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
 
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getColumnValues;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static java.sql.Connection.TRANSACTION_NONE;
 import static java.sql.Connection.TRANSACTION_READ_UNCOMMITTED;
@@ -219,29 +222,33 @@ class AerospikeDatabaseMetadataTest {
         assertResultSet(md.getTypeInfo(), true);
         assertResultSet(md.getClientInfoProperties(), false);
 
-        assertResultSet(md.getProcedures(null, null, null), false);
-        assertResultSet(md.getProcedureColumns(null, null, null, null), false);
-        assertResultSet(md.getTables(null, null, null, null), null); // not sure that tables exist on build machine when this test is running.
-        assertResultSet(md.getColumns(null, null, null, null), null); // not sure that tables exist on build machine when this test is running.
+        Collection<String> catalogs = new ArrayList<>();
+        catalogs.add(null);
+        catalogs.addAll(getColumnValues(md.getCatalogs(), rs -> rs.getString("TABLE_CAT")));
 
-
-        assertResultSet(md.getColumnPrivileges(null, null, null, null), false);
-        assertResultSet(md.getTablePrivileges(null, null, null), false);
-        assertResultSet(md.getBestRowIdentifier(null, null, null, 0, true), false);
-        assertResultSet(md.getVersionColumns(null, null, null), false);
-        assertResultSet(md.getPrimaryKeys(null, null, null), null);  // not sure that tables exist on build machine when this test is running.
-        assertResultSet(md.getImportedKeys(null, null, null), false);
-        assertResultSet(md.getExportedKeys(null, null, null), false);
-        assertResultSet(md.getCrossReference(null, null, null, null, null, null), false);
-        assertResultSet(md.getIndexInfo(null, null, null, true, true), false);
-        assertResultSet(md.getUDTs(null, null, null, new int[0]), false);
-        assertResultSet(md.getSuperTypes(null, null, null), true);
-        assertResultSet(md.getSuperTables(null, null, null), false);
-        assertResultSet(md.getAttributes(null, null, null, null), false);
-        assertResultSet(md.getSchemas(null, null), false);
-        assertResultSet(md.getFunctions(null, null, null), true);
-        assertResultSet(md.getFunctionColumns(null, null, null, null), false);
-        assertResultSet(md.getPseudoColumns(null, null, null, null), false);
+        for (String catalog : catalogs) {
+            assertResultSet(md.getProcedures(catalog, null, null), false);
+            assertResultSet(md.getProcedureColumns(catalog, null, null, null), false);
+            assertResultSet(md.getTables(catalog, null, null, null), null); // not sure that tables exist on build machine when this test is running.
+            assertResultSet(md.getColumns(catalog, null, null, null), null); // not sure that tables exist on build machine when this test is running.
+            assertResultSet(md.getColumnPrivileges(catalog, null, null, null), false);
+            assertResultSet(md.getTablePrivileges(catalog, null, null), false);
+            assertResultSet(md.getBestRowIdentifier(catalog, null, null, 0, true), false);
+            assertResultSet(md.getVersionColumns(catalog, null, null), false);
+            assertResultSet(md.getPrimaryKeys(catalog, null, null), null);  // not sure that tables exist on build machine when this test is running.
+            assertResultSet(md.getImportedKeys(catalog, null, null), false);
+            assertResultSet(md.getExportedKeys(catalog, null, null), false);
+            assertResultSet(md.getCrossReference(catalog, null, null, null, null, null), false);
+            assertResultSet(md.getIndexInfo(catalog, null, null, true, true), false);
+            assertResultSet(md.getUDTs(catalog, null, null, new int[0]), false);
+            assertResultSet(md.getSuperTypes(catalog, null, null), true);
+            assertResultSet(md.getSuperTables(catalog, null, null), false);
+            assertResultSet(md.getAttributes(catalog, null, null, null), false);
+            assertResultSet(md.getSchemas(catalog, null), false);
+            assertResultSet(md.getFunctions(catalog, null, null), true);
+            assertResultSet(md.getFunctionColumns(catalog, null, null, null), false);
+            assertResultSet(md.getPseudoColumns(catalog, null, null, null), false);
+        }
     }
 
 

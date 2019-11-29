@@ -12,6 +12,7 @@ import com.aerospike.client.query.IndexType;
 import com.nosqldriver.Person;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.util.ThrowingFunction;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -400,5 +401,13 @@ public class TestDataUtils {
             }
         }
         assertEquals(rs.getMetaData().getColumnCount(), columns.length);
+    }
+
+    public static <T> Collection<T> getColumnValues(ResultSet rs, ThrowingFunction<ResultSet, T, SQLException> getter) throws SQLException {
+        Collection<T> values = new ArrayList<>();
+        while (rs.next()) {
+            values.add(getter.apply(rs));
+        }
+        return values;
     }
 }

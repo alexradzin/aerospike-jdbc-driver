@@ -136,6 +136,8 @@ class SelectTest {
         assertEquals(HOLD_CURSORS_OVER_COMMIT, rs.getHoldability());
         assertThrows(SQLFeatureNotSupportedException.class, rs::getCursorName);
         assertNull(rs.getWarnings());
+        rs.clearWarnings();
+        assertNull(rs.getWarnings());
         rs.setFetchDirection(FETCH_REVERSE); // passes but adds warning
         assertNotNull(rs.getWarnings());
         SQLWarning warning = rs.getWarnings();
@@ -195,6 +197,9 @@ class SelectTest {
         assertTrue(rs.last());
         assertTrue(rs.absolute(1));
         assertTrue(rs.relative(1));
+
+        assertThrows(SQLFeatureNotSupportedException.class, rs::previous);
+        assertThrows(SQLFeatureNotSupportedException.class, rs::getCursorName);
 
         assertFalse(rs.isFirst());
         assertFalse(rs.isLast());
@@ -287,10 +292,8 @@ class SelectTest {
             assertTrue(rs.next());
             assertNotNull(rs.getString("first_name"));
             assertEquals("Column 'doesnotexist' not found", assertThrows(SQLException.class, () -> rs.getString("doesnotexist")).getMessage());
-            System.out.println("message1:" + assertThrows(SQLException.class, () -> rs.getInt("first_name")).getMessage());
-            System.out.println("message2:" + assertThrows(SQLException.class, () -> rs.getString("year_of_birth")).getMessage());
-//            assertTrue(assertThrows(SQLException.class, () -> rs.getInt("first_name")).getMessage().matches(".*java.lang.String cannot111 be cast to.* java.lang.Long.*"));
-//            assertTrue(assertThrows(SQLException.class, () -> rs.getString("year_of_birth")).getMessage().matches(".*java.lang.Long cannot be cast to.* java.lang.String.*"));
+            assertTrue(assertThrows(SQLException.class, () -> rs.getInt("first_name")).getMessage().matches(".*java.lang.String cannot be cast to .*java.lang.Long.*"));
+            assertTrue(assertThrows(SQLException.class, () -> rs.getString("year_of_birth")).getMessage().matches(".*java.lang.Long cannot be cast to .*java.lang.String.*"));
         }
     }
 
@@ -1562,6 +1565,18 @@ class SelectTest {
         assertTrue(rs.first());
         assertTrue(rs.isFirst());
         assertThrows(SQLFeatureNotSupportedException.class, rs::beforeFirst);
+
+        assertThrows(SQLFeatureNotSupportedException.class, rs::getCursorName);
+        assertNull(rs.getWarnings());
+        rs.clearWarnings();
+        assertNull(rs.getWarnings());
+        assertEquals(FETCH_FORWARD, rs.getFetchDirection());
+        rs.setFetchDirection(FETCH_FORWARD);
+        assertEquals(FETCH_FORWARD, rs.getFetchDirection());
+        assertNull(rs.getWarnings());
+        rs.setFetchDirection(FETCH_REVERSE);
+        assertNotNull(rs.getWarnings().getMessage());
+        assertEquals(FETCH_FORWARD, rs.getFetchDirection());
 
         assertTrue(rs.last());
         assertTrue(rs.isLast());

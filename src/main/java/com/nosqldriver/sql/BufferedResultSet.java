@@ -180,7 +180,7 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public boolean previous() throws SQLException {
-        return false;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override

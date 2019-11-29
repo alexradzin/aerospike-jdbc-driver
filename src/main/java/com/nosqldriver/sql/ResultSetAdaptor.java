@@ -502,7 +502,7 @@ public interface ResultSetAdaptor extends ResultSet {
 
     @Override
     default boolean previous() throws SQLException {
-        return false;
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override

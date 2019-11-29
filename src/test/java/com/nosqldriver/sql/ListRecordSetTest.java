@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
 import static java.lang.System.currentTimeMillis;
+import static java.sql.ResultSet.FETCH_FORWARD;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -175,23 +176,23 @@ class ListRecordSetTest {
 
 
     @Test
-    void updateValueListRecordSet() {
+    void updateValueListRecordSet() throws SQLException {
         assertUpdateValue(new ListRecordSet(null, "schema", "table", emptyList(), emptyList()));
     }
 
     @Test
-    void updateValueResultSetWrapper() {
+    void updateValueResultSetWrapper() throws SQLException {
         assertUpdateValue(new ResultSetWrapper(new ListRecordSet(null, "schema", "table", emptyList(), emptyList()), emptyList(), true));
     }
 
     @Test
-    void updateValueBufferedResultSet() {
-        assertUpdateValue(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", emptyList(), emptyList()), emptyList(), r -> true, true), new ArrayList<>(), 0));
+    void updateValueBufferedResultSet() throws SQLException {
+        assertUpdateValue(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", emptyList(), emptyList()), emptyList(), r -> true, true), new ArrayList<>(), 1));
     }
 
 
 
-    private void assertUpdateValue(ResultSet rs) {
+    private void assertUpdateValue(ResultSet rs) throws SQLException {
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNull(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNull("field"));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBoolean(1, true));
@@ -304,6 +305,18 @@ class ListRecordSetTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNCharacterStream("field", new StringReader(""), 0));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNCharacterStream(1, new StringReader(""), 0L));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNCharacterStream("field", new StringReader(""), 0L));
+
+        assertThrows(SQLFeatureNotSupportedException.class, rs::previous);
+        assertEquals(FETCH_FORWARD, rs.getFetchDirection());
+        rs.setFetchDirection(FETCH_FORWARD);
+        assertEquals(FETCH_FORWARD, rs.getFetchDirection());
+//        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.setFetchDirection(ResultSet.FETCH_REVERSE));
+        assertEquals(FETCH_FORWARD, rs.getFetchDirection());
+        assertEquals(1, rs.getFetchSize());
+//        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.setFetchSize(2));
+        assertEquals(1, rs.getFetchSize());
+        assertEquals(ResultSet.TYPE_FORWARD_ONLY, rs.getType());
+        assertEquals(ResultSet.CONCUR_READ_ONLY, rs.getConcurrency());
     }
 
     private int[] getTypes(ResultSetMetaData md) throws SQLException {
