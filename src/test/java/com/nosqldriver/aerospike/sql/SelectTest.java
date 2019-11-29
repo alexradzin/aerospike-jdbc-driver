@@ -281,15 +281,14 @@ class SelectTest {
     }
 
     @Test
-    @Disabled // works locally but fails on build machine in line "Column 'doesnotexist' not found". TODO: discover this issue!
     void wrongCall() throws SQLException {
         try(ResultSet rs = testConn.createStatement().executeQuery("select first_name, year_of_birth from people limit 1")) {
             assertEquals("Cursor is not positioned on any row", assertThrows(SQLException.class, () -> rs.getString("first_name")).getMessage());
             assertTrue(rs.next());
             assertNotNull(rs.getString("first_name"));
             assertEquals("Column 'doesnotexist' not found", assertThrows(SQLException.class, () -> rs.getString("doesnotexist")).getMessage());
-            assertTrue(assertThrows(SQLException.class, () -> rs.getInt("first_name")).getMessage().contains("class java.lang.String cannot be cast to class java.lang.Long"));
-            assertTrue(assertThrows(SQLException.class, () -> rs.getString("year_of_birth")).getMessage().contains("class java.lang.Long cannot be cast to class java.lang.String"));
+            assertTrue(assertThrows(SQLException.class, () -> rs.getInt("first_name")).getMessage().matches(".*java.lang.String cannot be cast to.* java.lang.Long.*"));
+            assertTrue(assertThrows(SQLException.class, () -> rs.getString("year_of_birth")).getMessage().matches(".*java.lang.Long cannot be cast to.* java.lang.String.*"));
         }
     }
 
