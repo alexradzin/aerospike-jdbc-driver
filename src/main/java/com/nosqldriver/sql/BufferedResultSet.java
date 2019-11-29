@@ -17,6 +17,7 @@ import static java.lang.String.format;
 public class BufferedResultSet implements ResultSet, DelegatingResultSet, ResultSetAdaptor, SimpleWrapper {
     private final ResultSet rs;
     private final Collection<Map<String, Object>> buffer;
+    private final int fetchSize;
     private Iterator<Map<String, Object>> it;
     private Map<String, Object> current;
     private int row = 0;
@@ -26,9 +27,10 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
     private boolean afterLast = false;
     private boolean atLast = false;
 
-    protected BufferedResultSet(ResultSet rs, Collection<Map<String, Object>> buffer) {
+    protected BufferedResultSet(ResultSet rs, Collection<Map<String, Object>> buffer, int fetchSize) {
         this.rs = rs;
         this.buffer = buffer;
+        this.fetchSize = fetchSize;
     }
 
     @Override
@@ -40,6 +42,7 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
                 return true;
             } else {
                 bufferIsFull = false;
+                afterLast = true;
                 return false;
             }
         }
@@ -160,17 +163,19 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
     @Override
     public boolean absolute(int row) throws SQLException {
         it = buffer.iterator();
-        // TODO: lists and navigable sets can do this much better.
-        int i = 0;
-        for (; i < row && it.hasNext(); i++) {
-            current = it.next();
-        }
-        return i == row;
+        atLast = false;
+        return relative(row);
     }
 
     @Override
     public boolean relative(int rows) throws SQLException {
-        return false;
+        int i = 0;
+        for (; i < rows && it.hasNext(); i++) {
+            current = it.next();
+            atLast = false;
+        }
+        atLast = !it.hasNext();
+        return i == rows;
     }
 
     @Override
@@ -180,34 +185,34 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public void setFetchDirection(int direction) throws SQLException {
-
+        rs.setFetchDirection(direction);
     }
 
     @Override
     public int getFetchDirection() throws SQLException {
-        return 0;
+        return rs.getFetchDirection();
     }
 
     @Override
     public void setFetchSize(int rows) throws SQLException {
-        if (rows != buffer.size()) {
+        if (rows != fetchSize) {
             throw new SQLException(format("Fetch size cannot be changed at runtime. The current fetch size is %d", buffer.size()));
         }
     }
 
     @Override
     public int getFetchSize() throws SQLException {
-        return buffer.size();
+        return fetchSize;
     }
 
     @Override
     public int getType() throws SQLException {
-        return TYPE_SCROLL_SENSITIVE;
+        return rs.getType();
     }
 
     @Override
     public int getConcurrency() throws SQLException {
-        return CONCUR_READ_ONLY;
+        return rs.getConcurrency();
     }
 
     @Override
@@ -232,7 +237,7 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public int getHoldability() throws SQLException {
-        return HOLD_CURSORS_OVER_COMMIT;
+        return rs.getHoldability();
     }
 
     @Override

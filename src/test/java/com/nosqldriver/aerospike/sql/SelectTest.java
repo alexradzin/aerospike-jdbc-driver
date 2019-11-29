@@ -120,6 +120,95 @@ class SelectTest {
         selectAll(sql, executeQuery);
     }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people order by id",
+    })
+    void selectAllOrdered(String sql) throws SQLException {
+        ResultSet rs = executeQuery.apply(sql);
+
+        assertEquals(FETCH_FORWARD, rs.getFetchDirection());
+        assertEquals(Integer.MAX_VALUE, rs.getFetchSize());
+        rs.setFetchSize(Integer.MAX_VALUE); //should be OK
+        assertThrows(SQLException.class, () -> rs.setFetchSize(2));
+        assertEquals(TYPE_FORWARD_ONLY, rs.getType());
+        assertEquals(CONCUR_READ_ONLY, rs.getConcurrency());
+        assertEquals(HOLD_CURSORS_OVER_COMMIT, rs.getHoldability());
+        assertThrows(SQLFeatureNotSupportedException.class, rs::getCursorName);
+        assertNull(rs.getWarnings());
+        rs.setFetchDirection(FETCH_REVERSE); // passes but adds warning
+        assertNotNull(rs.getWarnings());
+        SQLWarning warning = rs.getWarnings();
+        assertTrue(warning.getMessage().contains("unsupported fetch direction"));
+
+
+        assertFalse(rs.isClosed());
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(NAMESPACE, md.getSchemaName(1));
+
+        int nColumns = md.getColumnCount();
+        assertEquals(5, nColumns);
+        Map<String, Integer> actualTypes = new HashMap<>();
+        List<String> columnNames = new ArrayList<>();
+        List<String> columnLabels = new ArrayList<>();
+        for (int i = 0; i < nColumns; i++) {
+            String name = md.getColumnName(i + 1);
+            String label = md.getColumnLabel(i + 1);
+            columnNames.add(name);
+            columnLabels.add(label);
+            actualTypes.put(name, md.getColumnType(i +1));
+        }
+        assertEquals(columnNames, columnLabels);
+        Map<String, Integer> expectedTypes = new HashMap<>();
+        expectedTypes.put("first_name", VARCHAR);
+        expectedTypes.put("last_name", VARCHAR);
+        expectedTypes.put("id", BIGINT);
+        expectedTypes.put("year_of_birth", BIGINT);
+        expectedTypes.put("kids_count", BIGINT);
+        assertEquals(expectedTypes, actualTypes);
+
+
+        assertFalse(rs.isClosed());
+        Map<Integer, String> selectedPeople = new HashMap<>();
+        for (int row = 1; rs.next(); row++) {
+            assertFalse(rs.isClosed());
+            assertEquals(row, rs.getRow());
+            for (int i = 0; i < nColumns; i++) {
+                String name = columnNames.get(i);
+                switch (actualTypes.get(name)) {
+                    case VARCHAR: assertEquals(rs.getString(i + 1), rs.getString(name)); break;
+                    case BIGINT: assertEquals(rs.getInt(i + 1), rs.getInt(name)); break;
+                    default: throw new IllegalArgumentException("Unexpected column type " + actualTypes.get(name));
+                }
+                assertFalse(rs.wasNull());
+            }
+            selectedPeople.put(rs.getInt("id"), rs.getString("first_name") + " " + rs.getString("last_name") + " " + rs.getInt("year_of_birth"));
+        }
+
+        assertEquals("John Lennon 1940", selectedPeople.get(1));
+        assertEquals("Paul McCartney 1942", selectedPeople.get(2));
+        assertEquals("George Harrison 1943", selectedPeople.get(3));
+        assertEquals("Ringo Starr 1940", selectedPeople.get(4));
+
+        assertTrue(rs.isAfterLast());
+        assertTrue(rs.first());
+        assertTrue(rs.last());
+        assertTrue(rs.absolute(1));
+        assertTrue(rs.relative(1));
+
+        assertFalse(rs.isFirst());
+        assertFalse(rs.isLast());
+        assertFalse(rs.isBeforeFirst());
+
+
+        assertTrue(rs.first());
+        assertEquals("John", rs.getString("first_name"));
+
+        assertFalse(rs.isClosed());
+        rs.close();
+        assertTrue(rs.isClosed());
+
+    }
 
     @Test
     void wrongSyntax() {
@@ -1527,6 +1616,7 @@ class SelectTest {
         assertTrue(rs.absolute(2));
         assertEquals(2, rs.getRow());
         assertFalse(rs.isFirst());
+        assertEquals("Cannot got backwards on result set type TYPE_FORWARD_ONLY", assertThrows(SQLException.class, rs::first).getMessage());
         assertFalse(rs.absolute(10));
         assertEquals(0, rs.getRow());
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.absolute(1)); // cannot rewind
@@ -1548,6 +1638,7 @@ class SelectTest {
         assertEquals(2, rs.getRow());
         assertFalse(rs.isFirst());
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.relative(-1)); // cannot rewind
+        assertFalse(rs.relative(10));
     }
 
 

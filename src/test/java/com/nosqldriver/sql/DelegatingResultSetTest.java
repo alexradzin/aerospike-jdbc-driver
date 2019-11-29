@@ -87,8 +87,8 @@ class DelegatingResultSetTest {
     @VisibleForPackage // visible for tests
     @SuppressWarnings("unused") // referenced from annotation VariableSource
     private static Stream<Arguments> resultSetsForCompositeTypes = Stream.of(
-            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), new ArrayList<>()), "Buffered(Filtered(index-by-name))"),
-            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, false), new ArrayList<>()), "Buffered(Filtered)"),
+            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), new ArrayList<>(), 0), "Buffered(Filtered(index-by-name))"),
+            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, false), new ArrayList<>(), 0), "Buffered(Filtered)"),
             Arguments.of(new FilteredResultSet(new ListRecordSet(null, "schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), "Filtered(index-by-name)"),
             Arguments.of(new FilteredResultSet(new ListRecordSet(null, "schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, false), "Filtered")
     );
@@ -96,7 +96,7 @@ class DelegatingResultSetTest {
     @VisibleForPackage // visible for tests
     @SuppressWarnings("unused") // referenced from annotation VariableSource
     private static Stream<Arguments> resultSetsForSimpleTypes = Stream.of(
-            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), new ArrayList<>()), "Buffered(Filtered(index-by-name))"),
+            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), new ArrayList<>(), 0), "Buffered(Filtered(index-by-name))"),
             Arguments.of(new FilteredResultSet(new ListRecordSet(null, "schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), "Filtered(index-by-name)"),
             Arguments.of(new FilteredResultSet(new ListRecordSet(null, "schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, false), "Filtered")
     );
@@ -105,7 +105,7 @@ class DelegatingResultSetTest {
     @SuppressWarnings("unused") // referenced from annotation VariableSource
     private static Stream<Arguments> resultSetsForUnsupported = Stream.of(
             Arguments.of(new FilteredResultSet(new ListRecordSet(null, "schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), "Filtered(index-by-name)"),
-            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), new ArrayList<>()), "Buffered(Filtered(index-by-name))"),
+            Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), new ArrayList<>(), 0), "Buffered(Filtered(index-by-name))"),
             Arguments.of(new JoinedResultSet(new ListRecordSet(null, "schema", "table", simpleColumns, simpleData), Collections.emptyList()), "Joined")
     );
 

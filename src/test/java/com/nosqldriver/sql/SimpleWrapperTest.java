@@ -24,7 +24,7 @@ class SimpleWrapperTest {
         failing(lrs, Runnable.class);
 
 
-        BufferedResultSet brs = new BufferedResultSet(null, null);
+        BufferedResultSet brs = new BufferedResultSet(null, null, 0);
         successful(brs, ResultSet.class);
         failing(brs, Callable.class);
 

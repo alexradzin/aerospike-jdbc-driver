@@ -37,7 +37,7 @@ public enum JoinType {
         }
         Set<Boolean> skip = Arrays.stream(types).map(t -> t.skipMissing).collect(Collectors.toSet());
         if (skip.size() > 1) {
-            throw new IllegalArgumentException(format("Incompatable join typpes %s", Arrays.toString(types)));
+            throw new IllegalArgumentException(format("Incompatible join types %s", Arrays.toString(types)));
         }
         return skip.iterator().next();
     }

@@ -127,14 +127,6 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
         return new DataColumnBasedResultSetMetaData(Stream.of(columns, additionalColumns).flatMap(Collection::stream).collect(Collectors.toList()));
     }
 
-    public void setDiscovered(boolean discovered) {
-        this.discovered = discovered;
-    }
-
-    public boolean isDiscovered() {
-        return discovered;
-    }
-
     private Stream<DataColumn> getVisibleColumns() {
         return columns.stream().filter(c -> !HIDDEN.equals(c.getRole()));
     }

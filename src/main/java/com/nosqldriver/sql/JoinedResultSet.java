@@ -45,7 +45,7 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
     public JoinedResultSet(ResultSet resultSet, List<JoinHolder> joinHolders) {
         this.resultSet = resultSet;
         this.joinHolders = joinHolders;
-        pureLeftJoin = !joinHolders.stream().anyMatch(JoinHolder::isSkipIfMissing);
+        pureLeftJoin = joinHolders.stream().noneMatch(JoinHolder::isSkipIfMissing);
     }
 
     @Override
@@ -194,6 +194,11 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
     }
 
     @Override
+    public void setFetchDirection(int direction) throws SQLException {
+        resultSet.setFetchDirection(direction);
+    }
+
+    @Override
     public SQLWarning getWarnings() throws SQLException {
         return resultSet.getWarnings();
     }
@@ -212,16 +217,8 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
     public ResultSetMetaData getMetaData() throws SQLException {
         if (metadata == null) {
             metadata = (DataColumnBasedResultSetMetaData) resultSet.getMetaData();
-            if (metadata.isDiscovered()) {
-                List<DataColumn> allColumns = new ArrayList<>(metadata.getColumns());
-                for (JoinHolder jh : joinHolders) {
-                    allColumns.addAll(((DataColumnBasedResultSetMetaData)jh.getMetaDataSupplier().get()).getColumns());
-                }
-                metadata = new DataColumnBasedResultSetMetaData(allColumns);
-            } else {
-                for (JoinHolder jh : joinHolders) {
-                    metadata = metadata.updateData(jh.getMetaDataSupplier().get());
-                }
+            for (JoinHolder jh : joinHolders) {
+                metadata = metadata.updateData(jh.getMetaDataSupplier().get());
             }
         }
         return metadata;

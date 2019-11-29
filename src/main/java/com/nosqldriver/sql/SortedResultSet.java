@@ -16,6 +16,7 @@ public class SortedResultSet extends BufferedResultSet {
     }
 
     public SortedResultSet(ResultSet rs, List<OrderItem> orderItems, long limit) {
-        super(rs, new PagedCollection<>(new TreeSet<>(new CompositeComparator<>(new ExpressionAwareMapComparator(orderItems), comparingInt(System::identityHashCode))), limit, false, TreeSet::pollLast));
+        //TODO: it is strange that limit is of type long here. Check it. Long sounds too much.
+        super(rs, new PagedCollection<>(new TreeSet<>(new CompositeComparator<>(new ExpressionAwareMapComparator(orderItems), comparingInt(System::identityHashCode))), limit, false, TreeSet::pollLast), (int)limit);
     }
 }

@@ -186,7 +186,7 @@ class ListRecordSetTest {
 
     @Test
     void updateValueBufferedResultSet() {
-        assertUpdateValue(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", emptyList(), emptyList()), emptyList(), r -> true, true), new ArrayList<>()));
+        assertUpdateValue(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", emptyList(), emptyList()), emptyList(), r -> true, true), new ArrayList<>(), 0));
     }
 
 
