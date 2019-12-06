@@ -116,6 +116,16 @@ class PreparedStatementWithComplexTypesTest {
 
         assertEquals(1, rs.getInt(1));
         assertEquals(1, rs.getInt("id"));
+
+        assertThrows(SQLException.class, () -> rs.getAsciiStream(1));
+        assertThrows(SQLException.class, () -> rs.getAsciiStream("id"));
+        assertThrows(SQLException.class, () -> rs.getBinaryStream(1));
+        assertThrows(SQLException.class, () -> rs.getBinaryStream("id"));
+        assertThrows(SQLException.class, () -> rs.getCharacterStream(1));
+        assertThrows(SQLException.class, () -> rs.getCharacterStream("id"));
+        assertThrows(SQLException.class, () -> rs.getNCharacterStream(1));
+        assertThrows(SQLException.class, () -> rs.getNCharacterStream("id"));
+
         assertEquals("John", rs.getString(2));
         assertEquals("John", rs.getString("first_name"));
         assertEquals("Lennon", rs.getString(3));
@@ -337,7 +347,6 @@ class PreparedStatementWithComplexTypesTest {
         assertArrayEquals(new byte[] {(byte)8}, rs.getBytes(2));
         assertArrayEquals(new byte[] {(byte)8}, IOUtils.toByteArray(rs.getBinaryStream(2)));
         assertArrayEquals(new byte[] {(byte)8}, (byte[])rs.getObject(2));
-
 
         assertEquals(blob, rs.getBlob(3));
         assertEquals(clob, rs.getClob(4));

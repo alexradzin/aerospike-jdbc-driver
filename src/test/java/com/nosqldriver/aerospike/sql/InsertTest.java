@@ -336,6 +336,8 @@ class InsertTest {
 
         assertArrayEquals(helloWorld.getBytes(), getBytes(rs.getBlob(11)));
         assertArrayEquals(helloWorld.getBytes(), getBytes(rs.getBlob("blob")));
+        assertArrayEquals(helloWorld.getBytes(), rs.getBytes(11));
+        assertArrayEquals(helloWorld.getBytes(), rs.getBytes("blob"));
 
         assertEquals(helloWorld, getString(rs.getClob(12)));
         assertEquals(helloWorld, getString(rs.getClob("clob")));
@@ -365,6 +367,33 @@ class InsertTest {
 
 
     @Test
+    void insertBytes() throws SQLException {
+        Key key1 = new Key(NAMESPACE, DATA, 1);
+        assertNull(client.get(null, key1));
+        PreparedStatement ps = testConn.prepareStatement("insert into data (PK, bytes) values (?, ?)");
+
+        String text = "hello, blob!";
+        byte[] bytes = text.getBytes();
+
+        ps.setInt(1, 1);
+        ps.setBytes(2, bytes);
+
+        assertEquals(1, ps.executeUpdate());
+
+        Record record1 = client.get(null, key1);
+        assertNotNull(record1);
+        assertArrayEquals(bytes, (byte[])record1.getValue("bytes"));
+
+        try(ResultSet rs = testConn.createStatement().executeQuery("select bytes from data")) {
+            assertTrue(rs.next());
+            assertArrayEquals(bytes, rs.getBytes("bytes"));
+            assertFalse(rs.next());
+        }
+    }
+
+
+
+    @Test
     void insertBlobs() throws SQLException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
         assertNull(client.get(null, key1));
@@ -388,6 +417,13 @@ class InsertTest {
         assertArrayEquals(bytes, (byte[])record1.getValue("blob"));
         assertArrayEquals(bytes, (byte[])record1.getValue("input_stream"));
         assertArrayEquals(bytes, (byte[])record1.getValue("limited_is"));
+
+
+        try(ResultSet rs = testConn.createStatement().executeQuery("select blob from data")) {
+            assertTrue(rs.next());
+            assertArrayEquals(bytes, rs.getBytes("blob"));
+            assertFalse(rs.next());
+        }
     }
 
     @Test

@@ -9,7 +9,6 @@ import com.nosqldriver.util.VariableSource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -70,10 +69,10 @@ import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Collections.singleton;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1696,6 +1695,22 @@ class SelectTest {
         assertThrows(SQLException.class, rs::next);
     }
 
+    @Test
+    void selectFieldThatDoesNotExistVariousTypes() throws SQLException {
+        final String DOES_NOT_EXIST = "does_not_exist";
+        ResultSet rs = testConn.createStatement().executeQuery(format("select id, first_name, %s from people", DOES_NOT_EXIST));
+        assertTrue(rs.next());
+        assertNull(rs.getString(DOES_NOT_EXIST));
+        assertFalse(rs.getBoolean(DOES_NOT_EXIST));
+        assertTrue(rs.getBoolean("id"));
+        assertThrows(SQLException.class, () -> rs.getBoolean("first_name"));
+        assertEquals(0, rs.getByte(DOES_NOT_EXIST));
+        assertEquals(0, rs.getShort(DOES_NOT_EXIST));
+        assertEquals(0, rs.getInt(DOES_NOT_EXIST));
+        assertEquals(0, rs.getLong(DOES_NOT_EXIST));
+        assertEquals(0.0f, rs.getFloat(DOES_NOT_EXIST));
+        assertEquals(0.0, rs.getDouble(DOES_NOT_EXIST));
+    }
 
     private int assertCounts(ResultSet rs) throws SQLException {
         int yearOfBirth = rs.getInt(1);

@@ -5,8 +5,11 @@ import com.nosqldriver.sql.BaseSchemalessResultSet;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.TypeDiscoverer;
 
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+
+import static com.nosqldriver.sql.TypeTransformer.cast;
 
 abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> {
     protected AerospikeRecordResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer) {
@@ -32,13 +35,13 @@ abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> 
     }
 
     @Override
-    protected byte getByte(Record record, String label) {
-        return ((Number)record.getValue(label)).byteValue();
+    protected byte getByte(Record record, String label) throws SQLException {
+        return cast(record.getValue(label), byte.class);
     }
 
     @Override
-    protected short getShort(Record record, String label) {
-        return ((Number) record.getValue(label)).shortValue(); // using getValue instead of getShort as a workaround over the bug in AS client.
+    protected short getShort(Record record, String label) throws SQLException {
+        return cast(record.getValue(label), short.class);
     }
 
     @Override
