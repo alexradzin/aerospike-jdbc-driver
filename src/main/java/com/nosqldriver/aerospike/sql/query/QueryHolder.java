@@ -9,6 +9,7 @@ import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
+import com.nosqldriver.aerospike.sql.query.BinaryOperation.PrimaryKeyEqualityPredicate;
 import com.nosqldriver.sql.ChainedResultSetWrapper;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
@@ -23,6 +24,7 @@ import com.nosqldriver.sql.ResultSetRowFilter;
 import com.nosqldriver.sql.ResultSetWrapper;
 import com.nosqldriver.sql.SortedResultSet;
 import com.nosqldriver.util.ByteArrayComparator;
+import com.nosqldriver.util.SneakyThrower;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
@@ -90,6 +92,7 @@ public class QueryHolder implements QueryContainer {
     private AerospikeBatchQueryBySecondaryIndex secondayIndexQuery = null;
     private AerospikeQueryByPk pkQuery = null;
     private AerospikeBatchQueryByPk pkBatchQuery = null;
+    private AerospikeScanQuery scanQuery = null;
     private Filter filter;
     private List<PredExp> predExps = new ArrayList<>();
     private long offset = -1;
@@ -162,15 +165,19 @@ public class QueryHolder implements QueryContainer {
 
 
         if (pkQuery != null) {
-            assertNull(pkBatchQuery, secondayIndexQuery);
+            assertNull(pkBatchQuery, secondayIndexQuery, scanQuery);
             return wrap(sqlStatement, pkQuery);
         }
         if (pkBatchQuery != null) {
-            assertNull(pkQuery, secondayIndexQuery);
+            assertNull(pkQuery, secondayIndexQuery, scanQuery);
             return wrap(sqlStatement, pkBatchQuery);
         }
+        if (scanQuery != null) {
+            assertNull(pkQuery, pkBatchQuery, secondayIndexQuery);
+            return wrap(sqlStatement, scanQuery);
+        }
         if (secondayIndexQuery != null) {
-            assertNull(pkQuery, pkBatchQuery);
+            assertNull(pkQuery, pkBatchQuery, scanQuery);
             return wrap(sqlStatement, secondayIndexQuery);
         }
         if (!data.isEmpty()) {
@@ -206,7 +213,22 @@ public class QueryHolder implements QueryContainer {
                     String binName = ((ColumnRefPredExp)predExps.get(i - 1)).getName();
                     if ("PK".equals(binName)) {
                         final Key key = createKey(getSchema(), getSetName(), parameter);
-                        createPkQuery(sqlStatement, key);
+                        String op = ((OperatorRefPredExp)predExps.get(i + 1)).getOp();
+                        // TODO: move this to BinaryOperation or at least do it better as map of functions or something.
+                        switch(op) {
+                            case "=":
+                                createPkQuery(sqlStatement, key);
+                                break;
+//                            case "IN":
+//                                createPkBatchQuery(sqlStatement, keys.....)
+//                                break;
+                            case "!=":
+                            case "<>":
+                                createScanQuery(sqlStatement, new PrimaryKeyEqualityPredicate(key, false));
+                                break;
+                            default: throw new IllegalArgumentException(op);
+                        }
+
                         indexesToRemove.addAll(asList(i - 1, i, i +1 ));
                     }
                     PredExp binExp = createBinPredExp(binName, type);
@@ -334,6 +356,13 @@ public class QueryHolder implements QueryContainer {
     void createPkBatchQuery(java.sql.Statement statement, Key ... keys) {
         pkBatchQuery = new AerospikeBatchQueryByPk(statement, schema, set, columns, keys, policyProvider.getBatchPolicy());
     }
+
+    @VisibleForPackage
+    void createScanQuery(java.sql.Statement statement, Predicate<ResultSet> predicate) {
+        scanQuery = new AerospikeScanQuery(statement, schema, set, columns, predicate, policyProvider.getScanPolicy());
+    }
+
+
 
     public String getSetName() {
         return set;

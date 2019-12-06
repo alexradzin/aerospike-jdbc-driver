@@ -2,12 +2,17 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
+import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.StringClob;
 import com.nosqldriver.util.IOUtils;
+import com.nosqldriver.util.VariableSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -33,6 +38,7 @@ import java.sql.Types;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -51,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
@@ -167,6 +174,22 @@ class InsertTest {
         long now = currentTimeMillis();
         insertOneRowUsingPreparedStatementVariousTypes(now);
         selectAndAssertOneRowUsingPreparedStatementVariousTypes(now, "select l.byte, l.short, l.int, l.long, l.boolean, l.float_number, l.double_number, l.bigdecimal, l.string, l.nstring, l.blob, l.clob, l.nclob, l.t, l.ts, l.d, l.url, l.nothing from data as l left join data2 as r on l.byte=r.id where PK=?", 1);
+    }
+
+
+    @VisibleForPackage // visible for tests
+    @SuppressWarnings("unused") // referenced from annotation VariableSource
+    private static Stream<Arguments> selectOneRowUsingPreparedStatementVariousTypes = Stream.of(
+            Arguments.of("select byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url, nothing from data where PK=?", 1),
+            Arguments.of("select byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url, nothing from data where PK!=?", 12345),
+            Arguments.of("select l.byte, l.short, l.int, l.long, l.boolean, l.float_number, l.double_number, l.bigdecimal, l.string, l.nstring, l.blob, l.clob, l.nclob, l.t, l.ts, l.d, l.url, l.nothing from data as l left join data2 as r on l.byte=r.id where PK=?", 1)
+    );
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @VariableSource("selectOneRowUsingPreparedStatementVariousTypes")
+    void insertAndSelectOneRowUsingPreparedStatementVariousTypes(String sql, int value) throws SQLException, IOException {
+        long now = currentTimeMillis();
+        insertOneRowUsingPreparedStatementVariousTypes(now);
+        selectAndAssertOneRowUsingPreparedStatementVariousTypes(now, sql, value);
     }
 
 

@@ -437,7 +437,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     }
 
     @Override
-    public boolean isClosed() throws SQLException {
+    public boolean isClosed() {
         return closed;
     }
 

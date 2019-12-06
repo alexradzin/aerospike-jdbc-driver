@@ -3,7 +3,11 @@ package com.nosqldriver.aerospike.sql.query;
 import com.aerospike.client.Key;
 import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
+import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.util.SneakyThrower;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,8 +15,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.aerospike.client.query.PredExp.integerBin;
@@ -28,6 +34,26 @@ import static java.util.Arrays.asList;
 import static java.util.Optional.ofNullable;
 
 public class BinaryOperation {
+    @VisibleForPackage
+    static class PrimaryKeyEqualityPredicate implements Predicate<ResultSet> {
+        private final Key key;
+        private final boolean eq;
+
+        PrimaryKeyEqualityPredicate(Key key, boolean eq) {
+            this.key = key;
+            this.eq = eq;
+        }
+
+        @Override
+        public boolean test(ResultSet rs) {
+            try {
+                return Objects.equals(key, rs.getObject("PK")) == eq;
+            } catch (SQLException e) {
+                SneakyThrower.sneakyThrow(e);
+                throw new IllegalStateException(); // This cannot happen because previous line in fact throwws exception. This line is written to satisfy compiler.
+            }
+        }
+    };
     private Statement statement;
     private String table;
     private String column;
@@ -75,8 +101,8 @@ public class BinaryOperation {
         NE("!=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                if ("PK".equals(operation.column)) {
-                    throw new UnsupportedOperationException("Cannot use PK with != operator");
+                if (!operation.values.isEmpty() && "PK".equals(operation.column)) {
+                    queries.createScanQuery(operation.statement, new PrimaryKeyEqualityPredicate(createKey(operation.values.get(0), queries), false));
                 }
                 return queries;
             }

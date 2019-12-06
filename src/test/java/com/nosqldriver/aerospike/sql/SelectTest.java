@@ -522,10 +522,10 @@ class SelectTest {
             Arguments.of("select * from people where first_name != 'John'", new String[] {"George", "Paul", "Ringo"}),
             Arguments.of("select * from people where first_name <> 'John'", new String[] {"George", "Paul", "Ringo"}),
             Arguments.of("select * from people where id!=1", new String[] {"George", "Paul", "Ringo"}),
-            Arguments.of("select * from people where id<>1", new String[] {"George", "Paul", "Ringo"})
-            //TODO: implement Not equal for PK
-            //Arguments.of("select * from people where PK!=1", new String[] {"George", "Paul", "Ringo"}),
-            //Arguments.of("select * from people where PK<>1", new String[] {"George", "Paul", "Ringo"})
+            Arguments.of("select * from people where id<>1", new String[] {"George", "Paul", "Ringo"}),
+            Arguments.of("select * from people where PK!=1", new String[] {"George", "Paul", "Ringo"}),
+            Arguments.of("select * from people where PK<>1", new String[] {"George", "Paul", "Ringo"}),
+            Arguments.of("select * from people where PK!=12345", new String[] {"John", "George", "Paul", "Ringo"})
     );
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @VariableSource("notEqual")
@@ -535,7 +535,6 @@ class SelectTest {
         assertSame(statement, rs.getStatement());
         assertEquals(new HashSet<>(asList(expected)), toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
     }
-
 
     @VisibleForPackage // visible for tests
     @SuppressWarnings("unused") // referenced from annotation VariableSource
@@ -552,7 +551,9 @@ class SelectTest {
     @VariableSource("like")
     void selectWhereFieldLikeValue(String query, String[] expected) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(query);
-        assertEquals(new HashSet<>(asList(expected)), toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
+        Collection<Map<String, Object>> list = toListOfMaps(rs);
+        assertEquals(expected.length, list.size());
+        assertEquals(new HashSet<>(asList(expected)), list.stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
     }
 
 
@@ -996,20 +997,24 @@ class SelectTest {
 
 
 
+    @VisibleForPackage // visible for tests
+    @SuppressWarnings("unused") // referenced from annotation VariableSource
+    private static Stream<Arguments> selectByPk = Stream.of(
+            Arguments.of("select * from people where PK=?", new int[] {2}),
+            Arguments.of("select * from people where PK!=?", new int[] {1, 3, 4}),
+            Arguments.of("select * from people where PK<>?", new int[] {1, 3, 4})
+            );
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
-    @ValueSource(strings = {
-            "select * from people where PK=?",
-    })
-    void selectOneRecordByPrimaryKeyUsingPreparedStatementClearParameters(String sql) throws SQLException {
+    @VariableSource("selectByPk")
+    void selectOneRecordByPrimaryKeyUsingPreparedStatementClearParameters(String sql, int[] expecteds) throws SQLException {
         PreparedStatement ps = testConn.prepareStatement(sql);
         ps.setInt(1, 1);
         ps.clearParameters();
         ps.setInt(1, 2);
         ResultSet rs = ps.executeQuery();
         assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
-        assertPeople(rs, beatles, 2);
+        assertPeople(rs, beatles, expecteds);
     }
-
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
@@ -1768,6 +1773,8 @@ class SelectTest {
             assertTrue(expectedIdsSet.contains(id), "ID " + id + " is unexpected" );
             int i = id - 1;
             assertEquals(people[i].getId(), rs.getInt("id"));
+            System.out.println("id=" + rs.getInt("id"));
+
             assertEquals(people[i].getFirstName(), rs.getString("first_name"));
             assertEquals(people[i].getLastName(), rs.getString("last_name"));
             assertEquals(people[i].getYearOfBirth(), rs.getInt("year_of_birth"));
