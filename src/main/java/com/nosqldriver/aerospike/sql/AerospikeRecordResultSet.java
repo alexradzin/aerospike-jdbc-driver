@@ -30,8 +30,8 @@ abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> 
     }
 
     @Override
-    protected boolean getBoolean(Record record, String label) {
-        return record.getBoolean(label);
+    protected boolean getBoolean(Record record, String label) throws SQLException {
+        return cast(record.getValue(label), boolean.class);
     }
 
     @Override
@@ -45,22 +45,22 @@ abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<Record> 
     }
 
     @Override
-    protected int getInt(Record record, String label) {
-        return record.getInt(label);
+    protected int getInt(Record record, String label) throws SQLException {
+        return cast(record.getValue(label), int.class);
     }
 
     @Override
-    protected long getLong(Record record, String label) {
-        return record.getLong(label);
+    protected long getLong(Record record, String label) throws SQLException {
+        return cast(record.getValue(label), long.class);
     }
 
     @Override
-    protected float getFloat(Record record, String label) {
-        return record.getFloat(label);
+    protected float getFloat(Record record, String label) throws SQLException {
+        return cast(record.getValue(label), float.class);
     }
 
     @Override
-    protected double getDouble(Record record, String label) {
-        return record.getDouble(label);
+    protected double getDouble(Record record, String label) throws SQLException {
+        return cast(record.getValue(label), double.class);
     }
 }

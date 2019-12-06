@@ -273,6 +273,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
         if (lastRecord != null) {
             afterLast = false;
+            setCurrentRecord(lastRecord);
             return true;
         }
         return false;
@@ -538,4 +539,8 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     protected abstract long getLong(R record, String label) throws SQLException;
     protected abstract float getFloat(R record, String label) throws SQLException;
     protected abstract double getDouble(R record, String label) throws SQLException;
+
+    protected void setCurrentRecord(R r) {
+        // default empty implementation
+    }
 }

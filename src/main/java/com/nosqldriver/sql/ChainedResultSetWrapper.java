@@ -67,6 +67,12 @@ public class ChainedResultSetWrapper extends ResultSetWrapper {
         for (int i = n - 1; i >= 0 ; i--) {
             ResultSet rs = resultSets.get(i);
             if (rs.last()) {
+                this.rs = rs;
+                while(lit.hasNext()) {
+                    if(rs == lit.next()) {
+                        break;
+                    }
+                }
                 return true;
             }
         }

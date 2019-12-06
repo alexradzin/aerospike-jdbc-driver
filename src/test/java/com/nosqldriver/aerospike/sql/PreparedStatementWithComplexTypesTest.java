@@ -349,6 +349,8 @@ class PreparedStatementWithComplexTypesTest {
         assertArrayEquals(new byte[] {(byte)8}, (byte[])rs.getObject(2));
 
         assertEquals(blob, rs.getBlob(3));
+        assertArrayEquals(helloWorld.getBytes(), rs.getBytes(3));
+
         assertEquals(clob, rs.getClob(4));
 
         assertEquals(helloWorld, new String(IOUtils.toByteArray(rs.getAsciiStream(4))));

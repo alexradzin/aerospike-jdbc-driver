@@ -82,4 +82,8 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
         }
         return columns;
     }
+
+    protected void setCurrentRecord(List<?> r) {
+        currentRecord = r;
+    }
 }
