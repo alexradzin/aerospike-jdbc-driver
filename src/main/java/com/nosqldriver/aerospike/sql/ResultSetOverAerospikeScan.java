@@ -31,21 +31,11 @@ public class ResultSetOverAerospikeScan extends BaseSchemalessResultSet<KeyRecor
 
     public ResultSetOverAerospikeScan(IAerospikeClient client, Statement statement, String schema, String table, List<DataColumn> columns, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
         super(statement, schema, table, columns, new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor));
-        this.callback = (key, record) -> {
-            try {
-                queue.put(new KeyRecord(key, record));
-            } catch (InterruptedException e) {
-                throw new IllegalStateException(e);
-            }
-        };
+        this.callback = (key, record) -> enqueue(new KeyRecord(key, record));
 
         new Thread(() -> {
             client.scanAll(new ScanPolicy(), schema, table, callback);
-            try {
-                queue.put(barrier);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            enqueue(barrier);
         }).start();
     }
 
@@ -91,7 +81,6 @@ public class ResultSetOverAerospikeScan extends BaseSchemalessResultSet<KeyRecor
         //it tries to cast Short to Long first. So, I have to implement the following workaround here.
         //return record.record.getShort(label);
         return (short)record.record.getValue(label);
-
     }
 
     @Override
@@ -117,11 +106,14 @@ public class ResultSetOverAerospikeScan extends BaseSchemalessResultSet<KeyRecor
     @Override
     public void close() throws SQLException {
         super.close();
-        try {
-            queue.put(barrier);
-        } catch (InterruptedException e) {
-            throw new SQLException(e);
-        }
+        enqueue(barrier);
     }
 
+    private void enqueue(KeyRecord record) {
+        try {
+            queue.put(record);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 }

@@ -1003,7 +1003,7 @@ class SelectTest {
             Arguments.of("select * from people where PK=?", new int[] {2}),
             Arguments.of("select * from people where PK!=?", new int[] {1, 3, 4}),
             Arguments.of("select * from people where PK<>?", new int[] {1, 3, 4})
-            );
+    );
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @VariableSource("selectByPk")
     void selectOneRecordByPrimaryKeyUsingPreparedStatementClearParameters(String sql, int[] expecteds) throws SQLException {
@@ -1011,9 +1011,10 @@ class SelectTest {
         ps.setInt(1, 1);
         ps.clearParameters();
         ps.setInt(1, 2);
-        ResultSet rs = ps.executeQuery();
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
-        assertPeople(rs, beatles, expecteds);
+        try(ResultSet rs = ps.executeQuery()) {
+            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+            assertPeople(rs, beatles, expecteds);
+        }
     }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
