@@ -5,6 +5,7 @@ import com.nosqldriver.Person;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.sql.DataColumnBasedResultSetMetaData;
 import com.nosqldriver.sql.SqlLiterals;
+import com.nosqldriver.util.ThrowingConsumer;
 import com.nosqldriver.util.VariableSource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -16,6 +17,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.sql.Array;
 import java.sql.ParameterMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -39,6 +41,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.TestUtils.getDisplayName;
@@ -85,6 +88,18 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
  * For performance reasons the data is filled in the beginning of the test case.
  */
 class SelectTest {
+    private static final String[] peopleIds = {
+            "1",
+            "2",
+            "3",
+            "4",
+            "1, 2",
+            "2, 3",
+            "3, 4",
+            "1, 2, 3, 4"
+    };
+
+
     @AfterEach
     void clean() {
         dropIndexSafely("first_name");
@@ -1137,6 +1152,63 @@ class SelectTest {
         assertSelect("select * from people where first_name in ('Paul', 'George')", 2, 3);
     }
 
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {"1",  "2", "3", "4","1, 2", "2, 3", "3, 4", "1, 2, 3, 4"})
+    void selectPsSeveralRecordsPKInUsingLongArray(String keys) throws SQLException {
+        long[] ids = stream(keys.split("\\s*,\\s*")).map(Long::parseLong).mapToLong(i -> i).toArray();
+        selectPsSeveralRecordsPKInUsingPrimitiveArray(keys, ids);
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {"1",  "2", "3", "4","1, 2", "2, 3", "3, 4", "1, 2, 3, 4"})
+    void selectPsSeveralRecordsPKInUsingIntArray(String keys) throws SQLException {
+        int[] ids = stream(keys.split("\\s*,\\s*")).map(Integer::parseInt).mapToInt(i -> i).toArray();
+        selectPsSeveralRecordsPKInUsingPrimitiveArray(keys, ids);
+    }
+
+
+    private void selectPsSeveralRecordsPKInUsingPrimitiveArray(String keys, Object idsToSet) throws SQLException {
+        int[] pids = stream(keys.split("\\s*,\\s*")).map(Integer::parseInt).mapToInt(i -> i).toArray();
+        PreparedStatement ps = testConn.prepareStatement("select * from people where PK in (?)");
+        selectPsSeveralRecordsPKIn(ps, pids, ps1 -> ps.setObject(1, idsToSet));
+    }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {"1",  "2", "3", "4","1, 2", "2, 3", "3, 4", "1, 2, 3, 4"})
+    void selectPsSeveralRecordsPKInInLoop(String keys) throws SQLException {
+        String questions = keys.replaceAll("\\d+", "?");
+        PreparedStatement ps = testConn.prepareStatement(format("select * from people where PK in (%s)", questions));
+        int[] pids = stream(keys.split("\\s*,\\s*")).map(Integer::parseInt).mapToInt(i -> i).toArray();
+
+        selectPsSeveralRecordsPKIn(ps, pids, ps1 -> {
+            IntStream.range(0, pids.length).forEach(i -> {
+                try {
+                    ps.setInt(i + 1, pids[i]);
+                } catch (SQLException e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+        });
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {"1",  "2", "3", "4","1, 2", "2, 3", "3, 4", "1, 2, 3, 4"})
+    void selectPsSeveralRecordsPKInUsingJdbcArray(String keys) throws SQLException {
+        PreparedStatement ps = testConn.prepareStatement("select * from people where PK in (?)");
+        int[] pids = stream(keys.split("\\s*,\\s*")).map(Integer::parseInt).mapToInt(i -> i).toArray();
+        Integer[] wids = stream(keys.split("\\s*,\\s*")).map(Integer::parseInt).toArray(Integer[]::new);
+        Array aids = testConn.createArrayOf("integer", wids);
+        selectPsSeveralRecordsPKIn(ps, pids, ps1 -> ps.setArray(1, aids));
+    }
+
+
+    private void selectPsSeveralRecordsPKIn(PreparedStatement ps, int[] ids, ThrowingConsumer<PreparedStatement, SQLException> setter) throws SQLException {
+        setter.accept(ps);
+        ResultSet rs = ps.executeQuery();
+        assertPeople(rs, beatles, ids);
+    }
 
     @Test
     @DisplayName("year_of_birth<1939 -> nothing")

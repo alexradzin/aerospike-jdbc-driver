@@ -24,7 +24,6 @@ import com.nosqldriver.sql.ResultSetRowFilter;
 import com.nosqldriver.sql.ResultSetWrapper;
 import com.nosqldriver.sql.SortedResultSet;
 import com.nosqldriver.util.ByteArrayComparator;
-import com.nosqldriver.util.SneakyThrower;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
@@ -58,6 +57,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKey;
+import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKeys;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.AGGREGATED;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
@@ -73,7 +73,7 @@ import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 
 public class QueryHolder implements QueryContainer {
-    public static final String BIN_NAME_DOES_NOT_EXIST = "NSDOESNOTEXIST";
+    @VisibleForPackage static final String BIN_NAME_DOES_NOT_EXIST = "NSDOESNOTEXIST";
     private static final Collection<Class> intTypes = new HashSet<>(asList(Byte.class, Short.class, Integer.class, Long.class, byte.class, short.class, int.class, long.class));
     private String schema;
     private final Collection<String> indexes;
@@ -212,19 +212,18 @@ public class QueryHolder implements QueryContainer {
                 if (predExps.get(i - 1) instanceof ColumnRefPredExp) {
                     String binName = ((ColumnRefPredExp)predExps.get(i - 1)).getName();
                     if ("PK".equals(binName)) {
-                        final Key key = createKey(getSchema(), getSetName(), parameter);
-                        String op = ((OperatorRefPredExp)predExps.get(i + 1)).getOp();
+                        String op = predExps.stream().skip(i).filter(exp -> exp instanceof OperatorRefPredExp).findFirst().map(exp -> ((OperatorRefPredExp) exp).getOp()).orElseThrow(() -> new IllegalStateException("Cannot find operation"));
                         // TODO: move this to BinaryOperation or at least do it better as map of functions or something.
                         switch(op) {
                             case "=":
-                                createPkQuery(sqlStatement, key);
+                                createPkQuery(sqlStatement, createKey(getSchema(), getSetName(), parameter));
                                 break;
-//                            case "IN":
-//                                createPkBatchQuery(sqlStatement, keys.....)
-//                                break;
+                            case "IN":
+                                createPkBatchQuery(sqlStatement, createKeys(getSchema(), getSetName(), parameter));
+                                break;
                             case "!=":
                             case "<>":
-                                createScanQuery(sqlStatement, new PrimaryKeyEqualityPredicate(key, false));
+                                createScanQuery(sqlStatement, new PrimaryKeyEqualityPredicate(createKey(getSchema(), getSetName(), parameter), false));
                                 break;
                             default: throw new IllegalArgumentException(op);
                         }
@@ -256,7 +255,7 @@ public class QueryHolder implements QueryContainer {
         if(String.class.equals(type)) {
             return PredExp.stringBin(name);
         }
-        if(Array.class.equals(type) || type.isArray() || Collection.class.isAssignableFrom(type)) {
+        if(Array.class.isAssignableFrom(type) || type.isArray() || Collection.class.isAssignableFrom(type)) {
             return PredExp.listBin(name);
         }
         if(Map.class.isAssignableFrom(type)) {
@@ -354,7 +353,15 @@ public class QueryHolder implements QueryContainer {
 
     @VisibleForPackage
     void createPkBatchQuery(java.sql.Statement statement, Key ... keys) {
-        pkBatchQuery = new AerospikeBatchQueryByPk(statement, schema, set, columns, keys, policyProvider.getBatchPolicy());
+        Key[] allKeys = keys;
+        if (pkBatchQuery != null) {
+            Key[] existingKesys = pkBatchQuery.criteria;
+            allKeys = new Key[existingKesys.length + keys.length];
+            System.arraycopy(existingKesys, 0, allKeys, 0, existingKesys.length);
+            System.arraycopy(keys, 0, allKeys, existingKesys.length, keys.length);
+        }
+
+        pkBatchQuery = new AerospikeBatchQueryByPk(statement, schema, set, columns, allKeys, policyProvider.getBatchPolicy());
     }
 
     @VisibleForPackage

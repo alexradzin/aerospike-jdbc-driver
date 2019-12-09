@@ -399,7 +399,10 @@ public class AerospikeQueryFactory {
                             expr.getRightItemsList().accept(new ItemsListVisitorAdapter() {
                                 @Override
                                 public void visit(ExpressionList expressionList) {
-                                    Operator.IN.update(queries, operation);
+                                Operator.IN.update(queries, operation);
+                                if ("PK".equals(operation.getColumn())) {
+                                    queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
+                                }
                                 }
                             });
                             in.set(false);

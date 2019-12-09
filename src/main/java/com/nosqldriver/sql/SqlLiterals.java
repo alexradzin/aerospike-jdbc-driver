@@ -2,8 +2,8 @@ package com.nosqldriver.sql;
 
 import com.aerospike.client.query.PredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
-import scala.xml.Null;
 
+import java.sql.Array;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -92,9 +92,13 @@ public class SqlLiterals {
             predExpOperators.put(operatorKey(type, "<="), PredExp::integerLessEq);
             predExpOperators.put(operatorKey(type, "AND"), () -> PredExp.and(2));
             predExpOperators.put(operatorKey(type, "OR"), () -> PredExp.or(2));
+            predExpOperators.put(operatorKey(type, "IN"), () -> new OperatorRefPredExp("IN"));
+        }
+        for (Class type : new Class[] {byte[].class, int[].class, long[].class, Array.class, BasicArray.class}) {
+            predExpOperators.put(operatorKey(type, "IN"), () -> new OperatorRefPredExp("IN"));
         }
 
-        // null is for prepared statement when type of value is unknonw during parsing of expression.
+        // null is for prepared statement when type of value is unknown during parsing of expression.
         asList("=", "<>", "!=", "<", "<=", ">", ">=", "LIKE").forEach(op -> predExpOperators.put(operatorKey(null, op), () -> new OperatorRefPredExp(op)));
         predExpOperators.put(operatorKey(null, "AND"), () -> PredExp.and(2));
         predExpOperators.put(operatorKey(null, "OR"), () -> PredExp.or(2));

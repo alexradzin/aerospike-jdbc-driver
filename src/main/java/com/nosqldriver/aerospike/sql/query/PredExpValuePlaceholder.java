@@ -14,16 +14,7 @@ public class PredExpValuePlaceholder extends FakePredExp {
 
     @VisibleForPackage
     PredExp createPredExp(Object val) {
-        if(val instanceof Byte || val instanceof Short || val instanceof Integer || val instanceof Long) {
-            return PredExp.integerValue(((Number)val).longValue());
-        }
-        if (val instanceof Calendar) {
-            return PredExp.integerValue((Calendar)val);
-        }
-        if(val instanceof String) {
-            return PredExp.stringValue((String)val);
-        }
-        throw new IllegalArgumentException("" + val);
+        return ValueHolderPredExp.create(val);
     }
 
     public int getIndex() {
