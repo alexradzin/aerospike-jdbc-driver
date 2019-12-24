@@ -58,6 +58,9 @@ import java.util.stream.Stream;
 
 import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKey;
 import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKeys;
+import static com.nosqldriver.aerospike.sql.query.PredExpUtil.extractType;
+import static com.nosqldriver.aerospike.sql.query.PredExpUtil.getValue;
+import static com.nosqldriver.aerospike.sql.query.PredExpUtil.isValue;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.AGGREGATED;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
@@ -300,6 +303,13 @@ public class QueryHolder implements QueryContainer {
 
     private Function<IAerospikeClient, ResultSet> createSecondaryIndexQuery(java.sql.Statement sqlStatement, Filter filter, List<PredExp> predExps) {
         statement.setFilter(filter);
+        if ((predExps.size() == 3) && predExps.stream().anyMatch(e -> PredExpUtil.isBin(extractType(e)) && "PK".equals(getValue(e)))) {
+            Optional<Object> value = predExps.stream().filter(e -> isValue(extractType(e))).map(PredExpUtil::getValue).findFirst();
+            if (value.isPresent()) {
+                Key key = KeyFactory.createKey(schema, set, value.get());
+                return new AerospikeQueryByPk(sqlStatement, schema, columns, key, policyProvider.getQueryPolicy());
+            }
+        }
         if (predExps.size() >= 3) {
             statement.setPredExp(predExps.toArray(new PredExp[0]));
         }

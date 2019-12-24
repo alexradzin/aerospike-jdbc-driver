@@ -105,6 +105,14 @@ class SpecialSelectTest {
             "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id",
             "select first_name, i.name as instrument from people as p inner join instruments as i on p.id=i.person_id",
             "select first_name, i.name as instrument from people as p left join instruments as i on p.id=i.person_id",
+
+            "select first_name, i.name as instrument from instruments as i join people as p on p.id=i.person_id",
+            "select first_name, i.name as instrument from instruments as i inner join people as p on p.id=i.person_id",
+            "select first_name, i.name as instrument from instruments as i left join people as p on p.id=i.person_id",
+
+            "select first_name, i.name as instrument from instruments as i join people as p on i.person_id=p.PK",
+            "select first_name, i.name as instrument from instruments as i inner join people as p on i.person_id=p.PK",
+            "select first_name, i.name as instrument from instruments as i left join people as p on i.person_id=p.PK",
     })
     void oneToOneJoin(String sql) throws SQLException {
         writeBeatles();
