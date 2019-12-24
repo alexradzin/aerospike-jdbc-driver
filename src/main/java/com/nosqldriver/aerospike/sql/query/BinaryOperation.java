@@ -53,7 +53,7 @@ public class BinaryOperation {
                 throw new IllegalStateException(); // This cannot happen because previous line in fact throwws exception. This line is written to satisfy compiler.
             }
         }
-    };
+    }
     private Statement statement;
     private String table;
     private String column;
@@ -228,20 +228,7 @@ public class BinaryOperation {
         }
 
         protected Key createKey(Object value, QueryHolder queries) {
-            final Key key;
-            final String schema = queries.getSchema();
-            if (value instanceof Long) {
-                key = new Key(schema, queries.getSetName(), (Long) value);
-            } else if (value instanceof Integer) {
-                key = new Key(schema, queries.getSetName(), (Integer) value);
-            } else if (value instanceof Number) {
-                key = new Key(schema, queries.getSetName(), ((Number) value).intValue());
-            } else if (value instanceof String) {
-                key = new Key(schema, queries.getSetName(), (String) value);
-            } else {
-                throw new IllegalArgumentException(format("Filter by %s is not supported right now. Use either number or string", value == null ? null : value.getClass()));
-            }
-            return key;
+            return KeyFactory.createKey(queries.getSchema(), queries.getSetName(), value);
         }
 
         public String operator() {
