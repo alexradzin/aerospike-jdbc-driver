@@ -330,7 +330,8 @@ public class TestDataUtils {
         int n = expectedMetadataFields.length / 3;
         assertEquals(n, md.getColumnCount());
         for (int i = 1, j = 0; i <= n; i++, j+=3) {
-            assertEquals(expectedSchema, md.getSchemaName(i));
+            assertEquals(expectedSchema, md.getCatalogName(i));
+            assertEquals("", md.getSchemaName(i));
             String name = (String)expectedMetadataFields[j];
             String label = (String)expectedMetadataFields[j + 1];
             Integer type = (Integer)expectedMetadataFields[j + 2];
@@ -369,7 +370,8 @@ public class TestDataUtils {
 
         for (int i = 0; i < expectedColumns.length; i++) {
             int j = i + 1;
-            assertEquals(expectedColumns[i].getCatalog(), md.getSchemaName(j));
+            assertEquals("", md.getSchemaName(j));
+            assertEquals(expectedColumns[i].getCatalog(), md.getCatalogName(j));
             assertEquals(expectedColumns[i].getTable(), md.getTableName(j));
             assertEquals(expectedColumns[i].getName(), md.getColumnName(j));
             assertEquals(expectedColumns[i].getLabel(), md.getColumnLabel(j));

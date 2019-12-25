@@ -148,7 +148,8 @@ class SelectTest {
 
         assertFalse(rs.isClosed());
         ResultSetMetaData md = rs.getMetaData();
-        assertEquals(NAMESPACE, md.getSchemaName(1));
+        assertEquals(NAMESPACE, md.getCatalogName(1));
+        assertEquals("", md.getSchemaName(1));
 
         int nColumns = md.getColumnCount();
         assertEquals(5, nColumns);
@@ -364,7 +365,8 @@ class SelectTest {
 
         assertFalse(rs.isClosed());
         ResultSetMetaData md = rs.getMetaData();
-        assertEquals(NAMESPACE, md.getSchemaName(1));
+        assertEquals(NAMESPACE, md.getCatalogName(1));
+        assertEquals("", md.getSchemaName(1));
 
         int nColumns = md.getColumnCount();
         assertEquals(5, nColumns);
@@ -567,7 +569,8 @@ class SelectTest {
 
         ResultSetMetaData metaData = rs.getMetaData();
         assertEquals(2, metaData.getColumnCount());
-        assertEquals(NAMESPACE, metaData.getSchemaName(1));
+        assertEquals(NAMESPACE, metaData.getCatalogName(1));
+        assertEquals("", metaData.getSchemaName(1));
 
         assertEquals(keyColumn, metaData.getColumnLabel(1));
         assertEquals("people", metaData.getTableName(1));
@@ -607,7 +610,8 @@ class SelectTest {
         assertEquals("year", rs.getMetaData().getColumnLabel(2));
         assertFindColumn(rs, "name", "year");
         assertThrows(SQLException.class, () -> rs.findColumn("doesNotExist"));
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+        assertEquals("", rs.getMetaData().getSchemaName(1));
         while (rs.next()) {
             selectedPeople.put(rs.getString("name"), rs.getInt("year"));
             assertThrowsSqlException(() -> rs.getString("last_name"), "last_name");
@@ -769,7 +773,8 @@ class SelectTest {
         Map<String, Integer> selectedPeople = new HashMap<>();
 
         assertEquals("first_name", rs.getMetaData().getColumnName(1));
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+        assertEquals("", rs.getMetaData().getSchemaName(1));
         while (rs.next()) {
             selectedPeople.put(rs.getString("name"), rs.getInt("name_len"));
         }
@@ -794,7 +799,8 @@ class SelectTest {
             assertEquals(expectedNames[i], md.getColumnName(i + 1));
         }
 
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+        assertEquals("", rs.getMetaData().getSchemaName(1));
         while (rs.next()) {
             selectedPeople.put(rs.getString("name"), rs.getInt("surname_length"));
 
@@ -820,7 +826,8 @@ class SelectTest {
             ResultSet rs = testConn.createStatement().executeQuery(format("select * from people where PK=%d", id));
 
             assertTrue(rs.next());
-            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+            assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+            assertEquals("", rs.getMetaData().getSchemaName(1));
             assertEquals(beatles[i].getId(), rs.getInt("id"));
             assertEquals(beatles[i].getFirstName(), rs.getString("first_name"));
             assertEquals(beatles[i].getLastName(), rs.getString("last_name"));
@@ -834,7 +841,8 @@ class SelectTest {
             ResultSet rs = testConn.createStatement().executeQuery(format("select * from people where last_name=%s", person.getLastName()));
 
             assertTrue(rs.next());
-            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+            assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+            assertEquals("", rs.getMetaData().getSchemaName(1));
             assertEquals(person.getId(), rs.getInt("id"));
             assertEquals(person.getFirstName(), rs.getString("first_name"));
             assertEquals(person.getLastName(), rs.getString("last_name"));
@@ -849,7 +857,8 @@ class SelectTest {
             ResultSet rs = testConn.createStatement().executeQuery(format("select * from people where first_name=%s", person.getFirstName()));
 
             assertTrue(rs.next());
-            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+            assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+            assertEquals("", rs.getMetaData().getSchemaName(1));
             assertEquals(person.getId(), rs.getInt("id"));
             assertEquals(person.getFirstName(), rs.getString("first_name"));
             assertEquals(person.getLastName(), rs.getString("last_name"));
@@ -923,7 +932,8 @@ class SelectTest {
         ps.setInt(1, 1940);
         ps.setString(2, "John");
         ResultSet rs = ps.executeQuery();
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+        assertEquals("", rs.getMetaData().getSchemaName(1));
         assertPeople(rs, beatles, 1);
     }
 
@@ -934,7 +944,8 @@ class SelectTest {
         PreparedStatement ps = testConn.prepareStatement(getDisplayName());
         ps.setInt(1, 1);
         ResultSet rs = ps.executeQuery();
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+        assertEquals("", rs.getMetaData().getSchemaName(1));
         assertPeople(rs, beatles, 1);
     }
 
@@ -993,7 +1004,8 @@ class SelectTest {
 
         ps.setInt(1, paramValue);
         ResultSet rs = ps.executeQuery();
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+        assertEquals("", rs.getMetaData().getSchemaName(1));
         assertPeople(rs, beatles, paramValue);
     }
 
@@ -1014,7 +1026,8 @@ class SelectTest {
         ps.clearParameters();
         ps.setInt(1, 2);
         try(ResultSet rs = ps.executeQuery()) {
-            assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+            assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+            assertEquals("", rs.getMetaData().getSchemaName(1));
             assertPeople(rs, beatles, expecteds);
         }
     }
@@ -1224,10 +1237,8 @@ class SelectTest {
     void selectAllWithLimit2() throws SQLException {
         assertSelect("select * from people limit 2", 1, 2);
 
-        //ResultSet rs = testConn.createStatement().executeQuery("select * from people limit 2");
         // "id", "first_name", "last_name", "year_of_birth", "kids_count"
         ResultSet rs = executeQuery("select * from people limit 2", NAMESPACE, false, "id", null, INTEGER, "first_name", null, VARCHAR, "last_name", null, VARCHAR, "year_of_birth", null, INTEGER, "kids_count", null, INTEGER);
-        //assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
         int n = 0;
         //noinspection StatementWithEmptyBody // counter
         for (; rs.next(); n++);
@@ -1243,7 +1254,8 @@ class SelectTest {
         // since order of records returned from the DB is not deterministic unless order by is used we cannot really
         // validate here the names of people and ought to check the number of rows in record set.
         ResultSet rs = testConn.createStatement().executeQuery(sql);
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+        assertEquals("", rs.getMetaData().getSchemaName(1));
         int n = 0;
         //noinspection StatementWithEmptyBody // counter
         for (; rs.next(); n++);
@@ -1353,7 +1365,8 @@ class SelectTest {
         ResultSet rs = statement.executeQuery(query);
         assertSame(statement, rs.getStatement());
         ResultSetMetaData md = rs.getMetaData();
-        assertEquals(NAMESPACE, md.getSchemaName(1));
+        assertEquals(NAMESPACE, md.getCatalogName(1));
+        assertEquals("", md.getSchemaName(1));
         assertEquals(1, rs.getMetaData().getColumnCount());
         assertEquals(expectedName, rs.getMetaData().getColumnName(1));
         assertEquals(expectedLabel, rs.getMetaData().getColumnLabel(1));
@@ -1371,7 +1384,8 @@ class SelectTest {
     void selectDistinctFirstName() throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
         ResultSetMetaData md = rs.getMetaData();
-        assertEquals(NAMESPACE, md.getSchemaName(1));
+        assertEquals(NAMESPACE, md.getCatalogName(1));
+        assertEquals("", md.getSchemaName(1));
         assertEquals(1, rs.getMetaData().getColumnCount());
         assertEquals("distinct(first_name)", rs.getMetaData().getColumnName(1));
         assertEquals("given_name", rs.getMetaData().getColumnLabel(1));
@@ -1811,7 +1825,8 @@ class SelectTest {
 
     private void assertAggregateOneField(String sql, String name, String label, int expected) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(sql);
-        assertEquals(NAMESPACE, rs.getMetaData().getSchemaName(1));
+        assertEquals(NAMESPACE, rs.getMetaData().getCatalogName(1));
+        assertEquals("", rs.getMetaData().getSchemaName(1));
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(1, md.getColumnCount());
         assertEquals(name, md.getColumnName(1));

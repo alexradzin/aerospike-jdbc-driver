@@ -197,7 +197,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
         if (columns.isEmpty()) {
             throw ExceptionFactory.invalidColumnIndex(column);
         }
-        return toEmpty(getVisibleColumn(column, DataColumn::getCatalog)); //TODO: ??? schema vs catalog
+        return "";
     }
 
     @Override
