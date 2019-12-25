@@ -19,9 +19,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -39,6 +37,9 @@ import static java.sql.Types.NCLOB;
 import static java.sql.Types.SMALLINT;
 import static java.sql.Types.TINYINT;
 import static java.sql.Types.VARCHAR;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,7 +52,7 @@ class DelegatingResultSetTest {
     private static final String SCHEMA = "schema";
     private static final String TABLE = "table";
 
-    private static final List<DataColumn> simpleColumns = Arrays.asList(
+    private static final List<DataColumn> simpleColumns = asList(
             column("byte", TINYINT), column("short", SMALLINT), column("int", INTEGER), column("long", BIGINT),
             column("on", BOOLEAN), column("off", BOOLEAN),
             column("float", FLOAT), column("double", DOUBLE),
@@ -63,10 +64,10 @@ class DelegatingResultSetTest {
 
     private static final long now = currentTimeMillis();
     private static final Object[] simpleRow = new Object[] {(byte)64, (short)123, 123456, now, true, false, 3.14f, 3.1415926, "hello, world!", new java.sql.Date(now), new java.sql.Time(now), new java.sql.Timestamp(now), "http://www.google.com", null};
-    private static final List<List<?>> simpleData = singletonList(Arrays.asList(simpleRow));
+    private static final List<List<?>> simpleData = singletonList(asList(simpleRow));
 
 
-    private static final List<DataColumn> compositeColumns = Arrays.asList(
+    private static final List<DataColumn> compositeColumns = asList(
             column("bytes", BLOB), column("array", ARRAY), column("blob", BLOB), column("clob", CLOB), column("nclob", NCLOB)
     );
     private static final Array array;
@@ -82,7 +83,7 @@ class DelegatingResultSetTest {
         }
     }
     private static final Object[] compositeRow = new Object[] {"hello".getBytes(), array, blob, clob, clob};
-    private static final List<List<?>> compositeData = singletonList(Arrays.asList(compositeRow));
+    private static final List<List<?>> compositeData = singletonList(asList(compositeRow));
 
     @VisibleForPackage // visible for tests
     @SuppressWarnings("unused") // referenced from annotation VariableSource
@@ -106,7 +107,7 @@ class DelegatingResultSetTest {
     private static Stream<Arguments> resultSetsForUnsupported = Stream.of(
             Arguments.of(new FilteredResultSet(new ListRecordSet(null, "schema", "table", simpleColumns, simpleData), simpleColumns, r -> true, true), "Filtered(index-by-name)"),
             Arguments.of(new BufferedResultSet(new FilteredResultSet(new ListRecordSet(null, "schema", "table", compositeColumns, compositeData), compositeColumns, r -> true, true), new ArrayList<>(), 0), "Buffered(Filtered(index-by-name))"),
-            Arguments.of(new JoinedResultSet(new ListRecordSet(null, "schema", "table", simpleColumns, simpleData), Collections.emptyList()), "Joined")
+            Arguments.of(new JoinedResultSet(new ListRecordSet(null, "schema", "table", simpleColumns, simpleData), emptyList()), "Joined")
     );
 
 
@@ -308,8 +309,8 @@ class DelegatingResultSetTest {
     @VariableSource("resultSetsForUnsupported")
     void unsupported(ResultSet rs, String name) throws SQLException {
         assertTrue(rs.first());
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getObject(1, Collections.emptyMap()));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getObject("any", Collections.emptyMap()));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getObject(1, emptyMap()));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getObject("any", emptyMap()));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRef(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRef("any"));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRowId(1));

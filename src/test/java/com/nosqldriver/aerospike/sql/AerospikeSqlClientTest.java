@@ -41,12 +41,12 @@ import org.mockito.ArgumentMatchers;
 
 import java.sql.SQLException;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.List;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -92,7 +92,7 @@ class AerospikeSqlClientTest {
         assertArrayEquals(realClient.getNodes(), wrapperClient.getNodes());
         assertEquals(realClient.getNodeNames(), wrapperClient.getNodeNames());
 
-        for(String nodeName : realClient.getNodeNames()) {
+        for (String nodeName : realClient.getNodeNames()) {
             assertEquals(realClient.getNode(nodeName), wrapperClient.getNode(nodeName));
         }
 
@@ -118,7 +118,7 @@ class AerospikeSqlClientTest {
         Key[] keys = new Key[] {key};
         String[] bins = {"bin1", "bin2"};
 
-        Record r = new Record(Collections.emptyMap(), 0, 0);
+        Record r = new Record(emptyMap(), 0, 0);
         Record[] rs = new Record[] {r};
         when(mock.get(p, key, bins)).thenReturn(r);
         assertEquals(r, wrapperClient.get(p, key, bins));

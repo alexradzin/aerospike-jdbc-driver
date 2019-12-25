@@ -3,7 +3,6 @@ package com.nosqldriver.sql;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
-import java.util.function.Supplier;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 

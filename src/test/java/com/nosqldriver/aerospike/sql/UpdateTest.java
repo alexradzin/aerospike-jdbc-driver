@@ -13,7 +13,6 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -21,6 +20,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.beatles;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
+import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
@@ -84,7 +84,7 @@ abstract class UpdateTest {
     @Test
     void updateOneFieldOneRow() throws SQLException {
         writeBeatles();
-        Map<Integer, Integer> expectedKidsCount = Arrays.stream(beatles).collect(Collectors.toMap(Person::getId, Person::getKidsCount));
+        Map<Integer, Integer> expectedKidsCount = Arrays.stream(beatles).collect(toMap(Person::getId, Person::getKidsCount));
 
         Map<Integer, Integer> kidsCount1 = new HashMap<>();
         client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {kidsCount1.put(rec.getInt("id"), rec.getInt("kids_count"));});
@@ -136,7 +136,7 @@ abstract class UpdateTest {
 
         AtomicInteger count = new AtomicInteger(0);
         AtomicInteger nullsCount = new AtomicInteger(0);
-        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {if(rec.getValue("age") == null) nullsCount.incrementAndGet(); count.incrementAndGet();});
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {if (rec.getValue("age") == null) nullsCount.incrementAndGet(); count.incrementAndGet();});
         assertEquals(4, count.get());
         assertEquals(4, nullsCount.get());
 
@@ -144,7 +144,7 @@ abstract class UpdateTest {
         count.set(0);
 
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-        Map<String, Integer> expectedAges = Arrays.stream(beatles).collect(Collectors.toMap(Person::getFirstName, p -> currentYear - p.getYearOfBirth()));
+        Map<String, Integer> expectedAges = Arrays.stream(beatles).collect(toMap(Person::getFirstName, p -> currentYear - p.getYearOfBirth()));
 
         Map<String, Integer> actualAges = new HashMap<>();
         client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {actualAges.put(rec.getString("first_name"), Double.valueOf(rec.getDouble("age")).intValue()); count.incrementAndGet();});

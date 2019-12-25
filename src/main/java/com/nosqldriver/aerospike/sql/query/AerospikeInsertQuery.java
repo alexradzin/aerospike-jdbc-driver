@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -32,6 +31,7 @@ import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKey;
 import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.stream.Collectors.toList;
 
 public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>, WritePolicy, Object> {
     private final int indexOfPK;
@@ -79,16 +79,16 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
         valueTransformer.put(o -> o instanceof Collection<?>, collection -> values(((Collection<?>)collection).stream()));
         valueTransformer.put(o -> o.getClass().isArray() && !o.getClass().getComponentType().isPrimitive(), a -> values(Arrays.stream((Object[])a)));
 
-        valueTransformer.put(o -> o.getClass().isArray() && int.class.equals(o.getClass().getComponentType()), a -> Arrays.stream((int[])a).boxed().collect(Collectors.toList()));
-        valueTransformer.put(o -> o.getClass().isArray() && long.class.equals(o.getClass().getComponentType()), a -> Arrays.stream((long[])a).boxed().collect(Collectors.toList()));
-        valueTransformer.put(o -> o.getClass().isArray() && double.class.equals(o.getClass().getComponentType()), a -> Arrays.stream((double[])a).boxed().collect(Collectors.toList()));
+        valueTransformer.put(o -> o.getClass().isArray() && int.class.equals(o.getClass().getComponentType()), a -> Arrays.stream((int[])a).boxed().collect(toList()));
+        valueTransformer.put(o -> o.getClass().isArray() && long.class.equals(o.getClass().getComponentType()), a -> Arrays.stream((long[])a).boxed().collect(toList()));
+        valueTransformer.put(o -> o.getClass().isArray() && double.class.equals(o.getClass().getComponentType()), a -> Arrays.stream((double[])a).boxed().collect(toList()));
         valueTransformer.put(o -> o.getClass().isArray() && short.class.equals(o.getClass().getComponentType()), a -> {
             short[] sa = (short[])a;
             int[] ia = new int[sa.length];
             for (int i = 0; i < sa.length; i++) {
                 ia[i] = sa[i];
             }
-            return Arrays.stream(ia).boxed().collect(Collectors.toList());
+            return Arrays.stream(ia).boxed().collect(toList());
         });
 
         valueTransformer.put(o -> o.getClass().isArray() && float.class.equals(o.getClass().getComponentType()), a -> {
@@ -97,7 +97,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
             for (int i = 0; i < fa.length; i++) {
                 da[i] = fa[i];
             }
-            return Arrays.stream(da).boxed().collect(Collectors.toList());
+            return Arrays.stream(da).boxed().collect(toList());
         });
         valueTransformer.put(o -> o.getClass().isArray() && boolean.class.equals(o.getClass().getComponentType()), a -> {
             boolean[] ba = (boolean[])a;
@@ -160,7 +160,7 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
     }
 
     private static Object binValue(Object o) {
-        for(Map.Entry<Predicate<Object>, Function<Object, Object>> e : valueTransformer.entrySet()) {
+        for (Map.Entry<Predicate<Object>, Function<Object, Object>> e : valueTransformer.entrySet()) {
             if (e.getKey().test(o)) {
                 return e.getValue().apply(o);
             }
@@ -169,6 +169,6 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
     }
 
     private static List<? extends Object> values(Stream<? extends Object> stream) {
-        return stream.map(AerospikeInsertQuery::binValue).collect(Collectors.toList());
+        return stream.map(AerospikeInsertQuery::binValue).collect(toList());
     }
 }

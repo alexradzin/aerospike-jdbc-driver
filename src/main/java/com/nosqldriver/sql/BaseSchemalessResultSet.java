@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
@@ -43,7 +42,7 @@ import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
-import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toSet;
 
 // TODO: extend this class from DelegatingResultSet, move all type transformations to TypeTransformer and remove getX() method from here.
 public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSetAdaptor, SimpleWrapper, IndexToLabelResultSet {
@@ -293,8 +292,8 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     public boolean relative(int rows) throws SQLException {
         ThrowingSupplier<Boolean, SQLException> supplier = rows >=0 ? this::next : this::previous;
         int n = Math.abs(rows);
-        for(int i = 0; i < n; i++) {
-            if(!supplier.get()) {
+        for (int i = 0; i < n; i++) {
+            if (!supplier.get()) {
                 return false;
             }
         }
@@ -398,7 +397,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
 
     private Class<?> getComponentType(Collection<Object> it) {
-        Set<Class> types = it.stream().filter(Objects::nonNull).map(Object::getClass).collect(Collectors.toSet());
+        Set<Class> types = it.stream().filter(Objects::nonNull).map(Object::getClass).collect(toSet());
         return types.size() == 1 ? types.iterator().next() : Object.class; //TODO discover the nearest common parent if size > 1
     }
 

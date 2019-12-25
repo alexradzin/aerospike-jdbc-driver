@@ -9,17 +9,17 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.OrderItem.Direction.ASC;
 import static com.nosqldriver.sql.OrderItem.Direction.DESC;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OrderItemsComparatorTest {
-    private static List<Map<String, Object>> peopleMap = Arrays.stream(TestDataUtils.beatles).map(PojoHelper::fieldsToMap).collect(Collectors.toList());
+    private static List<Map<String, Object>> peopleMap = Arrays.stream(TestDataUtils.beatles).map(PojoHelper::fieldsToMap).collect(toList());
 
     @Test
     void intEq() {
@@ -187,6 +187,6 @@ class OrderItemsComparatorTest {
     }
 
     private List<String> maps(OrderItem ... orderItems) {
-        return peopleMap.stream().sorted(new OrderItemsComparator<>(asList(orderItems), Map::get)).map(p -> (String)p.get("firstName")).collect(Collectors.toList());
+        return peopleMap.stream().sorted(new OrderItemsComparator<>(asList(orderItems), Map::get)).map(p -> (String)p.get("firstName")).collect(toList());
     }
 }

@@ -25,9 +25,9 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
+import static java.util.stream.Collectors.toMap;
 
 public class ResultSetWrapper implements ResultSet {
     protected volatile ResultSet rs;
@@ -39,7 +39,7 @@ public class ResultSetWrapper implements ResultSet {
     public ResultSetWrapper(ResultSet rs, List<DataColumn> columns, boolean indexByName) {
         this.rs = rs;
         this.columns = Collections.unmodifiableList(columns);
-        aliasToName = columns.stream().filter(c -> c.getName() != null && c.getLabel() != null).collect(Collectors.toMap(DataColumn::getLabel, DataColumn::getName));
+        aliasToName = columns.stream().filter(c -> c.getName() != null && c.getLabel() != null).collect(toMap(DataColumn::getLabel, DataColumn::getName));
         this.indexByName = indexByName;
     }
     

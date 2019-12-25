@@ -46,20 +46,20 @@ class ChainedResultSetWrapperTest {
 
     @Test
     void oneRecordNext() throws SQLException {
-        oneRecord(ResultSet::next);
+        assertOneRecord(ResultSet::next);
     }
 
     @Test
     void oneRecordFirst() throws SQLException {
-        oneRecord(ResultSet::first);
+        assertOneRecord(ResultSet::first);
     }
 
     @Test
     void oneRecordLast() throws SQLException {
-        oneRecord(ResultSet::last);
+        assertOneRecord(ResultSet::last);
     }
 
-    void oneRecord(ThrowingFunction<ResultSet, Boolean, SQLException> move) throws SQLException {
+    private void assertOneRecord(ThrowingFunction<ResultSet, Boolean, SQLException> move) throws SQLException {
         ResultSet rs = new ChainedResultSetWrapper(null, singletonList(createSimpleResultSet(singletonList(asList("John", "Smith", 1970)))), false);
         assertMetadata(rs);
         assertTrue(move.apply(rs));

@@ -53,7 +53,6 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKey;
@@ -72,6 +71,7 @@ import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 
@@ -126,46 +126,8 @@ public class QueryHolder implements QueryContainer {
 
     public Function<IAerospikeClient, ResultSet> getQuery(java.sql.Statement sqlStatement) {
         if (!subQeueries.isEmpty()) {
-            //TODO: add support of chained UNION and sub queries
-            if (subQeueries.stream().anyMatch(q -> ChainOperation.UNION_ALL.equals(q.chainOperation))) {
-                return client -> {
-                    return new ChainedResultSetWrapper(
-                            sqlStatement,
-                            subQeueries.stream()
-                                    .filter(q -> ChainOperation.UNION_ALL.equals(q.chainOperation))
-                                    .map(queryHolder -> queryHolder.getQuery(sqlStatement)).map(f -> f.apply(client)).collect(toList()), indexByName);
-                };
-            }
-            if (subQeueries.stream().anyMatch(q -> ChainOperation.UNION.equals(q.chainOperation))) {
-                Function<IAerospikeClient, ResultSet> chained = client -> new ChainedResultSetWrapper(
-                        sqlStatement,
-                        subQeueries.stream()
-                                .filter(q -> ChainOperation.UNION.equals(q.chainOperation))
-                                .map(queryHolder -> queryHolder.getQuery(sqlStatement)).map(f -> f.apply(client)).collect(toList()), indexByName);
-
-
-                return client -> new FilteredResultSet(
-                        chained.apply(client), columns,
-                        new ResultSetDistinctFilter<>(new ResultSetHashExtractor(), new TreeSet<>(new ByteArrayComparator())), indexByName);
-            }
-
-
-
-            if (subQeueries.stream().anyMatch(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation))) { // nested queries
-                List<QueryHolder> all = subQeueries.stream().filter(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation)).collect(toList());
-                all.add(0, this);
-                Collections.reverse(all);
-                all.forEach(h -> h.indexByName = true);
-                QueryHolder real = all.remove(0);
-                Function<IAerospikeClient, ResultSet> realRs = real.getQuery(sqlStatement);
-                AtomicReference<Function<IAerospikeClient, ResultSet>> currentRsRef = new AtomicReference<>(realRs);
-                for (QueryHolder h : all) {
-                    currentRsRef.set(h.wrap(sqlStatement, currentRsRef.get()));
-                }
-                return currentRsRef.get();
-            }
+            return getQueryWithSubQueries(sqlStatement);
         }
-
 
         if (pkQuery != null) {
             assertNull(pkBatchQuery, secondayIndexQuery, scanQuery);
@@ -190,6 +152,47 @@ public class QueryHolder implements QueryContainer {
         return wrap(sqlStatement, createSecondaryIndexQuery(sqlStatement));
     }
 
+    private Function<IAerospikeClient, ResultSet> getQueryWithSubQueries(java.sql.Statement sqlStatement) {
+        //TODO: add support of chained UNION and sub queries
+        if (subQeueries.stream().anyMatch(q -> ChainOperation.UNION_ALL.equals(q.chainOperation))) {
+            return client -> new ChainedResultSetWrapper(
+                    sqlStatement,
+                    subQeueries.stream()
+                            .filter(q -> ChainOperation.UNION_ALL.equals(q.chainOperation))
+                            .map(queryHolder -> queryHolder.getQuery(sqlStatement)).map(f -> f.apply(client)).collect(toList()), indexByName);
+        }
+        if (subQeueries.stream().anyMatch(q -> ChainOperation.UNION.equals(q.chainOperation))) {
+            Function<IAerospikeClient, ResultSet> chained = client -> new ChainedResultSetWrapper(
+                    sqlStatement,
+                    subQeueries.stream()
+                            .filter(q -> ChainOperation.UNION.equals(q.chainOperation))
+                            .map(queryHolder -> queryHolder.getQuery(sqlStatement)).map(f -> f.apply(client)).collect(toList()), indexByName);
+
+
+            return client -> new FilteredResultSet(
+                    chained.apply(client), columns,
+                    new ResultSetDistinctFilter<>(new ResultSetHashExtractor(), new TreeSet<>(new ByteArrayComparator())), indexByName);
+        }
+
+
+
+        if (subQeueries.stream().anyMatch(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation))) { // nested queries
+            List<QueryHolder> all = subQeueries.stream().filter(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation)).collect(toList());
+            all.add(0, this);
+            Collections.reverse(all);
+            all.forEach(h -> h.indexByName = true);
+            QueryHolder real = all.remove(0);
+            Function<IAerospikeClient, ResultSet> realRs = real.getQuery(sqlStatement);
+            AtomicReference<Function<IAerospikeClient, ResultSet>> currentRsRef = new AtomicReference<>(realRs);
+            for (QueryHolder h : all) {
+                currentRsRef.set(h.wrap(sqlStatement, currentRsRef.get()));
+            }
+            return currentRsRef.get();
+        }
+        return null;
+    }
+
+
     @Override
     public void setParameters(java.sql.Statement sqlStatement, Object[] parameters) {
         int dataIndex = 0;
@@ -207,7 +210,7 @@ public class QueryHolder implements QueryContainer {
         Class type = null;
         for (int i = 0; i < predExps.size(); i++) {
             PredExp predExp = predExps.get(i);
-            if(predExp instanceof PredExpValuePlaceholder) {
+            if (predExp instanceof PredExpValuePlaceholder) {
                 PredExpValuePlaceholder placeholder = ((PredExpValuePlaceholder)predExp);
                 Object parameter = parameters[dataIndex + placeholder.getIndex() - 1];
                 predExps.set(i, placeholder.createPredExp(parameter));
@@ -237,7 +240,7 @@ public class QueryHolder implements QueryContainer {
                     predExps.set(i - 1, binExp);
                 }
             }
-            if(predExp instanceof OperatorRefPredExp) {
+            if (predExp instanceof OperatorRefPredExp) {
                 if (type == null) {
                     throw new IllegalStateException("Cannot retrieve type of parameter of prepared statement");
                 }
@@ -252,16 +255,16 @@ public class QueryHolder implements QueryContainer {
     }
 
     private PredExp createBinPredExp(String name, Class<?> type) {
-        if(intTypes.contains(type)) {
+        if (intTypes.contains(type)) {
             return PredExp.integerBin(name);
         }
-        if(String.class.equals(type)) {
+        if (String.class.equals(type)) {
             return PredExp.stringBin(name);
         }
-        if(Array.class.isAssignableFrom(type) || type.isArray() || Collection.class.isAssignableFrom(type)) {
+        if (Array.class.isAssignableFrom(type) || type.isArray() || Collection.class.isAssignableFrom(type)) {
             return PredExp.listBin(name);
         }
-        if(Map.class.isAssignableFrom(type)) {
+        if (Map.class.isAssignableFrom(type)) {
             return PredExp.mapBin(name);
         }
 
@@ -306,7 +309,7 @@ public class QueryHolder implements QueryContainer {
         if ((predExps.size() == 3) && predExps.stream().anyMatch(e -> PredExpUtil.isBin(extractType(e)) && "PK".equals(getValue(e)))) {
             Optional<Object> value = predExps.stream().filter(e -> isValue(extractType(e))).map(PredExpUtil::getValue).findFirst();
             if (value.isPresent()) {
-                Key key = KeyFactory.createKey(schema, set, value.get());
+                Key key = createKey(schema, set, value.get());
                 return new AerospikeQueryByPk(sqlStatement, schema, columns, key, policyProvider.getQueryPolicy());
             }
         }
@@ -328,7 +331,7 @@ public class QueryHolder implements QueryContainer {
 
         if (aggregatedFields != null) {
             Value[] fieldsForAggregation = aggregatedFields.stream().map(StringValue::new).toArray(Value[]::new);
-            if(statement.getBinNames() != null && statement.getBinNames().length > 0) {
+            if (statement.getBinNames() != null && statement.getBinNames().length > 0) {
                 throw new IllegalArgumentException("Cannot perform aggregation operation with query that contains regular fields");
             }
             Pattern p = Pattern.compile("distinct\\((\\w+)\\)");
@@ -762,14 +765,14 @@ public class QueryHolder implements QueryContainer {
 
     @Override
     public List<DataColumn> getRequestedColumns() {
-        return columns.isEmpty() ? Collections.singletonList(HIDDEN.create(schema, set, "*", "*")) : columns;
+        return columns.isEmpty() ? singletonList(HIDDEN.create(schema, set, "*", "*")) : columns;
     }
 
     public List<DataColumn> getFilteredColumns() {
         return predExps.stream().filter(exp -> exp instanceof ColumnRefPredExp)
                 .map(e -> (ColumnRefPredExp)e)
                 .map(c -> DATA.create(schema, c.getTable(), null, c.getName()))
-                .collect(Collectors.toList());
+                .collect(toList());
     }
 
 

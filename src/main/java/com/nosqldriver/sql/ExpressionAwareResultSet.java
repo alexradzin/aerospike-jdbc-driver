@@ -24,11 +24,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 @VisibleForPackage
 class ExpressionAwareResultSet extends ResultSetWrapper {
@@ -40,7 +41,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     @VisibleForPackage
     ExpressionAwareResultSet(ResultSet rs, List<DataColumn> columns, boolean indexByName) {
         super(rs, columns, indexByName);
-        aliasToEval = columns.stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getLabel() != null).collect(Collectors.toMap(DataColumn::getLabel, DataColumn::getExpression));
+        aliasToEval = columns.stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getLabel() != null).collect(toMap(DataColumn::getLabel, DataColumn::getExpression));
         engine = new JavascriptEngineFactory().getEngine();
         this.rs = rs;
     }
@@ -148,9 +149,10 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        return (boolean)getValue(columnLabel, Object.class, v -> {
-                    return TypeTransformer.cast(v, boolean.class);
-                },
+        return (boolean)getValue(
+                columnLabel,
+                Object.class,
+                v -> cast(v, boolean.class),
                 () -> ExpressionAwareResultSet.super.getBoolean(columnLabel));
     }
 
@@ -239,12 +241,11 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
         DataColumnBasedResultSetMetaData md = (DataColumnBasedResultSetMetaData)rs.getMetaData();
-        List<DataColumn> dataColumns = md.getColumns().stream().filter(c -> !DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).collect(Collectors.toList());
-        List<DataColumn> expressions = md.getColumns().stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getType() == 0).collect(Collectors.toList());
+        List<DataColumn> dataColumns = md.getColumns().stream().filter(c -> !DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).collect(toList());
+        List<DataColumn> expressions = md.getColumns().stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getType() == 0).collect(toList());
         if (!expressions.isEmpty()) {
             Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
             Collection<String> bound = bind(rs, columns, bindings);
-            int n = md.getColumnCount();
 
             for (DataColumn column : dataColumns) {
                 String name = column.getName();
@@ -310,11 +311,11 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
         Collection<String> bound = bind(rs, columns, bindings);
         try {
             return engine.eval(eval);
-        } catch (ScriptException | RuntimeException e) {
-            if (e instanceof RuntimeException && e.getCause() instanceof SQLException) {
-                SneakyThrower.sneakyThrow(e.getCause());
-            }
+        } catch (ScriptException e) {
             SneakyThrower.sneakyThrow(new SQLException(e));
+            return null; //just to satisfy compiler
+        } catch (RuntimeException e) {
+            SneakyThrower.sneakyThrow(e.getCause() instanceof SQLException ? e.getCause() : new SQLException(e));
             return null; //just to satisfy compiler
         } finally {
             bound.forEach(bindings::remove);

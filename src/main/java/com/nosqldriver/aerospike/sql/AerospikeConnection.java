@@ -27,7 +27,6 @@ import java.sql.SQLXML;
 import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
@@ -40,6 +39,7 @@ import static java.sql.ResultSet.HOLD_CURSORS_OVER_COMMIT;
 import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static java.sql.Statement.NO_GENERATED_KEYS;
 import static java.util.Arrays.stream;
+import static java.util.Collections.emptyMap;
 
 @VisibleForPackage
 class AerospikeConnection implements Connection, SimpleWrapper {
@@ -49,7 +49,7 @@ class AerospikeConnection implements Connection, SimpleWrapper {
     private final IAerospikeClient client;
     private volatile boolean readOnly = false;
     private volatile SQLWarning sqlWarning;
-    private volatile Map<String, Class<?>> typeMap = Collections.emptyMap();
+    private volatile Map<String, Class<?>> typeMap = emptyMap();
     private volatile int holdability = HOLD_CURSORS_OVER_COMMIT;
     private final Properties clientInfo = new Properties();
     private final AtomicReference<String> schema = new AtomicReference<>(null); // schema can be updated by use statement

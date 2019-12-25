@@ -5,9 +5,9 @@ import net.sf.jsqlparser.statement.select.Join;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toSet;
 
 public enum JoinType {
     SIMPLE(Join::isSimple, true),
@@ -35,7 +35,7 @@ public enum JoinType {
         if (types.length == 0) {
             return true; // it is implicitly defined inner join
         }
-        Set<Boolean> skip = Arrays.stream(types).map(t -> t.skipMissing).collect(Collectors.toSet());
+        Set<Boolean> skip = Arrays.stream(types).map(t -> t.skipMissing).collect(toSet());
         if (skip.size() > 1) {
             throw new IllegalArgumentException(format("Incompatible join types %s", Arrays.toString(types)));
         }

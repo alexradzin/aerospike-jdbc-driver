@@ -11,11 +11,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import static java.sql.Types.NULL;
 import static java.util.Arrays.asList;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toMap;
 
 public class SqlLiterals {
     public static final Map<Class, Integer> sqlTypes = new HashMap<>();
@@ -52,7 +52,7 @@ public class SqlLiterals {
     }
     public static final Map<String, Integer> sqlTypeByName = sqlTypeNames.entrySet().stream()
             .filter(name -> name.getKey() != Types.ARRAY)
-            .collect(Collectors.toMap(Entry::getValue, Entry::getKey, (v1, v2) -> v1, TreeMap::new));
+            .collect(toMap(Entry::getValue, Entry::getKey, (v1, v2) -> v1, TreeMap::new));
 
     public static final Map<Integer, Class> sqlToJavaTypes = new HashMap<>();
     static {

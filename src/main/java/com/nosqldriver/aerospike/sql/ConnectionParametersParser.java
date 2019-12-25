@@ -13,9 +13,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static java.lang.String.join;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 
 @VisibleForPackage
 class ConnectionParametersParser {
@@ -81,7 +82,7 @@ class ConnectionParametersParser {
         Properties result = new Properties();
         result.putAll(properties.entrySet().stream()
                 .filter(e -> ((String)e.getKey()).startsWith(filter))
-                .collect(Collectors.toMap(e -> ((String)e.getKey()).substring(prefixLength), Map.Entry::getValue)));
+                .collect(toMap(e -> ((String)e.getKey()).substring(prefixLength), Map.Entry::getValue)));
         return result;
     }
 
@@ -98,6 +99,6 @@ class ConnectionParametersParser {
                 throw new IllegalStateException(e);
             }
             return props;
-        }).map(p -> join(".", p.getProperty("type"), p.getProperty("ns"), p.getProperty("set"), p.getProperty("bin"), p.getProperty("indexname"))).collect(Collectors.toSet());
+        }).map(p -> join(".", p.getProperty("type"), p.getProperty("ns"), p.getProperty("set"), p.getProperty("bin"), p.getProperty("indexname"))).collect(toSet());
     }
 }

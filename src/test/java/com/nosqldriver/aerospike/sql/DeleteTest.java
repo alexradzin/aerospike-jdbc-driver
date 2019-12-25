@@ -9,7 +9,6 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -23,6 +22,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.resultSetNext;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.retrieveColumn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -82,11 +82,11 @@ class DeleteTest {
     private <T> void assertDelete(Function<String, T> executor, String deleteSql, Predicate<Person> expectedResultFilter, Predicate<T> returnValueValidator) throws SQLException {
         writeBeatles();
         Collection<String> names1 = retrieveColumn(SELECT_ALL, "first_name");
-        assertEquals(stream(beatles).map(Person::getFirstName).collect(Collectors.toSet()), names1);
+        assertEquals(stream(beatles).map(Person::getFirstName).collect(toSet()), names1);
 
         assertTrue(returnValueValidator.test(executor.apply(deleteSql)));
 
         Collection<String> names2 = retrieveColumn(SELECT_ALL, "first_name");
-        assertEquals(stream(beatles).filter(expectedResultFilter).map(Person::getFirstName).collect(Collectors.toSet()), names2);
+        assertEquals(stream(beatles).filter(expectedResultFilter).map(Person::getFirstName).collect(toSet()), names2);
     }
 }

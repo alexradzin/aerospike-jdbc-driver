@@ -16,13 +16,11 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Time;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
@@ -32,6 +30,7 @@ import static java.sql.ResultSet.FETCH_FORWARD;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -137,7 +136,7 @@ class ListRecordSetTest {
                 "table",
                 Stream.of("short", "int", "long", "boolean", "float", "double", "string", "blob", "date", "time", "timestamp", "array")
                         .map(name -> DATA.create("schema", "talbe", name, name))
-                        .collect(Collectors.toList()),
+                        .collect(toList()),
                 singletonList(data)).getMetaData();
 
         //int[] actual = ListRecordSet.discoverTypes(data.size(), singletonList(data));
@@ -219,12 +218,10 @@ class ListRecordSetTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateDate("field", new Date(0)));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateTime(1, new Time(0)));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateTime("field", new Time(0)));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateTimestamp(1, new Timestamp(0)));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateTimestamp("field", new Timestamp(0)));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateTimestamp(1, new java.sql.Timestamp(0)));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateTimestamp("field", new java.sql.Timestamp(0)));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateAsciiStream(1, new ByteArrayInputStream(new byte[0])));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateAsciiStream("field", new ByteArrayInputStream(new byte[0])));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBinaryStream(1, new ByteArrayInputStream(new byte[0])));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBinaryStream("field", new ByteArrayInputStream(new byte[0])));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBinaryStream(1, new ByteArrayInputStream(new byte[0])));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateBinaryStream("field", new ByteArrayInputStream(new byte[0])));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateObject(1, new Object()));
@@ -273,8 +270,8 @@ class ListRecordSetTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNClob("field", (NClob)null));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNClob(1, (Reader)null));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNClob("field", (Reader)null));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNClob(1, (Reader)null, 0));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNClob("field", (Reader)null, 0));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNClob(1, null, 0));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNClob("field", null, 0));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateSQLXML(1, null));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateSQLXML("field", null));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.updateNCharacterStream(1, null));

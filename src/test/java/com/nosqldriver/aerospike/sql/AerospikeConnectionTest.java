@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
@@ -19,6 +18,7 @@ import static java.sql.ResultSet.CONCUR_READ_ONLY;
 import static java.sql.ResultSet.HOLD_CURSORS_OVER_COMMIT;
 import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static java.sql.Statement.RETURN_GENERATED_KEYS;
+import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -228,7 +228,7 @@ class AerospikeConnectionTest {
         Connection conn = new AerospikeConnection(JDBC_LOCAL, new Properties());
         assertTrue(conn.getTypeMap().isEmpty());
         class Athletes {}
-        conn.setTypeMap(Collections.singletonMap("mySchemaName.ATHLETES", Athletes.class));
+        conn.setTypeMap(singletonMap("mySchemaName.ATHLETES", Athletes.class));
 
         Map<String, Class<?>> types = conn.getTypeMap();
         assertEquals(1, types.size());

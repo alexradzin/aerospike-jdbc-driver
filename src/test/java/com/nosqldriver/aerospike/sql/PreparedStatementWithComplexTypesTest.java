@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -38,6 +37,7 @@ import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
+import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -59,37 +59,37 @@ class PreparedStatementWithComplexTypesTest {
 
     @Test
     void insertOneRowUsingPreparedStatementWithIntKey() throws SQLException {
-        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setInt(1, 1), new Key("test", "people", 1));
+        assertOneInsertedRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setInt(1, 1), new Key("test", "people", 1));
     }
 
     @Test
     void insertOneRowUsingPreparedStatementWithLongKey() throws SQLException {
-        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setLong(1, 1L), new Key("test", "people", 1L));
+        assertOneInsertedRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setLong(1, 1L), new Key("test", "people", 1L));
     }
 
     @Test
     void insertOneRowUsingPreparedStatementWithShortKey() throws SQLException {
-        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setShort(1, (short)1), new Key("test", "people", 1));
+        assertOneInsertedRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setShort(1, (short)1), new Key("test", "people", 1));
     }
 
     @Test
     @Disabled // Double cannot be used in predicates; this test performs query that adds predicate even if it is used on PK. The real fix is to avoid creating predicates when querying PK
     void insertOneRowUsingPreparedStatementWithDoubleKey() throws SQLException {
-        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setDouble(1, 1.0), new Key("test", "people", 1));
+        assertOneInsertedRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setDouble(1, 1.0), new Key("test", "people", 1));
     }
 
     @Test
     void insertOneRowUsingPreparedStatementWithStringKey() throws SQLException {
-        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setString(1, "one"), new Key("test", "people", "one"));
+        assertOneInsertedRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setString(1, "one"), new Key("test", "people", "one"));
     }
 
     @Test
     @Disabled // Byte array cannot be used in predicates; this test performs query that adds predicate even if it is used on PK. The real fix is to avoid creating predicates when querying PK
     void insertOneRowUsingPreparedStatementWithByteArrayKey() throws SQLException {
-        insertOneRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setBytes(1, new byte[] {1, 2, 3}), new Key("test", "people", new byte[] {1, 2, 3}));
+        assertOneInsertedRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setBytes(1, new byte[] {1, 2, 3}), new Key("test", "people", new byte[] {1, 2, 3}));
     }
 
-    private <T> void insertOneRowUsingPreparedStatementWithDifferentKeyType(ThrowingConsumer<PreparedStatement, SQLException> setter, Key key) throws SQLException {
+    private <T> void assertOneInsertedRowUsingPreparedStatementWithDifferentKeyType(ThrowingConsumer<PreparedStatement, SQLException> setter, Key key) throws SQLException {
         PreparedStatement insert = testConn.prepareStatement("insert into people (PK, id, first_name, last_name, kids) values (?, ?, ?, ?, ?)");
         setter.accept(insert);
 
@@ -216,8 +216,8 @@ class PreparedStatementWithComplexTypesTest {
         assertEquals(new ArrayList<>(singleton(new Timestamp(now))), record1.getList("ts"));
         assertEquals(new ArrayList<>(singleton(new java.sql.Date(now))), record1.getList("d"));
 
-        assertEquals(new ArrayList<>(Arrays.asList(3.14f, 2.7f)), record1.getList("fval").stream().map(v -> ((Number)v).floatValue()).collect(Collectors.toList()));
-        assertEquals(new ArrayList<>(Arrays.asList(3.1415926, 2.718281828)), record1.getList("dval"));
+        assertEquals(new ArrayList<>(asList(3.14f, 2.7f)), record1.getList("fval").stream().map(v -> ((Number)v).floatValue()).collect(toList()));
+        assertEquals(new ArrayList<>(asList(3.1415926, 2.718281828)), record1.getList("dval"));
 
 
         PreparedStatement query = testConn.prepareStatement("select byte, short, int, long, boolean, string, nstring, blob, clob, nclob, t, ts, d, fval, dval from data where PK=?");

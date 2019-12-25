@@ -10,9 +10,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static java.lang.String.CASE_INSENSITIVE_ORDER;
+import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -46,7 +46,7 @@ class PartialComparatorTest {
             return map;
         };
 
-        List<Map<String, Object>> beatlsAttrs = Arrays.stream(TestDataUtils.beatles).map(toMap).sorted(comparator).collect(Collectors.toList());
+        List<Map<String, Object>> beatlsAttrs = Arrays.stream(TestDataUtils.beatles).map(toMap).sorted(comparator).collect(toList());
         assertArrayEquals(new String[] {"John Lennon", "Ringo Starr", "Paul McCartney", "George Harrison"}, beatlsAttrs.stream().map(p -> p.get("name")).toArray());
     }
 

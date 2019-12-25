@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.SqlLiterals.getSqlType;
+import static java.util.stream.Collectors.toList;
 
 public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
     private BiFunction<String, String, Iterable<R>> recordsFetcher;
@@ -45,7 +46,7 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                 if (all) {
                     result.addAll(data.entrySet().stream()
                             .map(e -> DATA.create(catalog, table, e.getKey(), e.getKey()).withType(getSqlType(e.getValue())))
-                            .collect(Collectors.toList()));
+                            .collect(toList()));
                 } else {
                     ctd.getValue().forEach(c -> {
                         Object value = data.get(c.getName());

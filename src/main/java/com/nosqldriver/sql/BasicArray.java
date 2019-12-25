@@ -7,16 +7,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toList;
 
 public class BasicArray extends SerialArray {
     private String schema;
@@ -102,7 +102,7 @@ public class BasicArray extends SerialArray {
 
     @Override
     public ResultSet getResultSet(long index, int count) throws SerialException {
-        return getResultSet(index, count, Collections.emptyMap());
+        return getResultSet(index, count, emptyMap());
     }
 
     @Override
@@ -112,7 +112,7 @@ public class BasicArray extends SerialArray {
 
     @Override
     public ResultSet getResultSet() throws SerialException {
-        return getResultSet(0, Integer.MAX_VALUE, Collections.emptyMap());
+        return getResultSet(0, Integer.MAX_VALUE, emptyMap());
     }
 
     @Override
@@ -121,7 +121,7 @@ public class BasicArray extends SerialArray {
         Iterable<List<?>> data = Arrays.stream(((Object[]) getArray()))
                 .skip(index)
                 .map(e -> asList(counter.incrementAndGet(), e))
-                .collect(Collectors.toList());
+                .collect(toList());
         return new ListRecordSet(null, schema, null, columns, data);
     }
 }

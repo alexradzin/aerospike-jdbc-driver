@@ -1,14 +1,15 @@
 package com.nosqldriver.sql;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+
+import static java.util.Arrays.asList;
 
 public class CompositeTypeDiscoverer implements TypeDiscoverer {
     private final Collection<TypeDiscoverer> discoverers;
 
     public CompositeTypeDiscoverer(TypeDiscoverer ... discoverers) {
-        this(Arrays.asList(discoverers));
+        this(asList(discoverers));
     }
 
 

@@ -10,7 +10,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 public class AerospikeDriver implements Driver {
     static {
@@ -43,7 +44,7 @@ public class AerospikeDriver implements Driver {
                 allInfo.add(new DriverPropertyInfo(kv[0], kv.length > 1 ? kv[1] : null));
             });
         }
-        allInfo.addAll(info.entrySet().stream().map(e -> new DriverPropertyInfo((String)e.getKey(), (String)e.getValue())).collect(Collectors.toList()));
+        allInfo.addAll(info.entrySet().stream().map(e -> new DriverPropertyInfo((String)e.getKey(), (String)e.getValue())).collect(toList()));
         return allInfo.toArray(new DriverPropertyInfo[0]);
     }
 

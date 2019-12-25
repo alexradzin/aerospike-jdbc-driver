@@ -2,16 +2,16 @@ package com.nosqldriver.sql;
 
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
 import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
 import static java.lang.String.format;
+import static java.util.Collections.emptyList;
+import static java.util.stream.Collectors.toMap;
 
 public class ListRecordSet extends ValueTypedResultSet<List<?>> {
     private final Iterator<List<?>> it;
@@ -21,7 +21,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
     public ListRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, Iterable<List<?>> data) {
         super(statement, schema, table, columns, columns1 -> discoverTypes(columns1, data));
         this.it = data.iterator();
-        nameToIndex = IntStream.range(0, columns.size()).boxed().collect(Collectors.toMap(i -> columns.get(i).getName(), i -> i));
+        nameToIndex = IntStream.range(0, columns.size()).boxed().collect(toMap(i -> columns.get(i).getName(), i -> i));
     }
 
     @Override
@@ -49,10 +49,10 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
 
     private static List<DataColumn> discoverTypes(List<DataColumn> columns, Iterable<List<?>> data) {
         if (columns.isEmpty() || (columns.size() == 1 && "*".equals(columns.get(0).getName()))) {
-            return Collections.emptyList();
+            return emptyList();
         }
 
-        if(columns.stream().noneMatch(c -> c.getType() == 0)) {
+        if (columns.stream().noneMatch(c -> c.getType() == 0)) {
             return columns;
         }
 

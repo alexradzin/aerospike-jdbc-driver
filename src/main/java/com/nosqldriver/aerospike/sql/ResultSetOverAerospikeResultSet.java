@@ -21,11 +21,12 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.util.Collections.emptyMap;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 
 public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map<String, Object>> {
@@ -52,7 +53,7 @@ public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map
                                     c.withType(Types.BIGINT);
                                 } else if (name.startsWith("avg(") || name.startsWith("sumsqs(")) {
                                     c.withType(Types.DOUBLE);
-                                } else if(name.contains("(")) {
+                                } else if (name.contains("(")) {
                                     Matcher m = functionOfField.matcher(name);
                                     if (m.find()) {
                                         referencedFields.add(c);
@@ -66,11 +67,11 @@ public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map
                                 Collection<DataColumn> specialFunctions = referencedFields.stream().map(e -> {
                                     Matcher m = functionOfField.matcher(e.getName());
                                     return m.find() ? DataColumn.DataColumnRole.HIDDEN.create(e.getCatalog(), e.getTable(), m.group(1), null) : e;
-                                }).collect(Collectors.toList());
+                                }).collect(toList());
                                 Collection<DataColumn> uniqueSpecialColumns = new TreeSet<>(Comparator.comparing(DataColumn::getName));
                                 uniqueSpecialColumns.addAll(specialFunctions);
-                                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor).discoverType(Stream.concat(regularColumns, specialFunctions.stream()).collect(Collectors.toList()));
-                                Map<String, DataColumn> name2SpecialColumn = uniqueSpecialColumns.stream().collect(Collectors.toMap(DataColumn::getName, c -> c));
+                                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor).discoverType(Stream.concat(regularColumns, specialFunctions.stream()).collect(toList()));
+                                Map<String, DataColumn> name2SpecialColumn = uniqueSpecialColumns.stream().collect(toMap(DataColumn::getName, c -> c));
 
                                 for (DataColumn c : referencedFields) {
                                     Matcher m = functionOfField.matcher(c.getName());

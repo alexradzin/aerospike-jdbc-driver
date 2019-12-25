@@ -85,7 +85,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
@@ -96,6 +95,8 @@ import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 
 public class AerospikeQueryFactory {
     private CCJSqlParserManager parserManager = new CCJSqlParserManager();
@@ -374,7 +375,7 @@ public class AerospikeQueryFactory {
                 if (where != null) {
                     String whereExpression = where.toString();
                     //TODO: this regex does not include parentheses because they conflict with "in (1, 2, 3)", so I have to find a way to safely detect composite mathematical expressions and function calls in where clause.
-                    if(Pattern.compile("[-+*/]").matcher(whereExpression).find()) {
+                    if (Pattern.compile("[-+*/]").matcher(whereExpression).find()) {
                         queries.setWhereExpression(whereExpression);
                     }
                     AtomicBoolean predExpsEmpty = new AtomicBoolean(true);
@@ -709,7 +710,7 @@ public class AerospikeQueryFactory {
                     Map<String, Function<Record, Object>> columnValueSuppliers =
                             IntStream.range(0, columns.size())
                                     .boxed()
-                                    .collect(Collectors.toMap(columns::get, valueSuppliers::get));
+                                    .collect(toMap(columns::get, valueSuppliers::get));
 
                     BiFunction<IAerospikeClient, Entry<Key, Record>, Boolean> updater = (client, kr) -> {
                         client.put(writePolicy, kr.getKey(), bins(kr.getValue(), columnValueSuppliers));
@@ -816,7 +817,7 @@ public class AerospikeQueryFactory {
                     throw new IllegalArgumentException("BETWEEN must have exactly 2 edges");
                 }
                 if ("PK".equals(column)) {
-                    Collection<Key> keys = LongStream.rangeClosed(longParameters.get(0), longParameters.get(1)).boxed().map(i -> new Key(schema, tableName, i)).collect(Collectors.toSet());
+                    Collection<Key> keys = LongStream.rangeClosed(longParameters.get(0), longParameters.get(1)).boxed().map(i -> new Key(schema, tableName, i)).collect(toSet());
                     keyPredicate = keys::contains;
 
                     filterByPk = true;
@@ -829,7 +830,7 @@ public class AerospikeQueryFactory {
             super.visit(expr);
             System.out.println("visit(In): " + expr);
             if ("PK".equals(column)) {
-                Collection<Key> keys = longParameters.stream().map(i -> new Key(schema, tableName, i)).collect(Collectors.toSet());
+                Collection<Key> keys = longParameters.stream().map(i -> new Key(schema, tableName, i)).collect(toSet());
                 keyPredicate = keys::contains;
                 filterByPk = true;
             } else {

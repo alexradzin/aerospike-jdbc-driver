@@ -12,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -166,14 +165,14 @@ class InsertTest {
     void insertAndSelectOneRowUsingPreparedStatementVariousTypes() throws SQLException, IOException {
         long now = currentTimeMillis();
         insertOneRowUsingPreparedStatementVariousTypes(now);
-        selectAndAssertOneRowUsingPreparedStatementVariousTypes(now, "select byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url, nothing from data where PK=?", 1);
+        assertOneSelectedRowUsingPreparedStatementVariousTypes(now, "select byte, short, int, long, boolean, float_number, double_number, bigdecimal, string, nstring, blob, clob, nclob, t, ts, d, url, nothing from data where PK=?", 1);
     }
 
     @Test
     void insertAndSelectWithJoinOneRowUsingPreparedStatementVariousTypes() throws SQLException, IOException {
         long now = currentTimeMillis();
         insertOneRowUsingPreparedStatementVariousTypes(now);
-        selectAndAssertOneRowUsingPreparedStatementVariousTypes(now, "select l.byte, l.short, l.int, l.long, l.boolean, l.float_number, l.double_number, l.bigdecimal, l.string, l.nstring, l.blob, l.clob, l.nclob, l.t, l.ts, l.d, l.url, l.nothing from data as l left join data2 as r on l.byte=r.id where PK=?", 1);
+        assertOneSelectedRowUsingPreparedStatementVariousTypes(now, "select l.byte, l.short, l.int, l.long, l.boolean, l.float_number, l.double_number, l.bigdecimal, l.string, l.nstring, l.blob, l.clob, l.nclob, l.t, l.ts, l.d, l.url, l.nothing from data as l left join data2 as r on l.byte=r.id where PK=?", 1);
     }
 
 
@@ -189,7 +188,7 @@ class InsertTest {
     void insertAndSelectOneRowUsingPreparedStatementVariousTypes(String sql, int value) throws SQLException, IOException {
         long now = currentTimeMillis();
         insertOneRowUsingPreparedStatementVariousTypes(now);
-        selectAndAssertOneRowUsingPreparedStatementVariousTypes(now, sql, value);
+        assertOneSelectedRowUsingPreparedStatementVariousTypes(now, sql, value);
     }
 
 
@@ -259,7 +258,7 @@ class InsertTest {
     }
 
 
-    private void selectAndAssertOneRowUsingPreparedStatementVariousTypes(long now, String query, int pk) throws SQLException, IOException {
+    private void assertOneSelectedRowUsingPreparedStatementVariousTypes(long now, String query, int pk) throws SQLException, IOException {
         String helloWorld = "hello, world!";
         String google = "http://www.google.com";
         PreparedStatement ps = testConn.prepareStatement(query);

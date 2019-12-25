@@ -526,14 +526,8 @@ public class AerospikeSqlClient implements IAerospikeClient {
         try {
             return c.get();
         } catch (Exception e) {
-            if (e instanceof AerospikeException) {
-                throwSqlException((AerospikeException) e);
-            } else if (e instanceof SQLException) {
-                sneakyThrow(e);
-            } else if (e instanceof RuntimeException) {
-                throw (RuntimeException)e;
-            }
-            throw new IllegalStateException(e);
+            processException(e);
+            throw new IllegalStateException(e); // shold never happen because processException() should never return normally.
         }
     }
 
@@ -542,14 +536,18 @@ public class AerospikeSqlClient implements IAerospikeClient {
         try {
             c.accept(client);
         } catch (Exception e) {
-            if (e instanceof AerospikeException) {
-                throwSqlException((AerospikeException) e);
-            } else if (e instanceof SQLException) {
-                sneakyThrow(e);
-            } else if (e instanceof RuntimeException) {
-                throw (RuntimeException)e;
-            }
-            throw new IllegalStateException(e);
+            processException(e);
         }
+    }
+
+    private void processException(Exception e) {
+        if (e instanceof AerospikeException) {
+            throwSqlException((AerospikeException) e);
+        } else if (e instanceof SQLException) {
+            sneakyThrow(e);
+        } else if (e instanceof RuntimeException) {
+            throw (RuntimeException)e;
+        }
+        throw new IllegalStateException(e);
     }
 }

@@ -4,17 +4,17 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Map;
-import java.util.stream.Collectors;
 
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
+import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ExpressionAwarePropertyGetterTest {
     @Test
     void noProperty() {
-        assertExpression(Collections.emptyMap(), "something", null);
+        assertExpression(emptyMap(), "something", null);
     }
 
     @Test
@@ -24,7 +24,7 @@ class ExpressionAwarePropertyGetterTest {
 
     @Test
     void validMathExpressionWithoutVariables() {
-        assertExpression(Collections.emptyMap(), "3 + 5", 8);
+        assertExpression(emptyMap(), "3 + 5", 8);
     }
 
     @Test
@@ -42,7 +42,7 @@ class ExpressionAwarePropertyGetterTest {
                         return null;
                     }
                 },
-                holder -> Arrays.stream(Holder.class.getDeclaredFields()).map(Field::getName).collect(Collectors.toList())).apply(new Holder(), "pi * e");
+                holder -> Arrays.stream(Holder.class.getDeclaredFields()).map(Field::getName).collect(toList())).apply(new Holder(), "pi * e");
 
         assertEquals(Math.PI * Math.E, actual, 0.001);
     }

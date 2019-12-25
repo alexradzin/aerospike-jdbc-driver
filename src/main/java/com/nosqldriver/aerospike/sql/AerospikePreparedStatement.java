@@ -38,17 +38,18 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.lang.String.format;
+import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public class AerospikePreparedStatement extends AerospikeStatement implements PreparedStatement {
     private static final KeyRecordFetcherFactory keyRecordFetcherFactory = new KeyRecordFetcherFactory();
@@ -275,7 +276,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
             aliasToName.put(c.getLabel(), c.getName());
         }
 
-        Map<String, DataColumn> columnByIdentifier = discoverType(Collections.singletonList(DATA.create(schema.get(), set, "*", "*"))).stream().collect(Collectors.toMap(c -> String.join(":", c.getCatalog(), c.getTable(), c.getLabel()), c -> c));
+        Map<String, DataColumn> columnByIdentifier = discoverType(singletonList(DATA.create(schema.get(), set, "*", "*"))).stream().collect(toMap(c -> String.join(":", c.getCatalog(), c.getTable(), c.getLabel()), c -> c));
         List<DataColumn> parameterColumns = queryPlan.getFilteredColumns().stream().map(c -> {
             String id = String.join(":", c.getCatalog(), c.getTable(), c.getLabel());
             String name = aliasToName.getOrDefault(c.getLabel(), c.getLabel());
@@ -285,7 +286,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
                 column.withType(discoverdColumn.getType());
             }
             return column;
-        }).collect(Collectors.toList());
+        }).collect(toList());
 
         return new SimpleParameterMetaData(parameterColumns);
     }

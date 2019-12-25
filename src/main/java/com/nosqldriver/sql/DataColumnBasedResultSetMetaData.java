@@ -12,13 +12,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
 import static java.util.Collections.emptyList;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toList;
 
 public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, SimpleWrapper {
     private static final int MAX_BLOCK_SIZE = 128 * 1024;
@@ -93,7 +93,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
     public DataColumnBasedResultSetMetaData updateData(ResultSetMetaData md) throws SQLException {
         List<DataColumn> additionalColumns = new ArrayList<>();
 
-        for(DataColumn c  : ((DataColumnBasedResultSetMetaData)md).columns) {
+        for (DataColumn c  : ((DataColumnBasedResultSetMetaData)md).columns) {
             String catalog = c.getCatalog();
             String table = c.getTable();
             String label = Stream.of(c.getLabel(), c.getName()).filter(Objects::nonNull).findFirst().orElse(null);
@@ -124,7 +124,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
                 additionalColumns.add(c);
             }
         }
-        return new DataColumnBasedResultSetMetaData(Stream.of(columns, additionalColumns).flatMap(Collection::stream).collect(Collectors.toList()));
+        return new DataColumnBasedResultSetMetaData(Stream.of(columns, additionalColumns).flatMap(Collection::stream).collect(toList()));
     }
 
     private Stream<DataColumn> getVisibleColumns() {

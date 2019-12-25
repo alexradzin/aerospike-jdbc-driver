@@ -19,7 +19,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static com.aerospike.client.query.PredExp.integerBin;
 import static com.aerospike.client.query.PredExp.integerEqual;
@@ -32,8 +31,14 @@ import static com.nosqldriver.aerospike.sql.query.QueryHolder.BIN_NAME_DOES_NOT_
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toMap;
 
 public class BinaryOperation {
+    private Statement statement;
+    private String table;
+    private String column;
+    private List<Object> values = new ArrayList<>(2);
+
     @VisibleForPackage
     static class PrimaryKeyEqualityPredicate implements Predicate<ResultSet> {
         private final Key key;
@@ -54,10 +59,6 @@ public class BinaryOperation {
             }
         }
     }
-    private Statement statement;
-    private String table;
-    private String column;
-    private List<Object> values = new ArrayList<>(2);
 
     public BinaryOperation() {
     }
@@ -204,7 +205,7 @@ public class BinaryOperation {
 
         private static Map<String, Operator> operators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         static {
-            operators.putAll(Arrays.stream(Operator.values()).collect(Collectors.toMap(e -> e.operator, e -> e)));
+            operators.putAll(Arrays.stream(Operator.values()).collect(toMap(e -> e.operator, e -> e)));
         }
         private final String operator;
         private final boolean requiresColumn;

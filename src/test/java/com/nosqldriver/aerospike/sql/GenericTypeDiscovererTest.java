@@ -47,7 +47,7 @@ class GenericTypeDiscovererTest {
 
     @AfterEach
     void dropAll() {
-        deleteAllRecords(NAMESPACE, TestDataUtils.DATA);
+        deleteAllRecords(NAMESPACE, DATA);
     }
 
     @Test
@@ -71,23 +71,23 @@ class GenericTypeDiscovererTest {
     void discoverAll() throws SQLException {
         writeData();
         List<DataColumn> all = singletonList(DataColumnRole.DATA.create(NAMESPACE, DATA, "*", "*"));
-        discover(createTypeDiscoverer(), all);
-        discover(createTypeDiscoverer(4), all);
+        assertDiscoveredColumns(createTypeDiscoverer(), all);
+        assertDiscoveredColumns(createTypeDiscoverer(4), all);
     }
 
     @Test
-    void discover() throws SQLException {
+    void assertDiscoveredColumns() throws SQLException {
         writeData();
         List<DataColumn> all = asList(
                 DataColumnRole.DATA.create(NAMESPACE, DATA, "name", "name"),
                 DataColumnRole.DATA.create(NAMESPACE, DATA, "mother", "mother"),
                 DataColumnRole.DATA.create(NAMESPACE, DATA, "father", "father"));
-        discover(createTypeDiscoverer(), all);
-        discover(createTypeDiscoverer(10), all);
+        assertDiscoveredColumns(createTypeDiscoverer(), all);
+        assertDiscoveredColumns(createTypeDiscoverer(10), all);
     }
 
 
-    void discover(TypeDiscoverer discoverer, List<DataColumn> columns) throws SQLException {
+    void assertDiscoveredColumns(TypeDiscoverer discoverer, List<DataColumn> columns) {
         assertDiscoveredColumns(
                 discoverer,
                 columns,

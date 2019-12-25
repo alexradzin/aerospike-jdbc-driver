@@ -40,7 +40,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -72,6 +71,7 @@ import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Collections.singleton;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -88,18 +88,6 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
  * For performance reasons the data is filled in the beginning of the test case.
  */
 class SelectTest {
-    private static final String[] peopleIds = {
-            "1",
-            "2",
-            "3",
-            "4",
-            "1, 2",
-            "2, 3",
-            "3, 4",
-            "1, 2, 3, 4"
-    };
-
-
     @AfterEach
     void clean() {
         dropIndexSafely("first_name");
@@ -547,7 +535,7 @@ class SelectTest {
         Statement statement = testConn.createStatement();
         ResultSet rs = statement.executeQuery(query);
         assertSame(statement, rs.getStatement());
-        assertEquals(new HashSet<>(asList(expected)), toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
+        assertEquals(new HashSet<>(asList(expected)), toListOfMaps(rs).stream().map(e -> (String)e.get("first_name")).collect(toSet()));
     }
 
     @VisibleForPackage // visible for tests
@@ -567,7 +555,7 @@ class SelectTest {
         ResultSet rs = testConn.createStatement().executeQuery(query);
         Collection<Map<String, Object>> list = toListOfMaps(rs);
         assertEquals(expected.length, list.size());
-        assertEquals(new HashSet<>(asList(expected)), list.stream().map(e -> (String)e.get("first_name")).collect(Collectors.toSet()));
+        assertEquals(new HashSet<>(asList(expected)), list.stream().map(e -> (String)e.get("first_name")).collect(toSet()));
     }
 
 
@@ -972,7 +960,7 @@ class SelectTest {
     }
 
 
-    void selectSpecificColumsUsingPreparedStatementAndValidateMetadata(String sql, int paramValue, int expectedParamType) throws SQLException {
+    private void selectSpecificColumsUsingPreparedStatementAndValidateMetadata(String sql, int paramValue, int expectedParamType) throws SQLException {
         PreparedStatement ps = testConn.prepareStatement(sql);
 
         ResultSetMetaData psmd = ps.getMetaData();
@@ -1392,7 +1380,7 @@ class SelectTest {
         while(rs.next()) {
             names.add(rs.getString(1));
         }
-        assertEquals(stream(beatles).map(Person::getFirstName).collect(Collectors.toSet()), names);
+        assertEquals(stream(beatles).map(Person::getFirstName).collect(toSet()), names);
     }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
@@ -1430,7 +1418,7 @@ class SelectTest {
         years.add(assertCounts(rs));
         assertTrue(rs.next());
         years.add(assertCounts(rs));
-        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(Collectors.toSet()), years);
+        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(toSet()), years);
 
         return md;
     }
@@ -1473,7 +1461,7 @@ class SelectTest {
         years.add(assertCounts(rs));
         assertTrue(rs.next());
         years.add(assertCounts(rs));
-        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(Collectors.toSet()), years);
+        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(toSet()), years);
     }
 
     @Test
@@ -1488,7 +1476,7 @@ class SelectTest {
         years.add(assertSums(rs));
         assertTrue(rs.next());
         years.add(assertSums(rs));
-        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(Collectors.toSet()), years);
+        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(toSet()), years);
 
         assertFalse(rs.next());
     }
@@ -1550,7 +1538,7 @@ class SelectTest {
         years.add(assertStats(rs));
         assertTrue(rs.next());
         years.add(assertStats(rs));
-        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(Collectors.toSet()), years);
+        assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(toSet()), years);
 
         assertFalse(rs.next());
     }

@@ -3,14 +3,13 @@ package com.nosqldriver.util;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.stream.IntStream;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -142,13 +141,13 @@ class PagedCollectionTest {
     @Test
     void containsAllEmpty() {
         Collection<String> collection =  new PagedCollection<>(new TreeSet<>(), 4, false, NavigableSet::pollLast);
-        assertTrue(collection.containsAll(Collections.emptyList()));
+        assertTrue(collection.containsAll(emptyList()));
     }
 
     @Test
     void containsAll() {
-        Collection<String> collection = new PagedCollection<>(new TreeSet<>(Arrays.asList("a", "b", "c", "d")), 4, false, NavigableSet::pollLast);
-        assertTrue(collection.containsAll(Arrays.asList("a", "b", "c", "d")));
+        Collection<String> collection = new PagedCollection<>(new TreeSet<>(asList("a", "b", "c", "d")), 4, false, NavigableSet::pollLast);
+        assertTrue(collection.containsAll(asList("a", "b", "c", "d")));
     }
 
     private void assertMultipleRewrite(String[] data, int  pageSize) {
@@ -171,6 +170,6 @@ class PagedCollectionTest {
 
     @Test
     void validateToString() {
-        assertTrue(new PagedCollection<>(new TreeSet<>(Arrays.asList("a", "b", "c", "d")), 4, false, NavigableSet::pollLast).toString().startsWith("PagedCollection"));
+        assertTrue(new PagedCollection<>(new TreeSet<>(asList("a", "b", "c", "d")), 4, false, NavigableSet::pollLast).toString().startsWith("PagedCollection"));
     }
 }
