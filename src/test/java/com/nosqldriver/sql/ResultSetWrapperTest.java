@@ -9,6 +9,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.Date;
+import java.sql.JDBCType;
 import java.sql.NClob;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -207,14 +208,11 @@ class ResultSetWrapperTest {
         rs.updateObject("field", new Object());
         rs.updateObject(1, new Object(), 10);
         rs.updateObject("field", new Object(), 10);
-//        rs.updateObject(1, new Object(), JDBCType.BIGINT);
-//        rs.updateObject("field", new Object(), JDBCType.BIGINT);
-//        rs.updateObject(1, new Object(), JDBCType.BIGINT, 10);
-//        rs.updateObject("field", new Object(), JDBCType.BIGINT, 10);
+        rs.updateObject(1, new Object(), JDBCType.BIGINT);
+        rs.updateObject("field", new Object(), JDBCType.BIGINT);
+        rs.updateObject(1, new Object(), JDBCType.BIGINT, 10);
+        rs.updateObject("field", new Object(), JDBCType.BIGINT, 10);
 
-
-//        rs.updateNull(1);
-//        rs.updateNull("field");
         rs.insertRow();
         rs.updateRow();
         rs.deleteRow();
@@ -322,12 +320,10 @@ class ResultSetWrapperTest {
         verify(mock, times(1)).updateObject(eq("field"), any(Object.class));
         verify(mock, times(1)).updateObject(eq(1), any(Object.class), eq(10));
         verify(mock, times(1)).updateObject(eq("field"), any(Object.class), eq(10));
-        // These methods are implemented in ResultSet as and throw SQLFeatureNotSupportedException
-        // TODO: implement these methods and uncomment tests
-//        verify(mock, times(1)).updateObject(eq(1), any(Object.class), eq(JDBCType.BIGINT));
-//        verify(mock, times(1)).updateObject(eq("field"), any(Object.class), eq(JDBCType.BIGINT));
-//        verify(mock, times(1)).updateObject(eq(1), any(Object.class), eq(JDBCType.BIGINT), eq(10));
-//        verify(mock, times(1)).updateObject(eq("field"), any(Object.class), eq(JDBCType.BIGINT), eq(10));
+        verify(mock, times(1)).updateObject(eq(1), any(Object.class), eq(JDBCType.BIGINT));
+        verify(mock, times(1)).updateObject(eq("field"), any(Object.class), eq(JDBCType.BIGINT));
+        verify(mock, times(1)).updateObject(eq(1), any(Object.class), eq(JDBCType.BIGINT), eq(10));
+        verify(mock, times(1)).updateObject(eq("field"), any(Object.class), eq(JDBCType.BIGINT), eq(10));
 
         verify(mock, times(1)).insertRow();
         verify(mock, times(1)).updateRow();

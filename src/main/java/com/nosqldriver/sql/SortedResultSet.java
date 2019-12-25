@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.TreeSet;
 
+import static java.lang.String.format;
 import static java.util.Comparator.comparingInt;
 
 public class SortedResultSet extends BufferedResultSet {
@@ -16,7 +17,15 @@ public class SortedResultSet extends BufferedResultSet {
     }
 
     public SortedResultSet(ResultSet rs, List<OrderItem> orderItems, long limit) {
-        //TODO: it is strange that limit is of type long here. Check it. Long sounds too much.
-        super(rs, new PagedCollection<>(new TreeSet<>(new CompositeComparator<>(new ExpressionAwareMapComparator(orderItems), comparingInt(System::identityHashCode))), limit, false, TreeSet::pollLast), (int)limit);
+        //limit is long here because limit and offset returned by SQL parser are long. However fetchSize of JDBC is int, so we have to cast limit to int.
+        super(rs, new PagedCollection<>(new TreeSet<>(new CompositeComparator<>(new ExpressionAwareMapComparator(orderItems), comparingInt(System::identityHashCode))), limit, false, TreeSet::pollLast), safeCast(limit));
     }
+
+    private static int safeCast(long l) {
+        if (l > Integer.MAX_VALUE || l < Integer.MIN_VALUE) {
+            throw new IllegalArgumentException(format("Cannot cast value %d to int", l));
+        }
+        return (int)l;
+    }
+
 }
