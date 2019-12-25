@@ -7,6 +7,7 @@ import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.policy.WritePolicy;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ListRecordSet;
+import com.nosqldriver.util.SneakyThrower;
 
 import java.math.BigDecimal;
 import java.sql.Array;
@@ -42,39 +43,10 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
     static {
         valueTransformer.put(Objects::isNull, o -> null);
         valueTransformer.put(o -> o != null && BigDecimal.class.equals(o.getClass()), o -> ((BigDecimal)o).doubleValue());
-        valueTransformer.put(o -> o instanceof Blob, blob -> {
-            try {
-                return ((Blob)blob).getBytes(1, (int)((Blob)blob).length());
-            } catch (SQLException e) {
-                sneakyThrow(e);
-                return null;
-            }
-        });
+        valueTransformer.put(o -> o instanceof Blob, blob -> SneakyThrower.get(() -> ((Blob)blob).getBytes(1, (int)((Blob)blob).length())));
         valueTransformer.put(o -> o instanceof byte[], bytes -> bytes);
-        valueTransformer.put(o -> o instanceof Clob, clob -> {
-            try {
-                return ((Clob)clob).getSubString(1, (int)((Clob)clob).length());
-            } catch (SQLException e) {
-                sneakyThrow(e);
-                return null;
-            }
-        });
-
-
-        valueTransformer.put(o -> o instanceof Array, arr -> {
-            try {
-                return values(Arrays.stream(((Object[]) ((Array) arr).getArray())));
-                //return Arrays.stream(((Object[]) ((Array) arr).getArray())).map(AerospikeInsertQuery::binValue).collect(Collectors.toList());
-                //return Arrays.asList((Object[])((Array)arr).getArray());
-            } catch (SQLException e) {
-                sneakyThrow(e);
-                return null;
-            }
-        });
-
-//        valueTransformer.put(o -> o instanceof Collection<?>, collection -> collection instanceof List ? collection : new LinkedList<Object>((Collection)collection).stream().map(AerospikeInsertQuery::binValue).collect(Collectors.toList()));
-
-
+        valueTransformer.put(o -> o instanceof Clob, clob -> SneakyThrower.get(() -> ((Clob)clob).getSubString(1, (int)((Clob)clob).length())));
+        valueTransformer.put(o -> o instanceof Array, arr -> SneakyThrower.get(() -> values(Arrays.stream(((Object[]) ((Array) arr).getArray())))));
 
         valueTransformer.put(o -> o instanceof Collection<?>, collection -> values(((Collection<?>)collection).stream()));
         valueTransformer.put(o -> o.getClass().isArray() && !o.getClass().getComponentType().isPrimitive(), a -> values(Arrays.stream((Object[])a)));

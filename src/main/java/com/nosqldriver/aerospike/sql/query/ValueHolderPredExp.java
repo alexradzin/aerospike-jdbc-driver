@@ -41,11 +41,7 @@ public class ValueHolderPredExp<T> extends FakePredExp {
             return new ValueHolderPredExp<>((Object[])val);
         }
         if (val instanceof Array) {
-            try {
-                return createSqlArrayHolder((Array)val);
-            } catch (SQLException e) {
-                SneakyThrower.sneakyThrow(e);
-            }
+            return SneakyThrower.get(() -> createSqlArrayHolder((Array)val));
         }
         throw new IllegalArgumentException("" + val);
     }

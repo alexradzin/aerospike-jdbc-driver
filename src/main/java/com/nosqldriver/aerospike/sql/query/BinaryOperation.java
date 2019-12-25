@@ -7,7 +7,6 @@ import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,12 +50,7 @@ public class BinaryOperation {
 
         @Override
         public boolean test(ResultSet rs) {
-            try {
-                return Objects.equals(key, rs.getObject("PK")) == eq;
-            } catch (SQLException e) {
-                SneakyThrower.sneakyThrow(e);
-                throw new IllegalStateException(); // This cannot happen because previous line in fact throwws exception. This line is written to satisfy compiler.
-            }
+            return Boolean.TRUE.equals(SneakyThrower.get(() -> Objects.equals(key, rs.getObject("PK")) == eq));
         }
     }
 

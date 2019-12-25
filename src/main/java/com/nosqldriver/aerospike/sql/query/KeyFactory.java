@@ -42,11 +42,7 @@ class KeyFactory {
                 return createKeysFromArray(schema, table, value);
             }
             if (value instanceof java.sql.Array) {
-                try {
-                    return createKeysFromArray(schema, table, ((java.sql.Array) value).getArray());
-                } catch (SQLException e) {
-                    SneakyThrower.sneakyThrow(e);
-                }
+                return SneakyThrower.get(() -> createKeysFromArray(schema, table, ((java.sql.Array) value).getArray()));
             }
             return createKeysFromArray(schema, table, new Object[] {value});
         }
