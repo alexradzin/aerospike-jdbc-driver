@@ -24,9 +24,11 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -392,6 +394,59 @@ class PreparedStatementWithComplexTypesTest {
         assertThrows(SQLException.class, insert::executeUpdate);
     }
 
+
+    @Test
+    void insertEmptyMap() throws SQLException {
+        Map<?,?> map = Collections.emptyMap();
+        assertEquals(map, insertAndSelectMap(map));
+    }
+
+    @Test
+    void insertStringMap() throws SQLException {
+        Map<String, String> map = new TreeMap<>();
+        map.put("one", "first");
+        map.put("two", "second");
+        assertEquals(map, insertAndSelectMap(map));
+    }
+
+    @Test
+    void insertLongStringMap() throws SQLException {
+        Map<Long, String> map = new HashMap<>();
+        map.put(1L, "first");
+        map.put(2L, "second");
+        assertEquals(map, insertAndSelectMap(map));
+    }
+
+    @Test
+    void insertStringLongMap() throws SQLException {
+        Map<String, Long> map = new HashMap<>();
+        map.put("first", 1L);
+        map.put("second", 2L);
+        assertEquals(map, insertAndSelectMap(map));
+    }
+
+    @Test
+    void insertComplexMap() throws SQLException {
+        Map<String, Object> map = new HashMap<>();
+        map.put("long", 12345L);
+        map.put("double", 3.14);
+        map.put("list", asList("abc", "xyz"));
+        map.put("array", new String[] {"abc", "xyz"});
+
+        Map<String, Object> outMap = insertAndSelectMap(map);
+        assertEquals(map.size(), outMap.size());
+
+        map.keySet().forEach(k -> {
+            Object v = map.get(k);
+            if (v != null && v.getClass().isArray()) {
+                assertArrayEquals((Object[])v, (Object[])outMap.get(k));
+            } else {
+                assertEquals(v, outMap.get(k));
+            }
+        });
+    }
+
+
     <T> void insertOneRowWithTypedKey(T id, Key key) throws SQLException {
         PreparedStatement insert = testConn.prepareStatement("insert into people (PK, id, first_name, last_name) values (?, ?, ?, ?, ?)");
         insert.setObject(1, id);
@@ -415,5 +470,27 @@ class PreparedStatementWithComplexTypesTest {
         } catch (SQLException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+
+    private <K, V> Map<K, V> insertAndSelectMap(Map<K, V> inMap) throws SQLException {
+        Key key1 = new Key(NAMESPACE, DATA, 1);
+        assertNull(client.get(null, key1));
+
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, map) values (?, ?)");
+        insert.setInt(1, 1);
+
+        insert.setObject(2, inMap);
+
+        assertEquals(1, insert.executeUpdate());
+
+        ResultSet rs = testConn.createStatement().executeQuery("select * from data");
+
+        assertTrue(rs.next());
+
+        @SuppressWarnings("unchecked")
+        Map<K, V> outMap = (Map<K, V>)rs.getObject(1);
+        assertFalse(rs.next());
+        return outMap;
     }
 }
