@@ -119,3 +119,15 @@ function epoch(str, fmt) {
 function millis(date) {
     return date.getTime();
 }
+
+function map(str) {
+    return JSON.parse(str);
+}
+
+function list(str) {
+    return com.nosqldriver.util.DataUtil.toList(map(str));
+}
+
+function array(str) {
+    return com.nosqldriver.util.DataUtil.toArray(map(str));
+}

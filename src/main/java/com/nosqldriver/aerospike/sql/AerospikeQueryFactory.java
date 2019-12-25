@@ -17,9 +17,11 @@ import com.nosqldriver.aerospike.sql.query.QueryHolder;
 import com.nosqldriver.aerospike.sql.query.QueryHolder.ChainOperation;
 import com.nosqldriver.aerospike.sql.query.ValueRefPredExp;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.JavascriptEngineFactory;
 import com.nosqldriver.sql.JoinType;
 import com.nosqldriver.sql.OrderItem;
 import com.nosqldriver.sql.RecordExpressionEvaluator;
+import com.nosqldriver.util.SneakyThrower;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -67,6 +69,8 @@ import net.sf.jsqlparser.statement.select.SubSelect;
 import net.sf.jsqlparser.statement.select.UnionOp;
 import net.sf.jsqlparser.statement.update.Update;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptException;
 import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -105,6 +109,8 @@ public class AerospikeQueryFactory {
     private String set;
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
+    private final ScriptEngine engine = new JavascriptEngineFactory().getEngine();
+
     @VisibleForPackage
     AerospikeQueryFactory(Statement statement, String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes) {
         this.statement = statement;
@@ -196,6 +202,14 @@ public class AerospikeQueryFactory {
                                     values.add(value.getValue());
                                 }
 
+                                @Override
+                                public void visit(net.sf.jsqlparser.expression.Function function) {
+                                    try {
+                                        values.add(engine.eval(function.toString()));
+                                    } catch (ScriptException e) {
+                                        SneakyThrower.sneakyThrow(e);
+                                    }
+                                }
                             });
                             System.out.println("visit expressions: " + expressionList);
                         }

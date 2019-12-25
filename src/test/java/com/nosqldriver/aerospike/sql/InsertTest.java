@@ -44,11 +44,13 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.sql.ResultSet.CLOSE_CURSORS_AT_COMMIT;
 import static java.sql.ResultSet.CONCUR_READ_ONLY;
 import static java.sql.ResultSet.FETCH_FORWARD;
 import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -647,9 +649,50 @@ class InsertTest {
         assertThrows(SQLException.class, () -> ps.setString(0, "ooops"));
         assertThrows(SQLException.class, () -> ps.setString(3, "ooops"));
         ps.setString(2, "ok");
-
     }
 
+
+    @Test
+    void insertMap() throws SQLException {
+        insert("insert into data (PK, map) values (1, map('{\"one\": \"first\", \"two\": \"second\"}'))", 1);
+        Record record = client.get(null, new Key("test", "data", 1));
+        assertNotNull(record);
+        Map<String, Object> expectedData = new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
+        map.put("one", "first");
+        map.put("two", "second");
+        expectedData.put("map", map);
+        assertEquals(expectedData, record.bins);
+    }
+
+    @Test
+    void insertArray() throws SQLException {
+        insertCollection("array");
+    }
+
+    @Test
+    void insertList() throws SQLException {
+        insertCollection("list");
+    }
+
+    @Test
+    void insertListWithMissingEntries() {
+        // 0 entry is missing
+        assertEquals(
+                "Cannot create list due to missing entries",
+                assertThrows(
+                        SQLException.class,
+                        () -> insert("insert into data (PK, list) values (1, list('{\"1\": \"first\", \"2\": \"second\"}'))", 1)).getCause().getMessage());
+    }
+
+    void insertCollection(String function) throws SQLException {
+        insert(format("insert into data (PK, collection) values (1, %s('[1, 2, 3]'))", function), 1);
+        Record record = client.get(null, new Key("test", "data", 1));
+        assertNotNull(record);
+        Map<String, Object> expectedData = new HashMap<>();
+        expectedData.put("collection", asList(1L, 2L, 3L));
+        assertEquals(expectedData, record.bins);
+    }
 
     private String getString(Clob clob) throws SQLException {
         return clob.getSubString(1, (int)clob.length());

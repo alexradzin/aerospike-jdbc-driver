@@ -1,7 +1,5 @@
 package com.nosqldriver.sql;
 
-import com.nosqldriver.VisibleForPackage;
-
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
@@ -14,13 +12,11 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
-@VisibleForPackage
-class JavascriptEngineFactory {
+public class JavascriptEngineFactory {
     private static final Pattern FUNCTION_HEADER = Pattern.compile("function\\s+(\\w+)\\s*\\(");
     private final ScriptEngine engine;
 
-    @VisibleForPackage
-    JavascriptEngineFactory() {
+    public JavascriptEngineFactory() {
         try {
             engine = new ScriptEngineManager().getEngineByName("JavaScript");
             Reader functions = new InputStreamReader(getClass().getResourceAsStream("/functions.js"));
@@ -42,7 +38,7 @@ class JavascriptEngineFactory {
         }
     }
 
-    @VisibleForPackage ScriptEngine getEngine() {
+    public ScriptEngine getEngine() {
         return engine;
     }
 }
