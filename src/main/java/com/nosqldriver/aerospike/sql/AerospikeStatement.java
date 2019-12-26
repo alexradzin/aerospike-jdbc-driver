@@ -2,6 +2,7 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
+import com.aerospike.client.query.IndexCollectionType;
 import com.aerospike.client.query.IndexType;
 import com.aerospike.client.task.IndexTask;
 import com.nosqldriver.aerospike.sql.query.AerospikeInsertQuery;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static java.lang.String.format;
@@ -131,11 +133,27 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             }
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
+                Matcher m = fixIndexPattern.matcher(sql);
+                if (m.find()) {
+                    sql = sql.substring(0, m.start()) + sql.substring(m.start(), m.end()).replaceAll("\\s+", ".") + sql.substring(m.end());
+                }
+
                 List<String> indexes = new ArrayList<>();
                 AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes);
                 aqf.createQueryPlan(sql);
                 String[] index = aqf.getIndexes().iterator().next().split("\\.");
-                IndexTask task = statement.client.createIndex(null, aqf.getSchema(), aqf.getSet(), index[4], index[3], IndexType.valueOf(index[0].toUpperCase()));
+
+                IndexType indexType = IndexType.valueOf(index[0].toUpperCase());
+                String binName = index[3];
+                String indexName = index[4];
+                IndexCollectionType indexCollectionType = IndexCollectionType.DEFAULT;
+                if (index.length == 6) {
+                    binName = index[4];
+                    indexName = index[5];
+                    indexCollectionType = IndexCollectionType.valueOf(index[1].toUpperCase());
+                }
+
+                IndexTask task = statement.client.createIndex(null, aqf.getSchema(), aqf.getSet(), indexName, binName, indexType, indexCollectionType);
                 int timeout = statement.client.getWritePolicyDefault().totalTimeout;
                 if(timeout > 0) {
                     task.waitTillComplete(timeout);
@@ -208,7 +226,12 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
 
     }
 
-    private static final Pattern createIndexPattern = Pattern.compile("^CREATE\\s+(STRING|NUMERIC)\\s+INDEX.*");
+    private static final String indexTypes = "STRING|NUMERIC|GEO2DSPHERE";
+    private static final String indexCollectionType = "DEFAULT|LIST|MAPKEYS|MAPVALUES";
+    private static final Pattern createIndexPattern = Pattern.compile(format("^CREATE\\s+(%s)(\\s+(%s))?\\s+INDEX.*", indexTypes, indexCollectionType));
+    private static final Pattern fixIndexPattern = Pattern.compile(format("((?:%s)\\s+(?:%s))", indexTypes, indexCollectionType));
+
+
 
     public AerospikeStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider) {
         this.client = client;
