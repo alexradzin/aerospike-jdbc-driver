@@ -46,6 +46,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
+import static com.nosqldriver.sql.PreparedStatementUtil.parseParameters;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
@@ -62,7 +63,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
     public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql) throws SQLException {
         super(client, connection, schema, policyProvider);
         this.sql = sql;
-        int n = parametersCount(sql);
+        int n = parseParameters(sql, 0).getValue();
         parameterValues = new Object[n];
         Arrays.fill(parameterValues, Optional.empty());
         queryPlan = new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes).createQueryPlan(sql);
@@ -71,20 +72,6 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
         discoverer = new GenericTypeDiscoverer<>(
                 keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema.get(), set),
                 keyRecord -> keyRecord.record.bins);
-    }
-
-    private int parametersCount(String sql) {
-        int count = 0;
-        boolean intoConstantt = false;
-        for (char c : sql.toCharArray()) {
-            if (c == '\'') {
-                intoConstantt = !intoConstantt;
-            }
-            if (!intoConstantt && c == '?') {
-                count++;
-            }
-        }
-        return count;
     }
 
     @Override
@@ -435,5 +422,9 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     private List<DataColumn> discoverType(List<DataColumn> columns) {
         return discoverer.discoverType(columns);
+    }
+
+    public Object[] getParameterValues() {
+        return parameterValues;
     }
 }

@@ -248,7 +248,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
         try {
             return getStatementType(sql).executeQuery(this, sql);
         } catch (RuntimeException e) {
-            throw new SQLException(e);
+            throw new SQLException(e.getMessage(), e);
         }
     }
 
@@ -257,7 +257,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
         try {
             return getStatementType(sql).executeUpdate(this, sql);
         } catch (RuntimeException e) {
-            throw new SQLException(e);
+            throw new SQLException(e.getMessage(), e);
         }
     }
 

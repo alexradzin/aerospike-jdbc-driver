@@ -76,6 +76,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -89,11 +90,14 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
+import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKey;
 import static com.nosqldriver.sql.OrderItem.Direction.ASC;
 import static com.nosqldriver.sql.OrderItem.Direction.DESC;
+import static com.nosqldriver.sql.PreparedStatementUtil.parseParameters;
 import static com.nosqldriver.sql.SqlLiterals.operatorKey;
 import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
 import static java.lang.String.format;
@@ -567,13 +571,14 @@ public class AerospikeQueryFactory {
 
     @VisibleForPackage
     Function<IAerospikeClient, Integer> createUpdate(Statement statement, String sql) throws SQLException {
-        return createUpdatePlan(sql).getQuery(statement);
+        Object[] values = statement instanceof AerospikePreparedStatement ? ((AerospikePreparedStatement)statement).getParameterValues() : new Object[0];
+        return createUpdatePlan(sql, values).getQuery(statement);
     }
 
 
 
     @VisibleForPackage
-    QueryContainer<Integer> createUpdatePlan(String sql) throws SQLException {
+    QueryContainer<Integer> createUpdatePlan(String sql, Object[] parameterValues) throws SQLException {
         try {
             AtomicInteger limit = new AtomicInteger(0);
             AtomicReference<String> tableName = new AtomicReference<>(null);
@@ -610,7 +615,7 @@ public class AerospikeQueryFactory {
                     }
                     Expression where = delete.getWhere();
                     if (where != null) {
-                        WhereVisitor whereVisitor = new WhereVisitor(AerospikeQueryFactory.this.schema, tableName.get());
+                        WhereVisitor whereVisitor = new WhereVisitor(AerospikeQueryFactory.this.schema, tableName.get(), Arrays.asList(parameterValues));
                         where.accept(whereVisitor);
                         useWhereRecord.set(whereVisitor.useWhereRecord);
                         keyPredicate.set(whereVisitor.keyPredicate);
@@ -648,7 +653,7 @@ public class AerospikeQueryFactory {
 
 
                     for (Expression expression : update.getExpressions()) {
-                        // If set statemnt uses any element of expression ()+-*/ or function call - treat it as expression.
+                        // If set statement uses any element of expression ()+-*/ or function call - treat it as expression.
                         // Otherwise treat it either as column reference or simple value.
                         Function<Record, Object> evaluator = new RecordExpressionEvaluator(expression.toString());
                         AtomicReference<Function<Record, Object>> extractorRef = new AtomicReference<>();
@@ -716,6 +721,11 @@ public class AerospikeQueryFactory {
                             public void visit(LongValue value) {
                                 extractorRef.compareAndSet(null, record -> value.getValue());
                             }
+
+                            @Override
+                            public void visit(JdbcParameter parameter) {
+                                extractorRef.compareAndSet(null, record -> parameterValues[parameter.getIndex() - 1]);
+                            }
                         });
 
                         valueSuppliers.add(extractorRef.get());
@@ -736,7 +746,7 @@ public class AerospikeQueryFactory {
 
                     Expression where = update.getWhere();
                     if (where != null) {
-                        WhereVisitor whereVisitor = new WhereVisitor(AerospikeQueryFactory.this.schema, tableName.get());
+                        WhereVisitor whereVisitor = new WhereVisitor(AerospikeQueryFactory.this.schema, tableName.get(), Arrays.asList(parameterValues));
                         where.accept(whereVisitor);
                         useWhereRecord.set(whereVisitor.useWhereRecord);
                         keyPredicate.set(whereVisitor.keyPredicate);
@@ -748,7 +758,11 @@ public class AerospikeQueryFactory {
             });
 
             if (useWhereRecord.get() && whereExpr.get() != null) {
-                recordPredicate.set(new RecordExpressionEvaluator(whereExpr.get()));
+                int totalParamCount = parseParameters(sql, 0).getValue();
+                int whereParamCount = parseParameters(whereExpr.get(), 0).getValue();
+                int offset = totalParamCount - whereParamCount;
+                Map<String, Object> psValues = IntStream.range(0, parameterValues.length).boxed().filter(i -> parameterValues[i] != null).collect(Collectors.toMap(i -> "$" + (i + 1), i -> parameterValues[i]));
+                recordPredicate.set(new RecordExpressionEvaluator(parseParameters(whereExpr.get(), offset).getKey(), psValues));
             } else if (filterByPk.get()) {
                 recordPredicate.set(r -> false);
             }
@@ -795,7 +809,6 @@ public class AerospikeQueryFactory {
         }
     }
 
-
     private Bin[] bins(Record record, Map<String, Function<Record, Object>> columnValueSuppliers) {
         return columnValueSuppliers.entrySet().stream().map(e -> new Bin(e.getKey(), e.getValue().apply(record))).toArray(Bin[]::new);
     }
@@ -803,6 +816,7 @@ public class AerospikeQueryFactory {
     private static class WhereVisitor extends ExpressionVisitorAdapter {
         private final String tableName;
         private final String schema;
+        private final List<Object> parameterValues;
 
         private Predicate<Key> keyPredicate = key -> false;
         private boolean useWhereRecord = false;
@@ -810,41 +824,37 @@ public class AerospikeQueryFactory {
 
 
         private String column = null;
-        private final List<Long> longParameters = new ArrayList<>();
-        private final Collection<String> stringParameters = new ArrayList<>();
+        private final List<Object> queryValues = new ArrayList<>();
 
 
-        private WhereVisitor(String schema, String tableName) {
+        private WhereVisitor(String schema, String tableName, List<Object> parameterValues) {
             this.schema = schema;
             this.tableName = tableName;
+            this.parameterValues = parameterValues;
         }
 
         public void visit(Between expr) {
             System.out.println("visit(Between): " + expr);
             super.visit(expr);
-            if (!stringParameters.isEmpty()) {
-                throw new IllegalArgumentException("BETWEEN cannot be applied to string");
-            }
-
-            if (!longParameters.isEmpty()) {
-                if (longParameters.size() != 2) {
-                    throw new IllegalArgumentException("BETWEEN must have exactly 2 edges");
+            if (!queryValues.isEmpty()) {
+                if (queryValues.stream().anyMatch(p -> !Number.class.isAssignableFrom(p.getClass()))) {
+                    throw new IllegalArgumentException("BETWEEN cannot be applied to string");
                 }
                 if ("PK".equals(column)) {
-                    Collection<Key> keys = LongStream.rangeClosed(longParameters.get(0), longParameters.get(1)).boxed().map(i -> new Key(schema, tableName, i)).collect(toSet());
+                    Collection<Key> keys = LongStream.rangeClosed(((Number)queryValues.get(0)).longValue(), ((Number)queryValues.get(1)).longValue()).boxed().map(i -> new Key(schema, tableName, i)).collect(toSet());
                     keyPredicate = keys::contains;
-
                     filterByPk = true;
                 } else {
                     useWhereRecord = true;
                 }
             }
         }
+
         public void visit(InExpression expr) {
             super.visit(expr);
             System.out.println("visit(In): " + expr);
             if ("PK".equals(column)) {
-                Collection<Key> keys = longParameters.stream().map(i -> new Key(schema, tableName, i)).collect(toSet());
+                Collection<Key> keys = queryValues.stream().map(v -> createKey(schema, tableName, v)).collect(toSet());
                 keyPredicate = keys::contains;
                 filterByPk = true;
             } else {
@@ -856,45 +866,38 @@ public class AerospikeQueryFactory {
             super.visitBinaryExpression(expr);
 
             if ("PK".equals(column)) {
-                Key condition = new Key(schema, tableName, longParameters.get(0));
+                Key condition = createKey(schema, tableName, queryValues.get(0));
                 keyPredicate = condition::equals;
                 filterByPk = true;
             } else {
                 useWhereRecord = true;
             }
-
         }
+
         public void visit(Column col) {
             column = col.getColumnName();
         }
         public void visit(LongValue value) {
-            longParameters.add(value.getValue());
+            queryValues.add(value.getValue());
         }
         public void visit(StringValue value) {
-            stringParameters.add(value.getValue());
+            queryValues.add(value.getValue());
         }
+
+        public void visit(JdbcParameter parameter) {
+            queryValues.add(parameterValues.get(parameter.getIndex() - 1));
+        }
+
     }
 
 
-//    public CCJSqlParserManager getParserManager() {
-//        return parserManager;
-//    }
-//
     public String getSchema() {
         return schema;
     }
-//
-//    public AerospikePolicyProvider getPolicyProvider() {
-//        return policyProvider;
-//    }
 
     public Collection<String> getIndexes() {
         return indexes;
     }
-
-//    public static Map<String, Supplier<PredExp>> getPredExpOperators() {
-//        return predExpOperators;
-//    }
 
     public String getSet() {
         return set;

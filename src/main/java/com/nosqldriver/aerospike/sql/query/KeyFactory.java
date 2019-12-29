@@ -10,10 +10,8 @@ import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 
-@VisibleForPackage
-class KeyFactory {
-    @VisibleForPackage
-    static Key createKey(String schema, String table, Object value) {
+public class KeyFactory {
+    public static Key createKey(String schema, String table, Object value) {
         final Key key;
         if (value instanceof Byte) {
             key = new Key(schema, table, ((Byte) value).intValue());
@@ -35,8 +33,7 @@ class KeyFactory {
         return key;
     }
 
-    @VisibleForPackage
-    static Key[] createKeys(String schema, String table, Object value) {
+    public static Key[] createKeys(String schema, String table, Object value) {
         if (value != null) {
             if (value.getClass().isArray()) {
                 return createKeysFromArray(schema, table, value);

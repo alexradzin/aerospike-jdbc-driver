@@ -12,20 +12,25 @@ import com.aerospike.client.query.IndexType;
 import com.nosqldriver.Person;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.util.SneakyThrower;
+import com.nosqldriver.util.ThrowingBiFunction;
 import com.nosqldriver.util.ThrowingFunction;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.aerospike.client.Log.setCallback;
@@ -91,7 +96,8 @@ public class TestDataUtils {
             try {
                 return testConn.createStatement().executeUpdate(sql);
             } catch (SQLException e) {
-                throw new IllegalStateException(e);
+                SneakyThrower.sneakyThrow(e);
+                return null;
             }
         }
     };
@@ -102,7 +108,8 @@ public class TestDataUtils {
             try {
                 return testConn.createStatement().execute(sql);
             } catch (SQLException e) {
-                throw new IllegalStateException(e);
+                SneakyThrower.sneakyThrow(e);
+                return null;
             }
         }
     };
@@ -113,7 +120,8 @@ public class TestDataUtils {
             try {
                 return testConn.createStatement().executeQuery(sql);
             } catch (SQLException e) {
-                throw new IllegalStateException(e);
+                SneakyThrower.sneakyThrow(e);
+                return null;
             }
         }
     };
@@ -123,6 +131,22 @@ public class TestDataUtils {
         public ResultSet apply(String sql) {
             try {
                 return testConn.prepareStatement(sql).executeQuery();
+            } catch (SQLException e) {
+                SneakyThrower.sneakyThrow(e);
+                return null;
+            }
+        }
+    };
+
+    @VisibleForPackage static BiFunction<String, Object[], ResultSet> executeQueryPreparedStatementWithParameters = new BiFunction<String, Object[], ResultSet>() {
+        @Override
+        public ResultSet apply(String sql, Object[] params) {
+            try {
+                PreparedStatement ps = testConn.prepareStatement(sql);
+                for (int i = 0; i < params.length; i++) {
+                    ps.setObject(i + 1, params[i]);
+                }
+                return ps.executeQuery();
             } catch (SQLException e) {
                 throw new IllegalStateException(e);
             }
