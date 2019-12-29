@@ -983,7 +983,6 @@ class SelectTest {
             columnInfo.add(join(",", psmd.getCatalogName(i), psmd.getTableName(i), psmd.getColumnName(i), psmd.getColumnTypeName(i)));
         }
 
-        System.out.println(columnInfo);
         assertTrue(columnInfo.contains("test,people,id,long"));
         assertTrue(columnInfo.contains("test,people,first_name,varchar"));
         assertTrue(columnInfo.contains("test,people,last_name,varchar"));
@@ -1864,7 +1863,6 @@ class SelectTest {
             assertTrue(expectedIdsSet.contains(id), "ID " + id + " is unexpected" );
             int i = id - 1;
             assertEquals(people[i].getId(), rs.getInt("id"));
-            System.out.println("id=" + rs.getInt("id"));
 
             assertEquals(people[i].getFirstName(), rs.getString("first_name"));
             assertEquals(people[i].getLastName(), rs.getString("last_name"));
