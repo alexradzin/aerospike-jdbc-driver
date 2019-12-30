@@ -5,7 +5,9 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
+import static java.util.Comparator.comparingInt;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DataUtilTest {
@@ -36,4 +38,14 @@ class DataUtilTest {
         assertEquals("Cannot create list due to missing entries", assertThrows(IllegalArgumentException.class, () -> DataUtil.toArray(data)).getMessage());
     }
 
+    @Test
+    void arrayWithDuplicateEntries() {
+        // A way to create map with duplicate entries:
+        // 1. create TreeMap with comparator based on identity hashCode
+        Map<String, Object> data = new TreeMap<>(comparingInt(System::identityHashCode));
+        // 2. create keys by explicity calling of the String constructor.
+        data.put(new String("0"), "something");
+        data.put(new String("0"), "something");
+        assertEquals("Cannot create list due to duplicate entries", assertThrows(IllegalArgumentException.class, () -> DataUtil.toArray(data)).getMessage());
+    }
 }

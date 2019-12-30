@@ -76,7 +76,7 @@ import static java.util.Collections.singletonList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 
-public class QueryHolder implements QueryContainer {
+public class QueryHolder implements QueryContainer<ResultSet> {
     @VisibleForPackage static final String BIN_NAME_DOES_NOT_EXIST = "NSDOESNOTEXIST";
     private static final Collection<Class> intTypes = new HashSet<>(asList(Byte.class, Short.class, Integer.class, Long.class, byte.class, short.class, int.class, long.class));
     private String schema;

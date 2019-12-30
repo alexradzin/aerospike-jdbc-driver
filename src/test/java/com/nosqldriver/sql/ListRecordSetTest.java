@@ -121,6 +121,30 @@ class ListRecordSetTest {
         assertFalse(rs.next());
     }
 
+
+
+    @Test
+    void misc() throws SQLException {
+        ListRecordSet rs = new ListRecordSet(null, "schema", "table",
+                asList(
+                        DATA.create(catalog, table, "first_name", "first_name"),
+                        DATA.create(catalog, table, "last_name", "last_name"),
+                        DATA.create(catalog, table, "year_of_birth", "year_of_birth")),
+                asList(asList("Neil", "Armstrong", 1930), asList("Buzz", "Aldrin", 1930)));
+
+
+        assertEquals(1, rs.getFetchSize());
+        assertThrows(SQLException.class, () -> rs.setFetchSize(2));
+        assertEquals(ResultSet.TYPE_FORWARD_ONLY, rs.getType());
+        assertEquals(ResultSet.CONCUR_READ_ONLY, rs.getConcurrency());
+
+        assertEquals(ResultSet.FETCH_FORWARD, rs.getFetchDirection());
+        rs.setFetchDirection(ResultSet.FETCH_FORWARD); //OK
+        assertEquals(ResultSet.FETCH_FORWARD, rs.getFetchDirection());
+        assertThrows(SQLFeatureNotSupportedException.class, rs::previous);
+    }
+
+
     @Test
     void discoverTypes() throws SQLException {
         long now = currentTimeMillis();

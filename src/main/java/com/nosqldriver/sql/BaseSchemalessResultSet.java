@@ -301,11 +301,6 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     }
 
     @Override
-    public boolean previous() throws SQLException {
-        throw new SQLFeatureNotSupportedException();
-    }
-
-    @Override
     public void setFetchDirection(int direction) throws SQLException {
         if (direction != FETCH_FORWARD) {
             SQLWarning warning = new SQLWarning(format("Attempt to set unsupported fetch direction %d. Only FETCH_FORWARD=%d is supported. The value is ignored.", direction, FETCH_FORWARD));
@@ -315,33 +310,6 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
                 sqlWarning.setNextWarning(warning);
             }
         }
-    }
-
-    @Override
-    public int getFetchDirection() throws SQLException {
-        return FETCH_FORWARD;
-    }
-
-    @Override
-    public void setFetchSize(int rows) throws SQLException {
-        if (rows != 1) {
-            throw new SQLException("Fetch size other than 1 is not supported right now");
-        }
-    }
-
-    @Override
-    public int getFetchSize() throws SQLException {
-        return 1;
-    }
-
-    @Override
-    public int getType() throws SQLException {
-        return TYPE_FORWARD_ONLY;
-    }
-
-    @Override
-    public int getConcurrency() throws SQLException {
-        return CONCUR_READ_ONLY;
     }
 
     @Override

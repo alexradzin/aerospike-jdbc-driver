@@ -1,8 +1,9 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.SneakyThrower;
+
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,7 +14,7 @@ public class ResultSetRowFilter extends ExpressionEvaluator<ResultSet> {
 
     @Override
     protected Map<String, Object> toMap(ResultSet rs) {
-        try {
+        return SneakyThrower.get(() -> {
             Map<String, Object> ctx = new HashMap<>();
             ResultSetMetaData md = rs.getMetaData();
             int n = md.getColumnCount();
@@ -26,8 +27,6 @@ public class ResultSetRowFilter extends ExpressionEvaluator<ResultSet> {
                 }
             }
             return ctx;
-        } catch (SQLException e) {
-            throw new IllegalStateException(e);
-        }
+        });
     }
 }

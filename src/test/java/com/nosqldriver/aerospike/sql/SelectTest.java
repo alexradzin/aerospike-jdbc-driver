@@ -431,7 +431,15 @@ class SelectTest {
     }
 
 
-
+    @Test
+    void findColumn() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery("select first_name, last_name from people");
+        do {
+            assertEquals(1, rs.findColumn("first_name"));
+            assertEquals(2, rs.findColumn("last_name"));
+            assertThrows(SQLException.class, () -> rs.findColumn("does_not_exist"));
+        } while (rs.next());
+    }
 
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)

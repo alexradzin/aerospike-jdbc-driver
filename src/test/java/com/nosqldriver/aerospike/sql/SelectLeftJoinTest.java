@@ -57,7 +57,7 @@ class SelectLeftJoinTest {
     @DisplayName("select first_name, i.name as instrument from people as p join guitars as i on p.id=i.person_id")
     void joinGuitars() throws SQLException {
         ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", VARCHAR);
-        Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
+        Map<String, Collection<String>> result = collect(rs, 1, "first_name", "instrument");
         assertEquals(3, result.size());
         Collection<String> guitar  = new HashSet<>(singleton("guitar"));
         asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
@@ -67,7 +67,7 @@ class SelectLeftJoinTest {
     @DisplayName("select first_name, i.name as instrument from people as p left join guitars as i on p.id=i.person_id")
     void leftJoinGuitars() throws SQLException {
         ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", VARCHAR);
-        Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
+        Map<String, Collection<String>> result = collect(rs, 1, "first_name", "instrument");
         assertEquals(4, result.size());
         asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
         assertEquals(new HashSet<>(), result.get("Ringo"));
@@ -79,7 +79,7 @@ class SelectLeftJoinTest {
     void joinGuitarsAndKeyboards() throws SQLException {
         writeKeyboards();
         ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "guitar", VARCHAR,  "name" , "keyboards", VARCHAR);
-        Map<String, Collection<String>> result = collect(rs, "first_name", "guitar", "keyboards");
+        Map<String, Collection<String>> result = collect(rs, 1, "first_name", "guitar", "keyboards");
         assertEquals(2, result.size());
 
         Collection<String> guitarAndKeyboards = new HashSet<>(asList("guitar", "keyboards"));

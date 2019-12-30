@@ -541,7 +541,7 @@ public class AerospikeQueryFactory {
 
 
                 if (plainSelect.getOrderByElements() != null) {
-                    plainSelect.getOrderByElements().stream().map(o -> new OrderItem(o.getExpression().toString(), o.isAsc() ? ASC :DESC)).forEach(o -> queries.addOrdering(o));
+                    plainSelect.getOrderByElements().stream().map(o -> new OrderItem(o.getExpression().toString(), o.isAsc() ? ASC :DESC)).forEach(queries::addOrdering);
                 }
 
                 if (plainSelect.getGroupByColumnReferences() != null) {
@@ -576,9 +576,7 @@ public class AerospikeQueryFactory {
     }
 
 
-
-    @VisibleForPackage
-    QueryContainer<Integer> createUpdatePlan(String sql, Object[] parameterValues) throws SQLException {
+    private QueryContainer<Integer> createUpdatePlan(String sql, Object[] parameterValues) throws SQLException {
         try {
             AtomicInteger limit = new AtomicInteger(0);
             AtomicReference<String> tableName = new AtomicReference<>(null);

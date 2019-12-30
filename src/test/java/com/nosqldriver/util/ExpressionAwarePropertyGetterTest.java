@@ -23,6 +23,16 @@ class ExpressionAwarePropertyGetterTest {
     }
 
     @Test
+    void simpleNullProperty() {
+        assertExpression(singletonMap("something", null), "something", null);
+    }
+
+    @Test
+    void expressionNullProperty() {
+        assertExpression(singletonMap("null()", null), "null()", null);
+    }
+
+    @Test
     void validMathExpressionWithoutVariables() {
         assertExpression(emptyMap(), "3 + 5", 8);
     }

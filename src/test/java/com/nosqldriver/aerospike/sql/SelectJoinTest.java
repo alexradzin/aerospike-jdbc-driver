@@ -28,6 +28,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
@@ -61,7 +62,7 @@ class SelectJoinTest {
     void oneToManyJoin(String sql) throws SQLException {
         ResultSet rs = executeQuery(sql, NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", VARCHAR);
         assertFindColumn(rs, "first_name", "instrument");
-        Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
+        Map<String, Collection<String>> result = collect(rs, 1, "first_name", "instrument");
         assertEquals(4, result.size());
         assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
         assertEquals(new HashSet<>(asList("vocals", "bass guitar", "guitar", "keyboards")), result.get("Paul"));
@@ -90,7 +91,7 @@ class SelectJoinTest {
         assertEquals(ResultSet.HOLD_CURSORS_OVER_COMMIT, rs.getHoldability());
         assertFalse(rs.isClosed());
         assertFindColumn(rs, "kids_count", "last_name", "id", "first_name", "year_of_birth", "name", null /*id from second table; the label is the same as first one, so it finds the first*/, "person_id");
-        Map<String, Collection<String>> result = collect(rs, "first_name", "name");
+        Map<String, Collection<String>> result = collect(rs, 0, "first_name", "name");
         assertEquals(4, result.size());
         assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
         assertEquals(new HashSet<>(asList("vocals", "bass guitar", "guitar", "keyboards")), result.get("Paul"));
@@ -111,7 +112,7 @@ class SelectJoinTest {
     })
     void oneToManyJoinWhereMainTable(String sql) throws SQLException {
         ResultSet rs = executeQuery(sql, NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", VARCHAR);
-        Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
+        Map<String, Collection<String>> result = collect(rs, 1, "first_name", "instrument");
         assertEquals(1, result.size());
         assertEquals(new HashSet<>(asList("vocals", "guitar", "keyboards", "harmonica")), result.get("John"));
         assertFindColumn(rs, "first_name", "instrument");
@@ -125,7 +126,7 @@ class SelectJoinTest {
     })
     void oneToManyJoinWhereSecondaryTable(String sql) throws SQLException {
         ResultSet rs = executeQuery(sql, NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", VARCHAR);
-        Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
+        Map<String, Collection<String>> result = collect(rs, 1, "first_name", "instrument");
         assertEquals(3, result.size());
         asList("John", "Paul", "George").forEach(name -> assertEquals(guitar, result.get(name)));
     }
@@ -139,15 +140,22 @@ class SelectJoinTest {
     })
     void oneToManyJoinWhereMainAndSecondaryTable(String sql) throws SQLException {
         ResultSet rs = executeQuery(sql, NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", VARCHAR);
-        Map<String, Collection<String>> result = collect(rs, "first_name", "instrument");
+        Map<String, Collection<String>> result = collect(rs, 1, "first_name", "instrument");
         assertEquals(1, result.size());
         assertEquals(guitar, result.get("Paul"));
     }
 
 
-    @VisibleForPackage static Map<String, Collection<String>> collect(ResultSet rs, String keyName, String ... valueNames) throws SQLException {
+    @VisibleForPackage static Map<String, Collection<String>> collect(ResultSet rs, int keyIndex, String keyName, String ... valueNames) throws SQLException {
         Map<String, Collection<String>> result = new HashMap<>();
+        if (keyIndex > 0) {
+            assertEquals(keyIndex, rs.findColumn(keyName));
+        }
         while(rs.next()) {
+            if (keyIndex > 0) {
+                assertEquals(keyIndex, rs.findColumn(keyName));
+            }
+            assertThrows(SQLException.class, () -> rs.findColumn("does_not_exist"));
             String key = rs.getString(keyName);
             Collection<String> values = result.getOrDefault(key, new HashSet<>());
             for (String valueName : valueNames) {
