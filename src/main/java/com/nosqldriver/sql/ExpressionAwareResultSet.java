@@ -59,9 +59,10 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        return (boolean)getValue(columnIndex, Object.class, v -> {
-                    return TypeTransformer.cast(v, boolean.class);
-                },
+        return (boolean)getValue(
+                columnIndex,
+                Object.class,
+                v -> TypeTransformer.cast(v, boolean.class),
                 () -> ExpressionAwareResultSet.super.getBoolean(columnIndex));
     }
 

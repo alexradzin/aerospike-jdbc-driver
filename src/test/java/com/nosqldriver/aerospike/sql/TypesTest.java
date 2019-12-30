@@ -39,11 +39,15 @@ class TypesTest {
     }
 
 
-    @Test
-    void simpleTypes() throws Exception {
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select text, integer, bigint, decimal, true_flag, false_flag from " + TYPE_TEST_TABLE,
+            "select text, integer, bigint, decimal, true_flag, false_flag from " + TYPE_TEST_TABLE + " as p left join secondary_table as s on p.text=s.text"
+    })
+    void simpleTypes(String sql) throws Exception {
         long now = currentTimeMillis();
         testConn.createStatement().execute(format("insert into %s (PK, text, integer, bigint, decimal, true_flag, false_flag) values (1, 'hello', 123, %d, 3.1415926, 1, 0)", TYPE_TEST_TABLE, now));
-        ResultSet rs = executeQuery(format("select text, integer, bigint, decimal, true_flag, false_flag from %s", TYPE_TEST_TABLE),
+        ResultSet rs = executeQuery(sql,
                 DATA.create(NAMESPACE, TYPE_TEST_TABLE, "text", "text").withType(VARCHAR),
                 DATA.create(NAMESPACE, TYPE_TEST_TABLE, "integer", "integer").withType(BIGINT),
                 DATA.create(NAMESPACE, TYPE_TEST_TABLE, "bigint", "bigint").withType(BIGINT),

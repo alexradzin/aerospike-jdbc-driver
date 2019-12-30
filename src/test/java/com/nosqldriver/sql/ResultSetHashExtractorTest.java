@@ -1,10 +1,13 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.util.ByteArrayComparator;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.function.Function;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
@@ -23,7 +26,10 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ResultSetHashExtractorTest {
     private static final String CATALOG = "catalog";
@@ -66,6 +72,23 @@ class ResultSetHashExtractorTest {
         assertArrayEquals(text1, text2);
     }
 
+    @Test
+    void resultSetThrowsException() throws SQLException {
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getMetaData()).thenThrow(new SQLException());
+        assertThrows(IllegalStateException.class, () -> new ResultSetHashExtractor().apply(rs));
+    }
+
+    @Test
+    void unsupportedType() throws SQLException {
+        ResultSet rs = mock(ResultSet.class);
+        ResultSetMetaData md = mock(ResultSetMetaData.class);
+        when(md.getColumnCount()).thenReturn(1);
+        when(md.getColumnLabel(1)).thenReturn("label");
+        when(md.getColumnType(1)).thenReturn(Types.OTHER);
+        when(rs.getMetaData()).thenReturn(md);
+        Assertions.assertEquals("Unsupported type " + Types.OTHER, assertThrows(IllegalArgumentException.class, () -> new ResultSetHashExtractor().apply(rs)).getMessage());
+    }
 
 
     private DataColumn column(String name, int type) {

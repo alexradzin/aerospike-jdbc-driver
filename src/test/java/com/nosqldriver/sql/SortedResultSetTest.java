@@ -19,6 +19,7 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SortedResultSetTest {
@@ -81,6 +82,11 @@ class SortedResultSetTest {
     void severalColumnsOrderBySeveralAscDesc() throws SQLException {
         List<List<?>> data = Arrays.stream(beatles).map(PojoHelper::fieldValues).collect(toList());
         assertOneColumnSeveralOrderBySeveralRecords(peopleColumns, data, asList(new OrderItem("yearOfBirth"), new OrderItem("kidsCount", DESC)), "firstName", new String[] {"Ringo", "John", "Paul", "George"});
+    }
+
+    @Test
+    void highLimit() {
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, emptyList()), emptyList(), Integer.MAX_VALUE + 1L)).getMessage().startsWith("Cannot cast value"));
     }
 
     private ResultSet dataRs(List<DataColumn> columns, Iterable<List<?>> data) {
