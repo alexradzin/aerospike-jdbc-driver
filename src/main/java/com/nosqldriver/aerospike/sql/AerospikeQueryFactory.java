@@ -630,7 +630,7 @@ public class AerospikeQueryFactory {
                 public void visit(Update update) {
                     List<Table> tables = update.getTables();
                     if (tables.size() != 1) {
-                        throw new IllegalArgumentException("Update statement can proceed one table only but was " + tables.size());
+                        SneakyThrower.sneakyThrow(new SQLException("Update statement can proceed one table only but was " + tables.size()));
                     }
                     Table table = tables.get(0);
                     tableName.set(table.getName());
@@ -789,7 +789,7 @@ public class AerospikeQueryFactory {
 
                 @Override
                 public List<DataColumn> getRequestedColumns() {
-                    throw new  IllegalStateException(); // this method should not be called here
+                    throw new IllegalStateException(); // this method should not be called here
                 }
 
                 @Override

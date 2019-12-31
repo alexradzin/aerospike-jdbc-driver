@@ -77,7 +77,6 @@ import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 
 public class QueryHolder implements QueryContainer<ResultSet> {
-    @VisibleForPackage static final String BIN_NAME_DOES_NOT_EXIST = "NSDOESNOTEXIST";
     private static final Collection<Class> intTypes = new HashSet<>(asList(Byte.class, Short.class, Integer.class, Long.class, byte.class, short.class, int.class, long.class));
     private String schema;
     private final Collection<String> indexes;
@@ -232,7 +231,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                             case "<>":
                                 createScanQuery(sqlStatement, new PrimaryKeyEqualityPredicate(createKey(getSchema(), getSetName(), parameter), false));
                                 break;
-                            default: throw new IllegalArgumentException(op);
+                            default: throw new IllegalArgumentException("Unsupported PK operation " + op);
                         }
 
                         indexesToRemove.addAll(asList(i - 1, i, i +1 ));

@@ -85,8 +85,13 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     }
 
     @Override
-    public boolean isLast() throws SQLException {
-        return currentIndex == row.size();
+    public boolean isLast() {
+        return currentIndex == row.size() - 1;
+    }
+
+    @Override
+    public boolean isAfterLast() throws SQLException {
+        return currentIndex > row.size() - 1;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.nosqldriver.Person;
+import org.junit.Assert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -23,6 +25,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 abstract class UpdateTest {
@@ -46,6 +49,15 @@ abstract class UpdateTest {
             "update people set band='Beatles' where PK in (1, 2, 3, 4)",
             "update people set band='Beatles' where PK>=1 and PK <= 4",
             "update people set band='Beatles' where id = 1",
+
+            "update test.people set band='Beatles'",
+            "update test.people set band='Beatles' where PK=1",
+            "update test.people set band='Beatles' where PK in (1, 2, 3, 4)",
+            "update test.people set band='Beatles' where PK>=1 and PK <= 4",
+            "update test.people set band='Beatles' where id = 1",
+
+            "update people set band='Beatles' where id in (1, 2, 3, 4)",
+
     })
     void updateEmptyDb(String sql) throws SQLException {
         deleteAllRecords(NAMESPACE, PEOPLE);
@@ -143,14 +155,49 @@ abstract class UpdateTest {
         executeUpdate("update people set age=year()-year_of_birth", 4);
         count.set(0);
 
-        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-        Map<String, Integer> expectedAges = Arrays.stream(beatles).collect(toMap(Person::getFirstName, p -> currentYear - p.getYearOfBirth()));
+        executeUpdate("update people set age_days=age*365", 4);
+        count.set(0);
 
-        Map<String, Integer> actualAges = new HashMap<>();
-        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {actualAges.put(rec.getString("first_name"), Double.valueOf(rec.getDouble("age")).intValue()); count.incrementAndGet();});
-        assertEquals(4, count.get());
-        assertEquals(expectedAges, actualAges);
+        executeUpdate("update people set age_month=age/12", 4);
+        count.set(0);
+
+        executeUpdate("update people set year_of_century=(year_of_birth-1900)", 4);
+        count.set(0);
+
+        executeUpdate("update people set year=year_of_birth+1900", 4);
+        count.set(0);
+
+        executeUpdate("update people set pi=3.14", 4);
+        count.set(0);
+
+        executeUpdate("update people set absolute_zero=-273", 4);
+        count.set(0);
+
+        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+        assertEquals(Arrays.stream(beatles).collect(toMap(Person::getFirstName, p -> currentYear - p.getYearOfBirth())), retrieveData("first_name", "age", o -> ((Number)o).intValue()));
+
+        assertEquals(Arrays.stream(beatles).collect(toMap(Person::getFirstName, p -> (currentYear - p.getYearOfBirth())*365)), retrieveData("first_name", "age_days", o -> ((Number)o).intValue()));
+        assertEquals(Arrays.stream(beatles).collect(toMap(Person::getFirstName, p -> (currentYear - p.getYearOfBirth())/12)), retrieveData("first_name", "age_month", o -> ((Number)o).intValue()));
+        assertEquals(Arrays.stream(beatles).collect(toMap(Person::getFirstName, p -> (p.getYearOfBirth()) - 1900)), retrieveData("first_name", "year_of_century", o -> ((Number)o).intValue()));
+        assertEquals(Arrays.stream(beatles).collect(toMap(Person::getFirstName, p -> 3.14)), retrieveData("first_name", "pi", o -> (Double)o));
+        assertEquals(Arrays.stream(beatles).collect(toMap(Person::getFirstName, p -> -273)), retrieveData("first_name", "absolute_zero", o -> ((Number)o).intValue()));
+
+        executeUpdate("update people set absolute_zero=NULL", 4);
+        count.set(0);
+        retrieveData("first_name", "absolute_zero", o -> o).values().forEach(Assert::assertNull);
     }
+
+    @Test
+    void updateSeveralTables() {
+        assertEquals("Update statement can proceed one table only but was 2", assertThrows(SQLException.class, () -> executeUpdate("update one, two set something=1", 0)).getMessage());
+    }
+
+    private <T> Map<String, T> retrieveData(String keyName, String valueName, Function<Object, T> typeTransformer) {
+        Map<String, T> actualValues = new HashMap<>();
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {actualValues.put(rec.getString(keyName), typeTransformer.apply(rec.getValue(valueName)));});
+        return actualValues;
+    }
+
 
     protected abstract void executeUpdate(String sql, int expectedRowCount) throws SQLException;
 

@@ -7,6 +7,7 @@ import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static com.aerospike.client.query.PredExp.integerBin;
@@ -26,7 +28,6 @@ import static com.aerospike.client.query.PredExp.or;
 import static com.aerospike.client.query.PredExp.stringBin;
 import static com.aerospike.client.query.PredExp.stringEqual;
 import static com.aerospike.client.query.PredExp.stringValue;
-import static com.nosqldriver.aerospike.sql.query.QueryHolder.BIN_NAME_DOES_NOT_EXIST;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Optional.ofNullable;
@@ -111,34 +112,33 @@ public class BinaryOperation {
         GT(">") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                List<Object> values = asList(((Number) operation.values.get(0)).longValue() + 1, Long.MAX_VALUE);
-                return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, values));
+                return updateComparisonOperation(queries, operation, o -> asList(((Number) operation.values.get(0)).longValue() + 1, Long.MAX_VALUE));
             }
         },
         GE(">=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                List<Object> values = asList(operation.values.get(0), Long.MAX_VALUE);
-                return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, values));
+                return updateComparisonOperation(queries, operation, o -> asList(operation.values.get(0), Long.MAX_VALUE));
             }
         },
         LT("<") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                List<Object> values = asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1);
-                return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, values));
+                return updateComparisonOperation(queries, operation, o -> asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1));
             }
         },
         LE("<=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                List<Object> values = asList(Long.MIN_VALUE, operation.values.get(0));
-                return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, values));
+                return updateComparisonOperation(queries, operation, o -> asList(Long.MIN_VALUE, operation.values.get(0)));
             }
         },
         BETWEEN("BETWEEN") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
+                if ("PK".equals(operation.column)) {
+                    return queries;
+                }
                 queries.setFilter(Filter.range(operation.column, ((Number) operation.values.get(0)).longValue(), ((Number) operation.values.get(1)).longValue()), operation.column);
                 return queries;
             }
@@ -149,16 +149,10 @@ public class BinaryOperation {
                 if ("PK".equals(operation.column)) {
                     queries.createPkBatchQuery(operation.statement, operation.values.stream().map(v -> createKey(v, queries)).toArray(Key[]::new));
                 } else {
-                    int nValues = operation.values.size();
+                    int nValues = operation.values.size(); // nValues cannot be 0: in() is syntactically wrong. Probably this may be a case with sub select "... in(select x from t)"
                     QueryHolder qh = queries.queries(operation.getTable());
-                    if (nValues == 0) {
-                        prefix(BIN_NAME_DOES_NOT_EXIST, BIN_NAME_DOES_NOT_EXIST).forEach(qh::addPredExp);
-                    } else {
-                        operation.values.stream().map(v -> prefix(operation.column, v)).flatMap(List::stream).forEach(qh::addPredExp);
-                        if (nValues > 1) {
-                            qh.addPredExp(or(nValues));
-                        }
-                    }
+                    operation.values.stream().map(v -> prefix(operation.column, v)).flatMap(List::stream).forEach(qh::addPredExp);
+                    qh.addPredExp(or(nValues));
                 }
                 return queries;
             }
@@ -228,6 +222,14 @@ public class BinaryOperation {
 
         public String operator() {
             return operator;
+        }
+
+        protected QueryHolder updateComparisonOperation(QueryHolder queries, BinaryOperation operation, Function<BinaryOperation, List<Object>> valuesGetter) {
+            if ("PK".equals(operation.column)) {
+                SneakyThrower.sneakyThrow(new SQLException("Filtering by PK supports =, !=, IN"));
+            }
+
+            return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, valuesGetter.apply(operation)));
         }
     }
 

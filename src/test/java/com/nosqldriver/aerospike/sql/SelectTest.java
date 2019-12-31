@@ -117,6 +117,7 @@ class SelectTest {
             "select * from (select * from people where 0=0)",
             "select * from (select * from people) where 1=1",
             "select * from (select * from people where 0=0) where 1=1",
+            "select * from test.people",
     })
     void selectAll(String sql) throws SQLException {
         selectAll(sql, executeQuery);
@@ -215,7 +216,43 @@ class SelectTest {
         assertFalse(rs.isClosed());
         rs.close();
         assertTrue(rs.isClosed());
+    }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people where PK=0",
+            "select * from people where id=0",
+            "select * from people where id<1",
+            "select * from people where id>4",
+            "select * from people where PK in (0)",
+            "select * from people where id in (0)",
+            "select * from people limit 0",
+            "select * from people offset 4",
+    })
+    void selectEmpty(String sql) throws SQLException {
+        assertFalse(testConn.createStatement().executeQuery(sql).next());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people where PK<1",
+            "select * from people where PK<=1",
+            "select * from people where PK>4",
+            "select * from people where PK>=4",
+    })
+    void unsupportedPkOperation(String sql) throws SQLException {
+        assertEquals("Filtering by PK supports =, !=, IN", assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people where PK>?",
+            "select * from people where PK>=?",
+            "select * from people where PK<?",
+            "select * from people where PK<=?",
+    })
+    void unsupportedPkOperationWithPreparedStatement(String sql) throws SQLException {
+        assertEquals("Filtering by PK supports =, !=, IN", assertThrows(SQLException.class, () -> testConn.prepareStatement(sql)).getMessage());
     }
 
     @Test
@@ -1432,6 +1469,8 @@ class SelectTest {
         assertEquals("count(*)", md.getColumnName(2));
         assertEquals(BIGINT, md.getColumnType(2));
 
+        assertEquals("Cursor is not positioned on any row", assertThrows(SQLException.class, () -> rs.getInt(1)).getMessage());
+
         Collection<Integer> years = new HashSet<>();
         assertTrue(rs.next());
         years.add(assertCounts(rs));
@@ -1440,6 +1479,10 @@ class SelectTest {
         assertTrue(rs.next());
         years.add(assertCounts(rs));
         assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(toSet()), years);
+
+        assertTrue(rs.isLast());
+        assertFalse(rs.next());
+        assertTrue(rs.isAfterLast());
 
         return md;
     }

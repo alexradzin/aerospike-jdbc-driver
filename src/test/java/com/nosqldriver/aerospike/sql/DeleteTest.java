@@ -52,6 +52,11 @@ class DeleteTest {
     }
 
     @Test
+    void deleteAllWithNamesapce() throws SQLException {
+        assertDelete("delete from test.people", p -> false);
+    }
+
+    @Test
     void deleteAllPs() throws SQLException {
         assertDelete("delete from people", new Object[0], p -> false);
     }

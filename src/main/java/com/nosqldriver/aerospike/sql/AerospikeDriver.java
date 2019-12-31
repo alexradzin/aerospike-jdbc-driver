@@ -1,5 +1,7 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.nosqldriver.util.SneakyThrower;
+
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -16,12 +18,11 @@ import static java.util.stream.Collectors.toList;
 public class AerospikeDriver implements Driver {
     static {
         // Register the AerospikeDriver with DriverManager
-        try {
+        SneakyThrower.get(() -> {
             AerospikeDriver driverObj = new AerospikeDriver();
             DriverManager.registerDriver(driverObj);
-        } catch (SQLException e) {
-            throw new IllegalStateException(e.getMessage(), e);
-        }
+            return driverObj;
+        });
     }
 
     @Override

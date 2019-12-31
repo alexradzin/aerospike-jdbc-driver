@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -78,9 +79,13 @@ class InsertTest {
     }
 
 
-    @Test
-    void insertOneRow() throws SQLException {
-        insert("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2)", 1);
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2)",
+            "insert into test.people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2)",
+    })
+    void insertOneRow(String sql) throws SQLException {
+        insert(sql, 1);
         Record record = client.get(null, new Key("test", "people", 1));
         assertNotNull(record);
         Map<String, Object> expectedData = new HashMap<>();
