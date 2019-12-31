@@ -16,12 +16,10 @@ public class ValueHolderPredExp<T> extends FakePredExp {
     private static final Map<Class, Function<Object, PredExp>> predExpFactories = new HashMap<>();
     static {
         Function<Object, PredExp> intFactory = val -> PredExp.integerValue(((Number)val).longValue());
-        for (Class c : new Class[] {Byte.class, Short.class, Integer.class, Long.class, byte.class, short.class,int.class,long.class}) {
+        for (Class c : new Class[] {Byte.class, Short.class, Integer.class, Long.class, byte.class, short.class, int.class, long.class}) {
             predExpFactories.put(c, intFactory);
         }
-        predExpFactories.put(Calendar.class, val -> PredExp.integerValue((Calendar)val));
         predExpFactories.put(String.class, val -> PredExp.stringValue((String)val));
-
         predExpFactories.put(short[].class, val -> new ValueHolderPredExp<>((short[])val));
         predExpFactories.put(int[].class, val -> new ValueHolderPredExp<>((int[])val));
         predExpFactories.put(long[].class, val -> new ValueHolderPredExp<>((long[])val));
@@ -36,6 +34,9 @@ public class ValueHolderPredExp<T> extends FakePredExp {
         Function<Object, PredExp> factory = predExpFactories.get(val.getClass());
         if (factory != null) {
             return factory.apply(val);
+        }
+        if (val instanceof Calendar) {
+            return PredExp.integerValue((Calendar)val);
         }
         if (val.getClass().isArray()) {
             return new ValueHolderPredExp<>((Object[])val);

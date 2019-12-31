@@ -25,7 +25,6 @@ import com.nosqldriver.util.SneakyThrower;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.BinaryExpression;
-import net.sf.jsqlparser.expression.DateValue;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.ExpressionVisitorAdapter;
@@ -35,8 +34,6 @@ import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.SignedExpression;
 import net.sf.jsqlparser.expression.StringValue;
-import net.sf.jsqlparser.expression.TimeValue;
-import net.sf.jsqlparser.expression.TimestampValue;
 import net.sf.jsqlparser.expression.operators.arithmetic.Addition;
 import net.sf.jsqlparser.expression.operators.arithmetic.Division;
 import net.sf.jsqlparser.expression.operators.arithmetic.Multiplication;
@@ -182,22 +179,6 @@ public class AerospikeQueryFactory {
 
                                 @Override
                                 public void visit(LongValue value) {
-                                    values.add(value.getValue());
-                                }
-
-
-                                @Override
-                                public void visit(DateValue value) {
-                                    values.add(value.getValue());
-                                }
-
-                                @Override
-                                public void visit(TimeValue value) {
-                                    values.add(value.getValue());
-                                }
-
-                                @Override
-                                public void visit(TimestampValue value) {
                                     values.add(value.getValue());
                                 }
 
@@ -514,20 +495,13 @@ public class AerospikeQueryFactory {
                             queries.queries(operation.getTable()).addPredExp(new PredExpValuePlaceholder(parameter.getIndex()));
                         }
 
-
                         @Override
-                        public void visit(DateValue value) {
-                            visit(new LongValue(value.getValue().getTime()));
-                        }
-
-                        @Override
-                        public void visit(TimeValue value) {
-                            visit(new LongValue(value.getValue().getTime()));
-                        }
-
-                        @Override
-                        public void visit(TimestampValue value) {
-                            visit(new LongValue(value.getValue().getTime()));
+                        public void visit(net.sf.jsqlparser.expression.Function function) {
+                            try {
+                                operation.addValue(engine.eval(function.toString()));
+                            } catch (ScriptException e) {
+                                SneakyThrower.sneakyThrow(e);
+                            }
                         }
                     });
 

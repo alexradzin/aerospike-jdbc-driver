@@ -24,6 +24,7 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -89,6 +90,28 @@ class PreparedStatementWithComplexTypesTest {
     @Disabled // Byte array cannot be used in predicates; this test performs query that adds predicate even if it is used on PK. The real fix is to avoid creating predicates when querying PK
     void insertOneRowUsingPreparedStatementWithByteArrayKey() throws SQLException {
         assertOneInsertedRowUsingPreparedStatementWithDifferentKeyType(ps -> ps.setBytes(1, new byte[] {1, 2, 3}), new Key("test", "people", new byte[] {1, 2, 3}));
+    }
+
+    @Test
+    void calendar() throws SQLException {
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, date) values (?, ?)");
+        insert.setInt(1, 1);
+        Calendar c = Calendar.getInstance();
+        final long NANOS_PER_MILLIS = 1000000L; // this is how aerospike date predicate works
+        long millis = c.getTimeInMillis();
+        long nanos = c.getTimeInMillis() * NANOS_PER_MILLIS;
+        insert.setLong(2, nanos);
+        assertEquals(1, insert.executeUpdate());
+
+        assertFilteringByDate(format("select * from data where date in (date(%d))", millis), millis, nanos);
+        assertFilteringByDate(format("select * from data where date in (calendar(%d))", millis), millis, nanos);
+    }
+
+    private void assertFilteringByDate(String sql, long millis, long nanos) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(format("select * from data where date in (date(%d))", millis));
+        assertTrue(rs.next());
+        assertEquals(nanos, rs.getLong(1));
+        assertFalse(rs.next());
     }
 
     private <T> void assertOneInsertedRowUsingPreparedStatementWithDifferentKeyType(ThrowingConsumer<PreparedStatement, SQLException> setter, Key key) throws SQLException {

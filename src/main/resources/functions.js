@@ -73,11 +73,18 @@ function _parse(str, fmt) {
  * @arg - (optional) epoch or string representation of date
  */
 function date(arg) {
-    result = (arg == null || typeof arg === 'undefined') ? new Date() : typeof arg === 'number' ? new Date(arg) : typeof arg === 'string' ? _parse(arg) : typeof arg.getMonth === 'function' ? arg : null;
+    result = (arg == null || typeof arg === 'undefined') ? new java.util.Date() : typeof arg === 'number' ? new java.util.Date(arg) : typeof arg === 'string' ? _parse(arg) : typeof arg.getMonth === 'function' ? arg : null;
     if (!result) {
         throw new java.sql.SQLException("Wrong argument " + arg);
     }
     return result;
+}
+
+function calendar(arg) {
+    var d = date(arg);
+    var c = java.util.Calendar.getInstance();
+    c.setTime(d);
+    return c;
 }
 
 function now() {

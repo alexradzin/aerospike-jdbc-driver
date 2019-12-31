@@ -164,6 +164,9 @@ public class TypeTransformer {
                 str = str.substring(6, str.length() - 1);
                 return (T)sqlDateFormat.format(Date.from(Instant.parse(str)));
             }
+            if (obj instanceof java.util.Date) {
+                return (T)sqlDateFormat.format((java.util.Date)obj);
+            }
         }
         if (obj == null || type.isAssignableFrom(obj.getClass())) {
             return (T)obj;
