@@ -487,8 +487,8 @@ public class AerospikeSqlClient implements IAerospikeClient {
         return new SQLException(ae.getMessage(), "", ae.getResultCode(), ae);
     }
 
-    private static void throwSqlException(AerospikeException ae) {
-        sneakyThrow(sqlException(ae));
+    private static <R> R throwSqlException(AerospikeException ae) {
+        return sneakyThrow(sqlException(ae));
     }
 
 
@@ -514,8 +514,7 @@ public class AerospikeSqlClient implements IAerospikeClient {
             try {
                 return supplier.get();
             } catch (AerospikeException ae) {
-                throwSqlException(ae);
-                return null;
+                return throwSqlException(ae);
             }
         }
     }

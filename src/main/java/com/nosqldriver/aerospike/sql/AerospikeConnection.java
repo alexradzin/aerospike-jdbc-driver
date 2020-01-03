@@ -10,6 +10,7 @@ import com.nosqldriver.sql.BasicArray;
 import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.SimpleWrapper;
 import com.nosqldriver.sql.StringClob;
+import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.Array;
 import java.sql.Blob;
@@ -351,11 +352,10 @@ class AerospikeConnection implements Connection, SimpleWrapper {
     @Override
     public void abort(Executor executor) throws SQLException {
         executor.execute(() -> {
-            try {
+            SneakyThrower.get(() -> {
                 close();
-            } catch (SQLException e) {
-                throw new IllegalStateException(e);
-            }
+                return null;
+            });
         });
     }
 

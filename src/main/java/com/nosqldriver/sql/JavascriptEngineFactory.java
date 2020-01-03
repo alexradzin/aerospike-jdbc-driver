@@ -1,9 +1,10 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.SneakyThrower;
+
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -19,17 +20,17 @@ public class JavascriptEngineFactory {
     private final ScriptEngine engine;
 
     public JavascriptEngineFactory() {
-        try {
-            synchronized (threadEngine) {
-                ScriptEngine tmp = threadEngine.get();
-                if (tmp == null) {
-                    engine = new ScriptEngineManager().getEngineByName("JavaScript");
-                    threadEngine.set(engine);
-                } else {
-                    engine = tmp;
-                    engine.getBindings(ScriptContext.ENGINE_SCOPE).clear();
-                }
+        synchronized (threadEngine) {
+            ScriptEngine tmp = threadEngine.get();
+            if (tmp == null) {
+                engine = new ScriptEngineManager().getEngineByName("JavaScript");
+                threadEngine.set(engine);
+            } else {
+                engine = tmp;
+                engine.getBindings(ScriptContext.ENGINE_SCOPE).clear();
             }
+        }
+        SneakyThrower.call(() -> {
             Reader functions = new InputStreamReader(getClass().getResourceAsStream("/functions.js"));
             String allFunctionsSrc = new BufferedReader(functions).lines().collect(Collectors.joining("\n"));
             Matcher matcher = FUNCTION_HEADER.matcher(allFunctionsSrc);
@@ -44,9 +45,7 @@ public class JavascriptEngineFactory {
 
             engine.eval(allFunctionsSrc + "\n" + capitalizedFunctions);
             engine.eval(new InputStreamReader(getClass().getResourceAsStream("/functionsExposer.js")));
-        } catch (ScriptException e) {
-            throw new IllegalStateException(e);
-        }
+        });
     }
 
     public ScriptEngine getEngine() {

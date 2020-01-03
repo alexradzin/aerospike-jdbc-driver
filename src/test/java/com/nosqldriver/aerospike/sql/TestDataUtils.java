@@ -35,6 +35,7 @@ import java.util.function.Function;
 
 import static com.aerospike.client.Log.setCallback;
 import static com.aerospike.client.Log.setLevel;
+import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
 import static java.lang.String.format;
 import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -96,8 +97,7 @@ public class TestDataUtils {
             try {
                 return testConn.createStatement().executeUpdate(sql);
             } catch (SQLException e) {
-                SneakyThrower.sneakyThrow(e);
-                return null;
+                return sneakyThrow(e);
             }
         }
     };
@@ -108,8 +108,7 @@ public class TestDataUtils {
             try {
                 return testConn.createStatement().execute(sql);
             } catch (SQLException e) {
-                SneakyThrower.sneakyThrow(e);
-                return null;
+                return sneakyThrow(e);
             }
         }
     };
@@ -120,8 +119,7 @@ public class TestDataUtils {
             try {
                 return testConn.createStatement().executeQuery(sql);
             } catch (SQLException e) {
-                SneakyThrower.sneakyThrow(e);
-                return null;
+                return sneakyThrow(e);
             }
         }
     };
@@ -132,8 +130,7 @@ public class TestDataUtils {
             try {
                 return testConn.prepareStatement(sql).executeQuery();
             } catch (SQLException e) {
-                SneakyThrower.sneakyThrow(e);
-                return null;
+                return sneakyThrow(e);
             }
         }
     };

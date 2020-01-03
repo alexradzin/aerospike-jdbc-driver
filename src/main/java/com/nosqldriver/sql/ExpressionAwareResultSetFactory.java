@@ -1,8 +1,8 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.SneakyThrower;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 
-import javax.script.ScriptException;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,12 +22,10 @@ public class ExpressionAwareResultSetFactory {
     private static final Pattern QUOTES = Pattern.compile("'[^']*'");
 
     public ExpressionAwareResultSetFactory() {
-        try {
+        SneakyThrower.call(() -> {
             ScriptObjectMirror definedFunctions = (ScriptObjectMirror) new JavascriptEngineFactory().getEngine().eval("functions");
             range(0, definedFunctions.size()).boxed().forEach(i -> functionNames.add((String) definedFunctions.getSlot(i)));
-        } catch (ScriptException e) {
-            throw new IllegalStateException(e);
-        }
+        });
     }
 
 

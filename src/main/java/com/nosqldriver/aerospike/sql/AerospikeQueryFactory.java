@@ -67,7 +67,6 @@ import net.sf.jsqlparser.statement.select.UnionOp;
 import net.sf.jsqlparser.statement.update.Update;
 
 import javax.script.ScriptEngine;
-import javax.script.ScriptException;
 import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -189,11 +188,7 @@ public class AerospikeQueryFactory {
 
                                 @Override
                                 public void visit(net.sf.jsqlparser.expression.Function function) {
-                                    try {
-                                        values.add(engine.eval(function.toString()));
-                                    } catch (ScriptException e) {
-                                        SneakyThrower.sneakyThrow(e);
-                                    }
+                                    SneakyThrower.call(() -> values.add(engine.eval(function.toString())));
                                 }
                             });
                             System.out.println("visit expressions: " + expressionList);
@@ -497,11 +492,7 @@ public class AerospikeQueryFactory {
 
                         @Override
                         public void visit(net.sf.jsqlparser.expression.Function function) {
-                            try {
-                                operation.addValue(engine.eval(function.toString()));
-                            } catch (ScriptException e) {
-                                SneakyThrower.sneakyThrow(e);
-                            }
+                            SneakyThrower.call(() -> operation.addValue(engine.eval(function.toString())));
                         }
                     });
 
