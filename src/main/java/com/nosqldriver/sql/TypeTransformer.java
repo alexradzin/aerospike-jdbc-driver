@@ -1,6 +1,6 @@
 package com.nosqldriver.sql;
 
-import jdk.nashorn.api.scripting.ScriptObjectMirror;
+import com.nosqldriver.util.SneakyThrower;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -18,7 +18,6 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -72,43 +71,25 @@ public class TypeTransformer {
             if (o instanceof byte[]) {
                 return o;
             }
+            throw new IllegalArgumentException(format("%s cannot be transformed to byte[]", o));
+        });
+        typeTransformers.put(InputStream.class, o -> SneakyThrower.get(() -> {
+            if (o instanceof byte[]) {
+                return new ByteArrayInputStream((byte[])o);
+            }
+            if (o instanceof String) {
+                return new ByteArrayInputStream(((String)o).getBytes());
+            }
             if (o instanceof Blob) {
-                Blob blob = ((Blob)o);
-                try {
-                    return blob.getBytes(1, (int)blob.length());
-                } catch (SQLException e) {
-                    throw new IllegalStateException(e);
-                }
+                return ((Blob)o).getBinaryStream();
             }
-            throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
-        });
-        typeTransformers.put(InputStream.class, o -> {
-            try {
-                if (o instanceof byte[]) {
-                    return new ByteArrayInputStream((byte[])o);
-                }
-                if (o instanceof String) {
-                    return new ByteArrayInputStream(((String)o).getBytes());
-                }
-                if (o instanceof Blob) {
-                    return ((Blob)o).getBinaryStream();
-                }
-                if (o instanceof Clob) {
-                    return ((Clob)o).getAsciiStream();
-                }
+            if (o instanceof Clob) {
+                return ((Clob)o).getAsciiStream();
+            }
 
-                throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
-            } catch (SQLException e) {
-                throw new IllegalStateException(e);
-            }
-        });
-        typeTransformers.put(Reader.class, o -> {
-            try {
-                return o instanceof String ? new StringReader((String)o) : ((Clob)o).getCharacterStream();
-            } catch (SQLException e) {
-                throw new IllegalStateException(e);
-            }
-        });
+            throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
+        }));
+        typeTransformers.put(Reader.class, o -> SneakyThrower.get(() -> o instanceof String ? new StringReader((String)o) : ((Clob)o).getCharacterStream()));
         typeTransformers.put(Blob.class, o -> {
             if (o instanceof byte[]) {
                 return new ByteArrayBlob((byte[])o);
@@ -128,16 +109,7 @@ public class TypeTransformer {
 
             throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
         });
-        typeTransformers.put(NClob.class, o -> {
-            if (o instanceof String) {
-                return new StringClob((String)o);
-            }
-            if (o instanceof Clob) {
-                return o;
-            }
-
-            throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
-        });
+        typeTransformers.put(NClob.class, typeTransformers.get(Clob.class));
     }
     private static final DateFormat isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"); // used by javascript engine
     private static final DateFormat sqlDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS"); // used by SQL
@@ -147,7 +119,7 @@ public class TypeTransformer {
         try {
             return castImpl(obj, type);
         } catch (RuntimeException e) {
-            throw new SQLException(e);
+            throw new SQLException(e.getMessage(), e);
         }
     }
 
@@ -156,14 +128,7 @@ public class TypeTransformer {
         if (typeTransformers.containsKey(type)) {
             return (T) typeTransformers.get(type).apply(obj);
         }
-
         if (obj != null && String.class.equals(type) && !(obj instanceof String)) {
-            if (obj instanceof ScriptObjectMirror && "Date".equals(((ScriptObjectMirror) obj).getClassName())) {
-                //[Date yyyy-MM-dd'T'HH:mm:ss.SSS'Z']
-                String str = obj.toString();
-                str = str.substring(6, str.length() - 1);
-                return (T)sqlDateFormat.format(Date.from(Instant.parse(str)));
-            }
             if (obj instanceof java.util.Date) {
                 return (T)sqlDateFormat.format((java.util.Date)obj);
             }

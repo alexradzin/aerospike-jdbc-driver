@@ -372,6 +372,7 @@ class PreparedStatementWithComplexTypesTest {
         assertArrayEquals(new byte[] {(byte)8}, rs.getBytes(2));
         assertArrayEquals(new byte[] {(byte)8}, IOUtils.toByteArray(rs.getBinaryStream(2)));
         assertArrayEquals(new byte[] {(byte)8}, (byte[])rs.getObject(2));
+        assertArrayEquals(new byte[] {(byte)8}, IOUtils.toByteArray(rs.getBlob(2).getBinaryStream()));
 
         assertEquals(blob, rs.getBlob(3));
         assertArrayEquals(helloWorld.getBytes(), rs.getBytes(3));

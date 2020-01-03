@@ -126,6 +126,7 @@ class DelegatingResultSetTest {
         assertEquals(expByte.intValue(), rs.getInt("byte"));
         assertEquals(expByte.longValue(), rs.getLong(1));
         assertEquals(expByte.longValue(), rs.getLong("byte"));
+        assertEquals(String.format("%d cannot be transformed to byte[]", expByte.intValue()), assertThrows(SQLException.class, () -> rs.getBytes(1)).getMessage());
         assertFalse(rs.wasNull());
 
         assertEquals(simpleRow[1], rs.getShort(2));
@@ -259,6 +260,9 @@ class DelegatingResultSetTest {
         assertArrayEquals((byte[])compositeRow[0], rs.getBytes("bytes"));
         assertArrayEquals((byte[])compositeRow[0], IOUtils.toByteArray(rs.getBinaryStream(1)));
         assertArrayEquals((byte[])compositeRow[0], IOUtils.toByteArray(rs.getBinaryStream("bytes")));
+        assertArrayEquals((byte[])compositeRow[0], IOUtils.toByteArray(rs.getBlob(1).getBinaryStream()));
+        assertArrayEquals((byte[])compositeRow[0], IOUtils.toByteArray(rs.getBlob("bytes").getBinaryStream()));
+
 
         assertEquals(compositeRow[1], rs.getArray(2));
         assertEquals(compositeRow[1], rs.getArray("array"));

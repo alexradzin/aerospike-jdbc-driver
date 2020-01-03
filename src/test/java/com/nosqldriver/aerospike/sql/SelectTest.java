@@ -1213,6 +1213,14 @@ class SelectTest {
     }
 
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {"1",  "2", "3", "4"})
+    void selectPsSeveralRecordsPKInUsingScalar(String key) throws SQLException {
+        selectPsSeveralRecordsPKInUsingPrimitiveArray(key, Integer.parseInt(key));
+    }
+
+
+
     private void selectPsSeveralRecordsPKInUsingPrimitiveArray(String keys, Object idsToSet) throws SQLException {
         int[] pids = stream(keys.split("\\s*,\\s*")).map(Integer::parseInt).mapToInt(i -> i).toArray();
         PreparedStatement ps = testConn.prepareStatement("select * from people where PK in (?)");
