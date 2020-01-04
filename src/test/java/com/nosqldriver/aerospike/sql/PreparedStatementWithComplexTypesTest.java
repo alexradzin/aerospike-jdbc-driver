@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import com.nosqldriver.util.IOUtils;
+import com.nosqldriver.util.SneakyThrower;
 import com.nosqldriver.util.ThrowingConsumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -489,11 +490,7 @@ class PreparedStatementWithComplexTypesTest {
     }
 
     private byte[] getBytes(Blob blob) {
-        try {
-            return blob.getBytes(1, (int)blob.length());
-        } catch (SQLException e) {
-            throw new IllegalStateException(e);
-        }
+        return SneakyThrower.get(() -> blob.getBytes(1, (int)blob.length()));
     }
 
 

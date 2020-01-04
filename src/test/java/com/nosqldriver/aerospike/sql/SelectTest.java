@@ -265,6 +265,11 @@ class SelectTest {
         assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("select * from people where first_name between 'Adam' and 'Abel'"));
     }
 
+    @Test
+    void wrongMethod() throws SQLException {
+        assertEquals("SELECT does not support executeUpdate", assertThrows(SQLException.class, () -> testConn.createStatement().executeUpdate(SELECT_ALL)).getMessage());
+    }
+
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             SELECT_ALL,

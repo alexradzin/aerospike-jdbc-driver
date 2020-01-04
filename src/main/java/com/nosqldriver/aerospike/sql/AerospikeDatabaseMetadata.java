@@ -60,15 +60,16 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     private final Map<String, String> dbInfo;
     private final IAerospikeClient client;
     private final Connection connection;
-    private final InfoPolicy infoPolicy = new InfoPolicy();
+    private final InfoPolicy infoPolicy;
     private static final String newLine = System.lineSeparator();
 
 
-    public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client, Connection connection) {
+    public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client, Connection connection, AerospikePolicyProvider policyProvider) {
         this.url = url;
         clientInfo = parser.clientInfo(url, info);
         this.client = client;
         this.connection = connection;
+        infoPolicy = policyProvider.getInfoPolicy();
         manifest = manifest();
         dbInfo = new HashMap<>();
         Arrays.stream(client.getNodes()).forEach(node -> dbInfo.putAll(Info.request(infoPolicy, node)));

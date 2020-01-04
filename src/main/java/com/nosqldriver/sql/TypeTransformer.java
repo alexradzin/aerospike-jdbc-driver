@@ -43,9 +43,9 @@ public class TypeTransformer {
         typeTransformers.put(float.class, n -> n == null ? 0.0f : ((Number)n).floatValue());
         typeTransformers.put(double.class, n -> n == null ? 0.0 : ((Number)n).doubleValue());
 
-        typeTransformers.put(Date.class, o -> o instanceof Date ? o : new Date((Long)o));
-        typeTransformers.put(Time.class, o -> o instanceof Time ? o : new Time((Long)o));
-        typeTransformers.put(Timestamp.class, o -> o instanceof Timestamp ? o : new Timestamp((Long)o));
+        typeTransformers.put(Date.class, o -> o instanceof Date ? o : new Date(((Number)o).longValue()));
+        typeTransformers.put(Time.class, o -> o instanceof Time ? o : new Time(((Number)o).longValue()));
+        typeTransformers.put(Timestamp.class, o -> o instanceof Timestamp ? o : new Timestamp(((Number)o).longValue()));
 
         typeTransformers.put(boolean.class, o -> {
             if (o == null) {

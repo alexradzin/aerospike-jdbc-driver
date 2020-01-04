@@ -1,5 +1,7 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.SneakyThrower;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -95,11 +97,7 @@ public class StringClob implements NClob {
             @Override
             public void close() throws IOException {
                 super.close();
-                try {
-                    setString(pos, new String(toByteArray()));
-                } catch (SQLException e) {
-                    sneakyThrow(e);
-                }
+                SneakyThrower.sqlCall(() -> setString(pos, new String(toByteArray())));
             }
         };
     }
@@ -111,11 +109,7 @@ public class StringClob implements NClob {
             @Override
             public void close() throws IOException {
                 super.close();
-                try {
-                    setString(pos, getBuffer().toString());
-                } catch (SQLException e) {
-                    sneakyThrow(e);
-                }
+                SneakyThrower.sqlCall(() -> setString(pos, getBuffer().toString()));
             }
         };
     }

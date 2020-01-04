@@ -97,6 +97,21 @@ class InsertTest {
         assertEquals(expectedData, record.bins);
     }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "insert into data (PK, number, text, nothing) values (1, 1, 'something', NULL)",
+            "insert into data (PK, number, text, nothing) values (1, 1, 'something', null)",
+    })
+    void insertNull(String sql) throws SQLException {
+        insert(sql, 1);
+        Record record = client.get(null, new Key("test", "data", 1));
+        assertNotNull(record);
+        Map<String, Object> expectedData = new HashMap<>();
+        expectedData.put("number", 1L);
+        expectedData.put("text", "something");
+        assertEquals(expectedData, record.bins);
+    }
+
     @Test
     void insertDuplicateRow() throws SQLException {
         insert("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2)", 1);

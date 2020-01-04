@@ -10,6 +10,7 @@ import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import java.io.InputStream;
+import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Date;
@@ -102,6 +103,12 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     }
 
     @Override
+    public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
+        return getValue(columnIndex, BigDecimal.class, () -> ExpressionAwareResultSet.super.getBigDecimal(columnIndex));
+    }
+
+
+    @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
         return getValue(columnIndex, byte[].class, () -> ExpressionAwareResultSet.super.getBytes(columnIndex));
     }
@@ -137,6 +144,17 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     public InputStream getBinaryStream(int columnIndex) throws SQLException {
         return getValue(columnIndex, InputStream.class, () -> ExpressionAwareResultSet.super.getBinaryStream(columnIndex));
     }
+
+    @Override
+    public Reader getCharacterStream(int columnIndex) throws SQLException {
+        return getValue(columnIndex, Reader.class, () -> ExpressionAwareResultSet.super.getCharacterStream(columnIndex));
+    }
+
+    @Override
+    public Reader getNCharacterStream(int columnIndex) throws SQLException {
+        return getCharacterStream(columnIndex);
+    }
+
 
     @Override
     public String getString(String columnLabel) throws SQLException {

@@ -129,7 +129,7 @@ class AerospikeConnection implements Connection, SimpleWrapper {
 
     @Override
     public DatabaseMetaData getMetaData() {
-        return new AerospikeDatabaseMetadata(url, props, client, this);
+        return new AerospikeDatabaseMetadata(url, props, client, this, policyProvider);
     }
 
     @Override

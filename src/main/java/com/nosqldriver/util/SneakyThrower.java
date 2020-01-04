@@ -17,6 +17,13 @@ public class SneakyThrower {
         }
     }
 
+    public static void sqlCall(ThrowingProcedure<SQLException> p) {
+        try {
+            p.call();
+        } catch (SQLException e) {
+            sneakyThrow(e);
+        }
+    }
 
     public static void call(ThrowingProcedure<ScriptException> p) {
         try {

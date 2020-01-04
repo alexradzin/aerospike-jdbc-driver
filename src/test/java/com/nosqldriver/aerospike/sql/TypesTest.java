@@ -1,11 +1,14 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.nosqldriver.util.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DateFormat;
@@ -253,24 +256,36 @@ class TypesTest {
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
-            "select 0, 1, 3.14, 'text'",
+            "select 0, 1, 3.14, 'text', 1578140272981",
     })
-    void types(String sql) throws SQLException {
+    void types(String sql) throws SQLException, IOException {
         ResultSet rs = testConn.createStatement().executeQuery(sql);
         assertTrue(rs.next());
         assertEquals(0, rs.getByte(1));
         assertEquals(0, rs.getShort(1));
         assertEquals(0, rs.getInt(1));
-//        assertFalse(rs.getBoolean(1));
+        assertFalse(rs.getBoolean(1));
 
         assertEquals(1, rs.getByte(2));
         assertEquals(1, rs.getShort(2));
         assertEquals(1, rs.getInt(2));
-//        assertTrue(rs.getBoolean(2));
+        assertTrue(rs.getBoolean(2));
 
         assertEquals(3.14f, rs.getFloat(3));
         assertEquals(3.14, rs.getDouble(3));
-//        assertEquals(3.14, rs.getBigDecimal(3).setScale(2).doubleValue());
+        assertEquals(3.14, rs.getBigDecimal(3).setScale(2, RoundingMode.FLOOR).doubleValue());
+
+        assertEquals("text", rs.getString(4));
+        assertEquals("text", new String(IOUtils.toByteArray(rs.getAsciiStream(4))));
+        assertEquals("text", new String(IOUtils.toByteArray(rs.getBinaryStream(4))));
+        assertEquals("text", IOUtils.toString(rs.getCharacterStream(4)));
+        assertEquals("text", IOUtils.toString(rs.getNCharacterStream(4)));
+        assertEquals("text", new String(IOUtils.toByteArray(rs.getUnicodeStream(4))));
+
+        long timestamp = 1578140272981L;
+        assertEquals(timestamp, rs.getDate(5).getTime());
+        assertEquals(timestamp, rs.getTime(5).getTime());
+        assertEquals(timestamp, rs.getTimestamp(5).getTime());
 
         assertFalse(rs.next());
     }

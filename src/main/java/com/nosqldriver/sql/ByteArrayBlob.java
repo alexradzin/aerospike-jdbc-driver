@@ -1,5 +1,7 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.SneakyThrower;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -93,12 +95,8 @@ public class ByteArrayBlob implements Blob {
         return new ByteArrayOutputStream() {
             @Override
             public void close() throws IOException {
-                super.close();
-                try {
-                    setBytes(pos, toByteArray());
-                } catch (SQLException e) {
-                    sneakyThrow(e);
-                }
+            super.close();
+            SneakyThrower.sqlCall(() -> setBytes(pos, toByteArray()));
             }
         };
     }

@@ -8,6 +8,7 @@ import com.aerospike.client.task.IndexTask;
 import com.nosqldriver.aerospike.sql.query.AerospikeInsertQuery;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.SimpleWrapper;
+import com.nosqldriver.util.ThrowingSupplier;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -201,23 +202,25 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
         }
 
         ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
-            if (prototype != null) {
-                return prototype.executeQuery(statement, sql);
-            }
-            throw new UnsupportedOperationException(name() + " does not support " + "executeQuery");
+            return executeAny(() -> prototype.executeQuery(statement, sql));
         }
         int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
-            if (prototype != null) {
-                return prototype.executeUpdate(statement, sql);
-            }
-            throw new UnsupportedOperationException(format("%s does not support %s", name(), "executeUpdate"));
+            return executeAny(() -> prototype.executeUpdate(statement, sql));
         }
         boolean execute(AerospikeStatement statement, String sql) throws SQLException {
-            if (prototype != null) {
-                return prototype.execute(statement, sql);
-            }
-            throw new UnsupportedOperationException(format("%s does not support %s", name(), "execute"));
+            return executeAny(() -> prototype.execute(statement, sql));
         }
+
+
+        <R> R executeAny(ThrowingSupplier<R, SQLException> executor) throws SQLException {
+            if (prototype != null) {
+                return executor.get();
+            }
+            String methodName = new Throwable().getStackTrace()[1].getMethodName();
+            throw new UnsupportedOperationException(format("%s does not support %s", name(), methodName));
+        }
+
+
 
         @Override
         public boolean test(String sql) {
