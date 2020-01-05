@@ -257,7 +257,7 @@ public class AerospikeQueryFactory {
                 }
                 List<SetOperation> operations = setOpList.getOperations();
                 if (operations.size() != 1) {
-                    throw new IllegalArgumentException(format("Query can contain only one concatenation operation but was %d: %s", operations.size(), operations));
+                    SneakyThrower.sneakyThrow(new SQLException(format("Query can contain only one concatenation operation but was %d: %s", operations.size(), operations)));
                 }
                 SetOperation operation = operations.get(0);
                 final ChainOperation chainOperation;
@@ -333,7 +333,7 @@ public class AerospikeQueryFactory {
                                 Optional<Operator> operator = Operator.find(expr.getStringExpression());
 
                                 if (!operator.map(Operator.EQ::equals).orElse(false)) {
-                                    throw new IllegalArgumentException(format("Join condition must use = only but was %s", operator.map(Operator::operator).orElse("N/A")));
+                                    SneakyThrower.sneakyThrow(new SQLException(format("Join condition must use = only but was %s", operator.map(Operator::operator).orElse("N/A"))));
                                 }
                                 currentJoin.addPredExp(new OperatorRefPredExp(expr.getStringExpression()));
                             }
@@ -466,7 +466,7 @@ public class AerospikeQueryFactory {
                                 switch (edge) {
                                     case 1: queries.queries(operation.getTable()).addPredExp(PredExp.integerGreaterEq()); break;
                                     case 2: queries.queries(operation.getTable()).addPredExp(PredExp.integerLessEq()); break;
-                                    default: throw new IllegalArgumentException("BETWEEN with more than 2 edges");
+                                    default: SneakyThrower.sneakyThrow(new SQLException("BETWEEN with more than 2 edges"));
                                 }
                             }
                         }
@@ -801,7 +801,7 @@ public class AerospikeQueryFactory {
             super.visit(expr);
             if (!queryValues.isEmpty()) {
                 if (queryValues.stream().anyMatch(p -> !Number.class.isAssignableFrom(p.getClass()))) {
-                    throw new IllegalArgumentException("BETWEEN cannot be applied to string");
+                    SneakyThrower.sneakyThrow(new SQLException("BETWEEN cannot be applied to string"));
                 }
                 if ("PK".equals(column)) {
                     Collection<Key> keys = LongStream.rangeClosed(((Number)queryValues.get(0)).longValue(), ((Number)queryValues.get(1)).longValue()).boxed().map(i -> new Key(schema, tableName, i)).collect(toSet());

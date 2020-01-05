@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Arrays;
 import java.util.Properties;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
@@ -29,15 +30,19 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 class IndexTest {
     private static final String STRING_INDEX_NAME = "PEOPLE_FIRST_NAME_INDEX";
     private static final String NUMERIC_INDEX_NAME = "PEOPLE_YOB_INDEX";
-    private static final String LIST_INDEX_NAME = "DATA_LIST_INDEX";
+    private static final String LIST_INDEX_NAME = "DATA_LIST_INDEX1";
+    private static final String MAPKEYS_INDEX_NAME = "MAPKEYS_INDEX";
+    private static final String MAPVALUES_INDEX_NAME = "MAPVALUES_INDEX";
+    private static final String GEO_INDEX_NAME = "GEO_INDEX1";
+
+    private static final String[] INDEX_NAMES = new String[] {STRING_INDEX_NAME, NUMERIC_INDEX_NAME, LIST_INDEX_NAME, MAPKEYS_INDEX_NAME, MAPVALUES_INDEX_NAME, GEO_INDEX_NAME};
+
 
     @BeforeAll
     @AfterAll
     static void dropAll() {
         TestDataUtils.deleteAllRecords(NAMESPACE, PEOPLE);
-        TestDataUtils.dropIndexSafely(STRING_INDEX_NAME);
-        TestDataUtils.dropIndexSafely(NUMERIC_INDEX_NAME);
-
+        Arrays.stream(INDEX_NAMES).forEach(TestDataUtils::dropIndexSafely);
     }
 
 
@@ -79,17 +84,17 @@ class IndexTest {
 
     @Test
     void createAndDropGeoIndexUsingExecute() throws SQLException, IOException {
-        assertCreateAndDropIndex("data", "location", LIST_INDEX_NAME, "GEO2DSPHERE", Statement::execute, Assertions::assertTrue);
+        assertCreateAndDropIndex("data", "location1", GEO_INDEX_NAME, "GEO2DSPHERE", Statement::execute, Assertions::assertTrue);
     }
 
     @Test
     void createAndDropStringMapkeysIndexUsingExecute() throws SQLException, IOException {
-        assertCreateAndDropIndex("data", "mapkeys", LIST_INDEX_NAME, "STRING MAPKEYS", Statement::execute, Assertions::assertTrue);
+        assertCreateAndDropIndex("data", "mapkeys", MAPKEYS_INDEX_NAME, "STRING MAPKEYS", Statement::execute, Assertions::assertTrue);
     }
 
     @Test
     void createAndDropStringMapvalesIndexUsingExecute() throws SQLException, IOException {
-        assertCreateAndDropIndex("data", "mapkeys", LIST_INDEX_NAME, "STRING MAPVALUES", Statement::execute, Assertions::assertTrue);
+        assertCreateAndDropIndex("data", "mapkeys", MAPVALUES_INDEX_NAME, "STRING MAPVALUES", Statement::execute, Assertions::assertTrue);
     }
 
     @Test

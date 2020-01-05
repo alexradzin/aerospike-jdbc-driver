@@ -57,21 +57,21 @@ public class TypeTransformer {
             if (o instanceof Number) {
                 return ((Number) o).doubleValue() != 0.0;
             }
-            throw new IllegalArgumentException(format("Cannot cast value %s to boolean", o));
+            return SneakyThrower.sneakyThrow(new SQLException(format("Cannot cast value %s to boolean", o)));
         });
 
         typeTransformers.put(URL.class, o -> {
             try {
                 return o instanceof URL ? o : new URL((String)o);
             } catch (MalformedURLException e) {
-                throw new IllegalArgumentException(e);
+                return SneakyThrower.sneakyThrow(new SQLException(e.getMessage(), e));
             }
         });
         typeTransformers.put(byte[].class, o -> {
-            if (o instanceof byte[]) {
-                return o;
+            if (!(o instanceof byte[])) {
+                SneakyThrower.sneakyThrow(new SQLException(format("%s cannot be transformed to byte[]", o)));
             }
-            throw new IllegalArgumentException(format("%s cannot be transformed to byte[]", o));
+            return o;
         });
         typeTransformers.put(InputStream.class, o -> SneakyThrower.get(() -> {
             if (o instanceof byte[]) {
@@ -87,7 +87,7 @@ public class TypeTransformer {
                 return ((Clob)o).getAsciiStream();
             }
 
-            throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
+            return SneakyThrower.sneakyThrow(new SQLException(format("%s cannot be transformed to InputStream", o)));
         }));
         typeTransformers.put(Reader.class, o -> SneakyThrower.get(() -> o instanceof String ? new StringReader((String)o) : ((Clob)o).getCharacterStream()));
         typeTransformers.put(Blob.class, o -> {
@@ -97,7 +97,7 @@ public class TypeTransformer {
             if (o instanceof Blob) {
                 return o;
             }
-            throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
+            return SneakyThrower.sneakyThrow(new SQLException(format("%s cannot be transformed to Blob", o)));
         });
         typeTransformers.put(Clob.class, o -> {
             if (o instanceof String) {
@@ -107,7 +107,7 @@ public class TypeTransformer {
                 return o;
             }
 
-            throw new IllegalArgumentException(format("%s cannot be transformed to InputStream", o));
+            return SneakyThrower.sneakyThrow(new SQLException(format("%s cannot be transformed to Clob", o)));
         });
         typeTransformers.put(NClob.class, typeTransformers.get(Clob.class));
     }

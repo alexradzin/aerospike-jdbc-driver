@@ -12,7 +12,7 @@ import static java.lang.String.format;
 
 public class KeyFactory {
     public static Key createKey(String schema, String table, Object value) {
-        final Key key;
+        Key key;
         if (value instanceof Byte) {
             key = new Key(schema, table, ((Byte) value).intValue());
         } else if (value instanceof Short) {
@@ -28,23 +28,22 @@ public class KeyFactory {
         } else if (value instanceof byte[]) {
             key = new Key(schema, table, (byte[]) value);
         } else {
-            throw new IllegalArgumentException(format("Filter by %s is not supported right now. Use either number or string", value == null ? null : value.getClass()));
+            return SneakyThrower.sneakyThrow(new SQLException(format("Filter by %s is not supported right now. Use either number or string", value == null ? null : value.getClass())));
         }
         return key;
     }
 
     public static Key[] createKeys(String schema, String table, Object value) {
-        if (value != null) {
-            if (value.getClass().isArray()) {
-                return createKeysFromArray(schema, table, value);
-            }
-            if (value instanceof java.sql.Array) {
-                return SneakyThrower.get(() -> createKeysFromArray(schema, table, ((java.sql.Array) value).getArray()));
-            }
-            return createKeysFromArray(schema, table, new Object[] {value});
+        if (value == null) {
+            return SneakyThrower.sneakyThrow(new SQLException("Filter by null value is not supported right now"));
         }
-
-        throw new IllegalArgumentException("Filter by null value is not supported right now");
+        if (value.getClass().isArray()) {
+            return createKeysFromArray(schema, table, value);
+        }
+        if (value instanceof java.sql.Array) {
+            return SneakyThrower.get(() -> createKeysFromArray(schema, table, ((java.sql.Array) value).getArray()));
+        }
+        return createKeysFromArray(schema, table, new Object[] {value});
     }
 
     private static Key[] createKeysFromArray(String schema, String table, Object value) {

@@ -2,6 +2,7 @@ package com.nosqldriver.util;
 
 import org.junit.jupiter.api.Test;
 
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +36,7 @@ class DataUtilTest {
         Map<String, Object> data = new HashMap<>();
         data.put("0", "zero");
         data.put("2", "two");
-        assertEquals("Cannot create list due to missing entries", assertThrows(IllegalArgumentException.class, () -> DataUtil.toArray(data)).getMessage());
+        assertEquals("Cannot create list due to missing entries", assertThrows(SQLException.class, () -> DataUtil.toArray(data)).getMessage());
     }
 
     @Test
@@ -46,6 +47,6 @@ class DataUtilTest {
         // 2. create keys by explicity calling of the String constructor.
         data.put(new String("0"), "something");
         data.put(new String("0"), "something");
-        assertEquals("Cannot create list due to duplicate entries", assertThrows(IllegalArgumentException.class, () -> DataUtil.toArray(data)).getMessage());
+        assertEquals("Cannot create list due to duplicate entries", assertThrows(SQLException.class, () -> DataUtil.toArray(data)).getMessage());
     }
 }

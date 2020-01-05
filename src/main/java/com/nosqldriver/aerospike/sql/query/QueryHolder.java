@@ -24,6 +24,7 @@ import com.nosqldriver.sql.ResultSetRowFilter;
 import com.nosqldriver.sql.ResultSetWrapper;
 import com.nosqldriver.sql.SortedResultSet;
 import com.nosqldriver.util.ByteArrayComparator;
+import com.nosqldriver.util.SneakyThrower;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
@@ -231,7 +232,8 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                             case "<>":
                                 createScanQuery(sqlStatement, new PrimaryKeyEqualityPredicate(createKey(getSchema(), getSetName(), parameter), false));
                                 break;
-                            default: throw new IllegalArgumentException("Unsupported PK operation " + op);
+                            default:
+                                SneakyThrower.sneakyThrow(new SQLException("Unsupported PK operation " + op));
                         }
 
                         indexesToRemove.addAll(asList(i - 1, i, i +1 ));
@@ -242,7 +244,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             }
             if (predExp instanceof OperatorRefPredExp) {
                 if (type == null) {
-                    throw new IllegalStateException("Cannot retrieve type of parameter of prepared statement");
+                    SneakyThrower.sneakyThrow(new SQLException("Cannot retrieve type of parameter of prepared statement"));
                 }
                 predExps.set(i, predExpOperators.get(operatorKey(type, ((OperatorRefPredExp)predExp).getOp())).get());
             }
@@ -270,13 +272,13 @@ public class QueryHolder implements QueryContainer<ResultSet> {
 
         // TODO: add GeoJson
 
-        throw new  IllegalArgumentException(format("Cannot create where clause using type %s", type));
+        return SneakyThrower.sneakyThrow(new SQLException(format("Cannot create where clause using type %s", type)));
     }
 
     @SafeVarargs
     private final void assertNull(Function<IAerospikeClient, ResultSet>... queries) {
         if (Arrays.stream(queries).anyMatch(Objects::nonNull)) {
-            throw new IllegalStateException("More than one queries have been created");
+            SneakyThrower.sneakyThrow(new SQLException("More than one queries have been created"));
         }
     }
 
@@ -332,13 +334,13 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         if (aggregatedFields != null) {
             Value[] fieldsForAggregation = aggregatedFields.stream().map(StringValue::new).toArray(Value[]::new);
             if (statement.getBinNames() != null && statement.getBinNames().length > 0) {
-                throw new IllegalArgumentException("Cannot perform aggregation operation with query that contains regular fields");
+                SneakyThrower.sneakyThrow(new SQLException("Cannot perform aggregation operation with query that contains regular fields"));
             }
             Pattern p = Pattern.compile("distinct\\((\\w+)\\)");
             Optional<String> distinctExpression = aggregatedFields.stream().filter(s -> p.matcher(s).find()).findAny();
             if (distinctExpression.isPresent()) {
                 if (aggregatedFields.size() > 1) {
-                    throw new IllegalArgumentException("Wrong query syntax: distinct is used together with other fields");
+                    SneakyThrower.sneakyThrow(new SQLException("Wrong query syntax: distinct is used together with other fields"));
                 }
 
                 Matcher m = p.matcher(distinctExpression.get());
@@ -429,7 +431,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         Optional<DataColumn> distinctColumn = columns.stream().filter(c -> c.getName() != null).filter(c -> p.matcher(c.getName()).find()).findAny();
         if (set == null && distinctColumn.isPresent()) {
             if (columns.size() > 1) {
-                throw new IllegalArgumentException("Wrong query syntax: distinct is used together with other fields");
+                SneakyThrower.sneakyThrow(new SQLException("Wrong query syntax: distinct is used together with other fields"));
             }
 
             String distinctColumnExpression = distinctColumn.get().getName();

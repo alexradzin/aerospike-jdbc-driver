@@ -89,7 +89,7 @@ public class BinaryOperation {
                 } else if (value instanceof String) {
                     filter = Filter.equal(column, (String) value);
                 } else {
-                    throw new IllegalArgumentException(format("Filter by %s is not supported right now. Use either number or string", value == null ? null : value.getClass()));
+                    return SneakyThrower.sneakyThrow(new SQLException(format("Filter by %s is not supported right now. Use either number or string", value == null ? null : value.getClass())));
                 }
                 return filter;
             }
@@ -138,6 +138,9 @@ public class BinaryOperation {
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 if ("PK".equals(operation.column)) {
                     return queries;
+                }
+                if (operation.values.stream().anyMatch(v -> !(v instanceof Number))) {
+                    SneakyThrower.sneakyThrow(new SQLException("Both operands of BETWEEN must be numbers"));
                 }
                 queries.setFilter(Filter.range(operation.column, ((Number) operation.values.get(0)).longValue(), ((Number) operation.values.get(1)).longValue()), operation.column);
                 return queries;

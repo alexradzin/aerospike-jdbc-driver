@@ -28,8 +28,11 @@ public class SneakyThrower {
     public static void call(ThrowingProcedure<ScriptException> p) {
         try {
             p.call();
-        } catch (ScriptException e) {
-            sneakyThrow(e);
+        } catch (ScriptException | RuntimeException e) {
+            if (e.getCause() instanceof SQLException) {
+                sneakyThrow(e.getCause());
+            }
+            sneakyThrow(new SQLException(e.getMessage(), e));
         }
     }
 }

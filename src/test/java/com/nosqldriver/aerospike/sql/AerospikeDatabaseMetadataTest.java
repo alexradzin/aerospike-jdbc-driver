@@ -212,7 +212,8 @@ class AerospikeDatabaseMetadataTest {
    }
 
 
-   //TODO implement separate tests with relevant validations for each result set.
+    //TODO implement separate tests with relevant validations for each result set.
+    //TODO remove all indexes before running this test
     @Test
     void resultSets() throws SQLException {
         DatabaseMetaData md = testConn.getMetaData();

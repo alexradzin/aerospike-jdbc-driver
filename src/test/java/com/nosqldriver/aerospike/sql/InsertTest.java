@@ -145,9 +145,21 @@ class InsertTest {
 
 
 
-    @Test
-    void insertSeveralRows() throws SQLException {
-        insert("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2), (2, 2, 'Paul', 'McCartney', 1942, 5)", 2);
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2), (2, 2, 'Paul', 'McCartney', 1942, 5)",
+            "" +
+                    "insert into people (PK, id, first_name, last_name, year_of_birth, kids_count, dummy) values (1, 1, 'John', 'Lennon', 1940, 2, 'a;aa');" +
+                    "insert into people (PK, id, first_name, last_name, year_of_birth, kids_count, dummy) values(2, 2, 'Paul', 'McCartney', 1942, 5, 'bb;b')",
+            "" +
+                    "insert into people (PK, id, first_name, last_name, year_of_birth, kids_count, dummy) values (1, 1, 'John', 'Lennon', 1940, 2, 'a;aa');" +
+                    "insert into people (PK, id, first_name, last_name, year_of_birth, kids_count, dummy) values(2, 2, 'Paul', 'McCartney', 1942, 5, 'bb;b');",
+            "" +
+                    "insert into people (PK, id, first_name, last_name, year_of_birth, kids_count, dummy) values (1, 1, 'John', 'Lennon', 1940, 2, 'a;aa');" +
+                    "insert into people (PK, id, first_name, last_name, year_of_birth, kids_count, dummy) values(2, 2, 'Paul', 'McCartney', 1942, 5, 'bb;b');\n\n    \n",
+    })
+    void insertSeveralRows(String sql) throws SQLException {
+        insert(sql, 2);
         assertEquals("John", client.get(null, new Key("test", "people", 1)).getString("first_name"));
         assertEquals("Paul", client.get(null, new Key("test", "people", 2)).getString("first_name"));
     }
@@ -702,7 +714,7 @@ class InsertTest {
                 "Cannot create list due to missing entries",
                 assertThrows(
                         SQLException.class,
-                        () -> insert("insert into data (PK, list) values (1, list('{\"1\": \"first\", \"2\": \"second\"}'))", 1)).getCause().getMessage());
+                        () -> insert("insert into data (PK, list) values (1, list('{\"1\": \"first\", \"2\": \"second\"}'))", 1)).getMessage());
     }
 
     void insertCollection(String function) throws SQLException {

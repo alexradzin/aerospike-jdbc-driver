@@ -7,7 +7,9 @@ import com.aerospike.client.query.IndexType;
 import com.aerospike.client.task.IndexTask;
 import com.nosqldriver.aerospike.sql.query.AerospikeInsertQuery;
 import com.nosqldriver.sql.ListRecordSet;
+import com.nosqldriver.sql.PreparedStatementUtil;
 import com.nosqldriver.sql.SimpleWrapper;
+import com.nosqldriver.util.SneakyThrower;
 import com.nosqldriver.util.ThrowingSupplier;
 
 import java.sql.Connection;
@@ -193,12 +195,14 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
         ;
 
         private final StatementType prototype;
+        private final Pattern pattern;
 
         StatementType() {
             this(null);
         }
         StatementType(StatementType prototype) {
             this.prototype = prototype;
+            pattern = Pattern.compile("^\\s*" + name().replace('_', ' ') + "\\b", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.MULTILINE);
         }
 
         ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
@@ -213,18 +217,18 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
 
 
         <R> R executeAny(ThrowingSupplier<R, SQLException> executor) throws SQLException {
-            if (prototype != null) {
-                return executor.get();
+            if (prototype == null) {
+                String methodName = new Throwable().getStackTrace()[1].getMethodName();
+                SneakyThrower.sneakyThrow(new SQLException(format("%s does not support %s", name(), methodName)));
             }
-            String methodName = new Throwable().getStackTrace()[1].getMethodName();
-            throw new UnsupportedOperationException(format("%s does not support %s", name(), methodName));
+            return executor.get();
         }
 
 
 
         @Override
         public boolean test(String sql) {
-            return sql.toUpperCase().startsWith(name().replace("_", " ") + " ");
+            return sql.substring(0, name().length() + 1).toUpperCase().startsWith(name().replace("_", " ") + " ") || pattern.matcher(sql).find();
         }
 
     }
@@ -258,7 +262,12 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
     @Override
     public int executeUpdate(String sql) throws SQLException {
         try {
-            return getStatementType(sql).executeUpdate(this, sql);
+            int result = 0;
+            for (String s : PreparedStatementUtil.splitQueries(sql)) {
+                int n = getStatementType(sql).executeUpdate(this, s);
+                result += n;
+            }
+            return result;
         } catch (RuntimeException e) {
             throw new SQLException(e.getMessage(), e);
         }

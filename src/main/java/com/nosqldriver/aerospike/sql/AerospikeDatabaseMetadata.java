@@ -7,6 +7,7 @@ import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.SimpleWrapper;
+import com.nosqldriver.util.SneakyThrower;
 import com.nosqldriver.util.ThrowingSupplier;
 
 import java.io.IOException;
@@ -1179,7 +1180,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         try {
             return supplier.get();
         } catch (IOException e) {
-            throw new IllegalStateException(e);
+            return SneakyThrower.sneakyThrow(new SQLException(e));
         }
     }
 
@@ -1187,7 +1188,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         try {
             return supplier.get();
         } catch (SQLException e) {
-            throw new IllegalStateException(e);
+            return SneakyThrower.sneakyThrow(e);
         }
     }
 
