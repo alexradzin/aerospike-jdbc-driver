@@ -6,6 +6,7 @@ import com.aerospike.client.query.IndexCollectionType;
 import com.aerospike.client.query.IndexType;
 import com.aerospike.client.task.IndexTask;
 import com.nosqldriver.aerospike.sql.query.AerospikeInsertQuery;
+import com.nosqldriver.sql.ChainedResultSetWrapper;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.PreparedStatementUtil;
 import com.nosqldriver.sql.SimpleWrapper;
@@ -252,25 +253,26 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
-        try {
-            return getStatementType(sql).executeQuery(this, sql);
-        } catch (RuntimeException e) {
-            throw new SQLException(e.getMessage(), e);
+        List<ResultSet> resultSets = new ArrayList<>();
+        int updateCount = 0;
+        for (String s : PreparedStatementUtil.splitQueries(sql)) {
+            ResultSet rs = getStatementType(sql).executeQuery(this, s);
+            int n = rs.getStatement().getUpdateCount();
+            resultSets.add(rs);
+            updateCount += n;
         }
+        setUpdateCount(updateCount);
+        return resultSets.size() == 1 ? resultSets.get(0) : new ChainedResultSetWrapper(this, resultSets, true);
     }
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
-        try {
-            int result = 0;
-            for (String s : PreparedStatementUtil.splitQueries(sql)) {
-                int n = getStatementType(sql).executeUpdate(this, s);
-                result += n;
-            }
-            return result;
-        } catch (RuntimeException e) {
-            throw new SQLException(e.getMessage(), e);
+        int result = 0;
+        for (String s : PreparedStatementUtil.splitQueries(sql)) {
+            int n = getStatementType(sql).executeUpdate(this, s);
+            result += n;
         }
+        return result;
     }
 
     @Override
@@ -335,7 +337,21 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
 
     @Override
     public boolean execute(String sql) throws SQLException {
-        return getStatementType(sql).execute(this, sql);
+        Boolean result = null;
+        int updateCount = 0;
+        for (String s : PreparedStatementUtil.splitQueries(sql)) {
+            boolean r = getStatementType(sql).execute(this, s);
+            int n = getUpdateCount();
+            updateCount += n;
+            if (result == null) {
+                result = r;
+            }
+            if (!r) {
+                result = r;
+            }
+        }
+        setUpdateCount(updateCount);
+        return result == null ? false : result;
     }
 
     @Override

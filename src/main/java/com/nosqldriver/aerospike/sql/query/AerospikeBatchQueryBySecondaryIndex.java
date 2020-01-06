@@ -10,6 +10,7 @@ import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ResultSetWrapper;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy, Record> {
@@ -37,6 +38,11 @@ public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statemen
                 public void close() {
                     // do nothing here
                     // This method prevents NullPointerException being thrown otherwise because wrapped result set is null
+                }
+
+                @Override
+                public java.sql.Statement getStatement() throws SQLException {
+                    return statement;
                 }
             };
         }

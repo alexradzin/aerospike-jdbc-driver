@@ -57,6 +57,7 @@ abstract class UpdateTest {
             "update test.people set band='Beatles' where id = 1",
 
             "update people set band='Beatles' where id in (1, 2, 3, 4)",
+            "update people set band='Beatles' where id in (1, 2); update people set band='Beatles' where id in (3, 4)",
 
     })
     void updateEmptyDb(String sql) throws SQLException {
@@ -115,20 +116,6 @@ abstract class UpdateTest {
 
 
     @Test
-    void updateSeveralFieldsSeveralRows() throws SQLException {
-        writeBeatles();
-
-        AtomicInteger count = new AtomicInteger(0);
-        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {assertNull(rec.getString("band")); assertNull(rec.getString("occupation")); count.incrementAndGet();});
-        assertEquals(4, count.get());
-
-        executeUpdate("update people set band='Beatles', occupation='musician'", 4);
-        count.set(0);
-        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {assertEquals("Beatles", rec.getString("band")); assertEquals("musician", rec.getString("occupation")); count.incrementAndGet();}, "band", "occupation");
-        assertEquals(4, count.get());
-    }
-
-    @Test
     void updateCopyFieldToFieldSeveralRows() throws SQLException {
         writeBeatles();
 
@@ -139,6 +126,26 @@ abstract class UpdateTest {
         executeUpdate("update people set given_name=first_name", 4);
         count.set(0);
         client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {assertEquals(rec.getString("first_name"), rec.getString("given_name")); count.incrementAndGet();});
+        assertEquals(4, count.get());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "update people set band='Beatles', occupation='musician'",
+            "update people set band='Beatles', occupation='musician' where PK IN (1,2,3,4)",
+            "update people set band='Beatles', occupation='musician' where PK IN (1,3); update people set band='Beatles', occupation='musician' where PK IN (2,4)",
+            "update people set band='Beatles', occupation='musician' where PK IN (1,2,3); update people set band='Beatles', occupation='musician' where PK IN (4)",
+    })
+    void updateSeveralFieldsSeveralRows(String sql) throws SQLException {
+        writeBeatles();
+
+        AtomicInteger count = new AtomicInteger(0);
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {assertNull(rec.getString("band")); assertNull(rec.getString("occupation")); count.incrementAndGet();});
+        assertEquals(4, count.get());
+
+        executeUpdate(sql, 4);
+        count.set(0);
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {assertEquals("Beatles", rec.getString("band")); assertEquals("musician", rec.getString("occupation")); count.incrementAndGet();}, "band", "occupation");
         assertEquals(4, count.get());
     }
 
