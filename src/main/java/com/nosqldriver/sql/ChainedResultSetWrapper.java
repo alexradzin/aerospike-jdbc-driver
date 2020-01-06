@@ -13,6 +13,7 @@ public class ChainedResultSetWrapper extends ResultSetWrapper {
     private ListIterator<ResultSet> lit;
     private boolean beforeFirst = true;
     private boolean afterLast = false;
+    private int index = 0;
 
     public ChainedResultSetWrapper(java.sql.Statement sqlStatement, List<ResultSet> resultSets, boolean indexByName) {
         this(sqlStatement, resultSets, emptyList(), indexByName);
@@ -32,11 +33,13 @@ public class ChainedResultSetWrapper extends ResultSetWrapper {
         while (true) {
             if (rs.next()) {
                 beforeFirst = false;
+                index++;
                 return true;
             } else if(lit.hasNext()) {
                 rs = lit.next();
                 if (rs.next()) {
                     beforeFirst = false;
+                    index++;
                     return true;
                 }
             } else {
@@ -47,6 +50,11 @@ public class ChainedResultSetWrapper extends ResultSetWrapper {
     }
 
     @Override
+    public int getRow() throws SQLException {
+        return index;
+    }
+
+    @Override
     public boolean first() throws SQLException {
         if (resultSets.isEmpty()) {
             beforeFirst = true;
@@ -54,7 +62,7 @@ public class ChainedResultSetWrapper extends ResultSetWrapper {
         }
         lit = resultSets.listIterator();
         rs = lit.next();
-        boolean res =  rs.next();
+        boolean res =  rs.first();
         if (!res) {
             beforeFirst = true;
         }
@@ -87,7 +95,7 @@ public class ChainedResultSetWrapper extends ResultSetWrapper {
 
     @Override
     public boolean isAfterLast() throws SQLException {
-        return afterLast;
+        return afterLast || (!lit.hasNext() && rs.isAfterLast());
     }
 
     @Override

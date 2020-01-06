@@ -33,6 +33,7 @@ public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
     public boolean next() throws SQLException {
         assertClosed();
         if (currentIndex + 1 >= records.length) {
+            afterLast = true;
             return false;
         }
         currentIndex++;

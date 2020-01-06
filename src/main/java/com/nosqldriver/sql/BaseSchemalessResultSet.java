@@ -56,7 +56,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     private volatile boolean closed = false;
 
     private boolean beforeFirst = true;
-    private boolean afterLast = false;
+    protected boolean afterLast = false;
     private final TypeDiscoverer typeDiscoverer;
     private volatile ResultSetMetaData metadata = null;
     private final List<DataColumn> columnsForMetadata;
