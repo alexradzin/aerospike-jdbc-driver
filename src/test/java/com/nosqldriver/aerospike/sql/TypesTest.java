@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.concurrent.Callable;
@@ -243,6 +244,7 @@ class TypesTest {
             "select upper(concat('John', ' ', 'Lennon'))",
             "select concat(upper('John'), ' ', upper('Lennon'))",
             "select concat_ws(' ', 'JOHN', 'LENNON')",
+            "select ucase(concat('John', ' ', 'Lennon'))",
     })
     void stringFunctionsWithoutAlias(String sql) throws SQLException {
         String expected = "JOHN LENNON";
@@ -252,6 +254,121 @@ class TypesTest {
         assertEquals(expected, rs.getNString(1));
         assertEquals(expected, rs.getObject(1));
         assertFalse(rs.next());
+    }
+
+    @Test
+    void functionAscii() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery("select ascii('Hello')");
+        assertTrue(rs.next());
+        assertEquals('H', rs.getInt(1));
+    }
+
+    @Test
+    void functionChar() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery("select char(65)");
+        assertTrue(rs.next());
+        assertEquals("A", rs.getString(1));
+    }
+
+    @Test
+    void functionInstr() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery("select instr('Hello, world!', 'Hello'), instr('Hello, world!', 'world'), instr('Hello, world!', 'bye')");
+        assertTrue(rs.next());
+        assertEquals(1, rs.getInt(1));
+        assertEquals(8, rs.getInt(2));
+        assertEquals(0, rs.getInt(3));
+    }
+
+    @Test
+    void functionLocate() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(
+                "select locate('Hello', 'Hello, world!'), locate('world', 'Hello, world!'), locate('Hello, world!', 'bye'), locate('world', 'Hello, world!', 8), locate('world', 'Hello, world!', 3)"
+        );
+        assertTrue(rs.next());
+        assertEquals(1, rs.getInt(1));
+        assertEquals(8, rs.getInt(2));
+        assertEquals(0, rs.getInt(3));
+        assertEquals(1, rs.getInt(4));
+        assertEquals(6, rs.getInt(5));
+    }
+
+    @Test
+    void functionSpace() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery("select space(0), space(1), space(5)");
+        assertTrue(rs.next());
+        assertEquals("", rs.getString(1));
+        assertEquals(" ", rs.getString(2));
+        assertEquals("     ", rs.getString(3));
+    }
+
+    @Test
+    void functionTrim() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(
+                "select trim('Hello'), trim(' Hello'), trim('Hello '), trim(' Hello '), ltrim(' Hello'), rtrim('Hello ')");
+        assertTrue(rs.next());
+        int n = rs.getMetaData().getColumnCount();
+        for (int i = 0; i < n; i++) {
+            assertEquals("Hello", rs.getString(i + 1));
+        }
+    }
+
+    @Test
+    void functionTrim2() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(
+                "select ltrim('Hello'), ltrim(' Hello'), ltrim('Hello '), rtrim('Hello'), rtrim(' Hello'), rtrim('Hello ')");
+        assertTrue(rs.next());
+        // ltrim
+        assertEquals("Hello", rs.getString(1));
+        assertEquals("Hello", rs.getString(2));
+        assertEquals("Hello ", rs.getString(3));
+        // rtrim
+        assertEquals("Hello", rs.getString(4));
+        assertEquals(" Hello", rs.getString(5));
+        assertEquals("Hello", rs.getString(6));
+    }
+
+
+    @Test
+    void functionStrcmpEq() throws SQLException {
+        functionStrcmp("select strcmp('', ''), strcmp('a', 'a'), strcmp('abc', 'abc')", 0);
+    }
+
+    @Test
+    void functionStrcmpLt() throws SQLException {
+        functionStrcmp("select strcmp('', 'a'), strcmp('a', 'b'), strcmp('ab', 'ac'), strcmp('abc', 'abcd')", -1);
+    }
+
+    @Test
+    void functionStrcmpGt() throws SQLException {
+        functionStrcmp("select strcmp('a', ''), strcmp('b', 'a'), strcmp('ac', 'ab'), strcmp('abcd', 'abc')", 1);
+    }
+
+    private void functionStrcmp(String sql, int expected) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        int n = rs.getMetaData().getColumnCount();
+        for (int i = 0; i < n; i++) {
+            assertEquals(expected, rs.getInt(i + 1));
+        }
+    }
+
+    @Test
+    void functionReverse() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery("select reverse(''), reverse('Hello')");
+        assertTrue(rs.next());
+        assertEquals("", rs.getString(1));
+        assertEquals("olleH", rs.getString(2));
+    }
+
+    @Test
+    void functionBase64() throws SQLException {
+        String str = "Hello";
+        String base64 = Base64.getEncoder().encodeToString(str.getBytes());
+        Base64.getDecoder().decode("");
+        ResultSet rs = testConn.createStatement().executeQuery(format("select to_base64('%s'), from_base64('%s')", str, base64));
+        assertTrue(rs.next());
+        assertEquals(base64, rs.getString(1));
+        assertEquals(str, new String(rs.getBytes(2)));
     }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)

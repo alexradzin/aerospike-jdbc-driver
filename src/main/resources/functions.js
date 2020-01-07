@@ -2,6 +2,10 @@ function len(s) {
     return s.length;
 }
 
+function length(s) {
+    return s.length
+}
+
 function ascii(s) {
     return s.length > 0 ? s.charCodeAt(0) : null;
 }
@@ -10,8 +14,29 @@ function char(code) {
     return String.fromCharCode(code);
 }
 
-function charIndex(subStr, str, start) {
-    return str.indexOf(subStr, start);
+function locate(subStr, str, start) {
+    var offset = start ? start - 1 : 0;
+    return str.indexOf(subStr) + 1 - offset;
+}
+
+function instr(str, subStr) {
+    return str.indexOf(subStr) + 1;
+}
+
+function trim(s) {
+    return s.trim();
+}
+
+function ltrim(s) {
+    return s.replace(/^ */g, '')
+}
+
+function rtrim(s) {
+    return s.replace(/ *$/g, '')
+}
+
+function strcmp(s1, s2) {
+    return s1 ? s1.localeCompare(s2) : s2 ? -1 : 0;
 }
 
 function left(str, n) {
@@ -22,7 +47,15 @@ function lower(str) {
     return str.toLowerCase();
 }
 
+function lcase(str) {
+    return str.toLowerCase();
+}
+
 function upper(str) {
+    return str.toUpperCase();
+}
+
+function ucase(str) {
     return str.toUpperCase();
 }
 
@@ -59,6 +92,14 @@ function reverse(str) {
         res += str.charAt(i);
     }
     return res;
+}
+
+function to_base64(b) {
+    return java.util.Base64.getEncoder().encodeToString(b.getBytes());
+}
+
+function from_base64(s) {
+    return java.util.Base64.getDecoder().decode(s)
 }
 
 ///////////////////////////////////////////////////////////
