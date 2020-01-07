@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql;
 import com.nosqldriver.Person;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
@@ -110,6 +111,13 @@ class DeleteTest {
     void deleteByIntCriteria() throws SQLException {
         assertDelete("delete from people where year_of_birth=1940", p -> p.getYearOfBirth() != 1940);
     }
+
+    @Test
+    @Disabled //FIXME
+    void deleteByIdBetween() throws SQLException {
+        assertDelete("delete from people where id between 1 and 3", p -> "Ringo".equals(p.getFirstName()));
+    }
+
 
     @Test
     void deleteByIntCriteriaPs() throws SQLException {

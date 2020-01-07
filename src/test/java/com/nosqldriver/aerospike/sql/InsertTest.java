@@ -99,8 +99,8 @@ class InsertTest {
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
-            "insert into data (PK, number, text, nothing) values (1, 1, 'something', NULL)",
-            "insert into data (PK, number, text, nothing) values (1, 1, 'something', null)",
+            "insert into data (PK, number, real, text, nothing) values (1, 1, 3.14, 'something', NULL)",
+            "insert into data (PK, number, real, text, nothing) values (1, 1, 3.14, 'something', null)",
     })
     void insertNull(String sql) throws SQLException {
         insert(sql, 1);
@@ -108,6 +108,7 @@ class InsertTest {
         assertNotNull(record);
         Map<String, Object> expectedData = new HashMap<>();
         expectedData.put("number", 1L);
+        expectedData.put("real", 3.14);
         expectedData.put("text", "something");
         assertEquals(expectedData, record.bins);
     }

@@ -1478,6 +1478,24 @@ class SelectTest {
         assertEquals("n", md.getColumnLabel(2));
     }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select first_name, count(*) from people",
+            "select first_name, max(kids_count) from people",
+    })
+    void wrongAggregation(String sql) throws SQLException {
+        assertEquals("Cannot perform aggregation operation with query that contains regular fields", assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select distinct(first_name), last_name from people",
+            "select distinct(first_name), count(*) from people",
+    })
+    void wrongDistinct(String sql) throws SQLException {
+        assertEquals("Wrong query syntax: distinct is used together with other fields", assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage());
+    }
+
 
     private ResultSetMetaData assertGroupByYearOfBirth(String sql) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(sql);

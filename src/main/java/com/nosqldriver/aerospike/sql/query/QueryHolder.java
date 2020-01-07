@@ -112,7 +112,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     private final ExpressionAwareResultSetFactory expressionResultSetWrappingFactory = new ExpressionAwareResultSetFactory();
 
     public enum ChainOperation {
-        UNION, UNION_ALL, SUB_QUERY;
+        UNION, UNION_ALL, SUB_QUERY
     }
 
     public QueryHolder(String schema, Collection<String> indexes, AerospikePolicyProvider policyProvider) {
@@ -658,7 +658,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                     try {
                         value = rs.getObject(ref.getName());
                     } catch (SQLException e) {
-                        throw new IllegalStateException(e);
+                        return SneakyThrower.sneakyThrow(e);
                     }
 
                     if (value instanceof String) {
@@ -695,10 +695,10 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             return result;
         }
 
-        private int index(List<PredExp> predicates, int i, Class placeholderType, int increment) {
-            int j = i + increment;
-            return j >= 0 && j < predicates.size() && placeholderType.equals(predicates.get(j).getClass()) ? j : -1;
-        }
+//        private int index(List<PredExp> predicates, int i, Class placeholderType, int increment) {
+//            int j = i + increment;
+//            return j >= 0 && j < predicates.size() && placeholderType.equals(predicates.get(j).getClass()) ? j : -1;
+//        }
 
 
 //        private PredExp preparePredicate(ResultSet rs, PredExp definedPredExp) {
@@ -752,9 +752,9 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         data.add(new ArrayList<>(dataRow));
     }
 
-    public boolean isSkipDuplicates() {
-        return skipDuplicates;
-    }
+//    public boolean isSkipDuplicates() {
+//        return skipDuplicates;
+//    }
 
     public void setSkipDuplicates(boolean skipDuplicates) {
         this.skipDuplicates = skipDuplicates;
@@ -797,14 +797,12 @@ public class QueryHolder implements QueryContainer<ResultSet> {
 
         @Override
         public ResultSetMetaData get() {
-            try {
+            return SneakyThrower.get(() -> {
                 if (metaData == null) {
                     metaData = metadataQueryHolder.getQuery(sqlStatement).apply(client).getMetaData();
                 }
                 return metaData;
-            } catch (SQLException e) {
-                throw new IllegalStateException(e);
-            }
+            });
         }
     }
 }

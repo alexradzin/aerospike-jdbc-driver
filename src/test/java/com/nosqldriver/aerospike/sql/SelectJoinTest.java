@@ -19,6 +19,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.assertFindColumn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeAllPersonalInstruments;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
@@ -58,6 +59,7 @@ class SelectJoinTest {
             "select first_name, i.name as instrument from people as p join instruments as i on p.id=i.person_id",
             "select first_name, i.name as instrument from people as p inner join instruments as i on p.id=i.person_id",
             "select first_name, i.name as instrument from people as p left join instruments as i on p.id=i.person_id",
+            "select first_name, i.name as instrument from test.people as p join test.instruments as i on p.id=i.person_id",
     })
     void oneToManyJoin(String sql) throws SQLException {
         ResultSet rs = executeQuery(sql, NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", VARCHAR);
@@ -143,6 +145,20 @@ class SelectJoinTest {
         Map<String, Collection<String>> result = collect(rs, 1, "first_name", "instrument");
         assertEquals(1, result.size());
         assertEquals(guitar, result.get("Paul"));
+    }
+
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select first_name, i.name as instrument from people as p join instruments as i on p.id!=i.person_id",
+            "select first_name, i.name as instrument from people as p join instruments as i on p.id>i.person_id",
+            "select first_name, i.name as instrument from people as p join instruments as i on p.id>=i.person_id",
+            "select first_name, i.name as instrument from people as p join instruments as i on p.id<i.person_id",
+            "select first_name, i.name as instrument from people as p join instruments as i on p.id<=i.person_id",
+    })
+    void wrongJoin(String sql) throws SQLException {
+        assertTrue(assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage().startsWith("Join condition must use = only but was"));
     }
 
 
