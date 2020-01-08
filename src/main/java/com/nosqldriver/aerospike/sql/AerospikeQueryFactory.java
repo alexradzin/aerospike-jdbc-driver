@@ -74,6 +74,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -103,6 +104,7 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 public class AerospikeQueryFactory {
+    private static final Collection<Class> INT_CLASSES = new HashSet<>(Arrays.asList(Byte.class, Short.class, Integer.class, Long.class));
     private CCJSqlParserManager parserManager = new CCJSqlParserManager();
     private final Statement statement;
     private String schema;
@@ -229,7 +231,8 @@ public class AerospikeQueryFactory {
 
             return queries;
         } catch (JSQLParserException e) {
-            throw new SQLException(e);
+            String msg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
+            throw new SQLException(msg, e);
         }
     }
 
@@ -481,6 +484,12 @@ public class AerospikeQueryFactory {
                             queries.queries(operation.getTable()).addPredExp(PredExp.stringBin(operation.getColumn()));
                             queries.queries(operation.getTable()).addPredExp(PredExp.stringValue(value.getValue()));
                             lastValueType.set(String.class);
+                        }
+
+                        @Override
+                        public void visit(DoubleValue value) {
+                            System.out.println("visit(DoubleValue value): " + value);
+                            SneakyThrower.sneakyThrow(new SQLException("BETWEEN can be applied to integer values only"));
                         }
 
                         @Override
@@ -768,7 +777,8 @@ public class AerospikeQueryFactory {
                 }
             };
         } catch (JSQLParserException e) {
-            throw new SQLException(e);
+            String msg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
+            throw new SQLException(msg, e);
         }
     }
 
@@ -800,8 +810,8 @@ public class AerospikeQueryFactory {
             System.out.println("visit(Between): " + expr);
             super.visit(expr);
             if (!queryValues.isEmpty()) {
-                if (queryValues.stream().anyMatch(p -> !Number.class.isAssignableFrom(p.getClass()))) {
-                    SneakyThrower.sneakyThrow(new SQLException("BETWEEN cannot be applied to string"));
+                if (queryValues.stream().anyMatch(p -> !isInt(p))) {
+                    SneakyThrower.sneakyThrow(new SQLException("BETWEEN can be applied to integer values only"));
                 }
                 if ("PK".equals(column)) {
                     Collection<Key> keys = LongStream.rangeClosed(((Number)queryValues.get(0)).longValue(), ((Number)queryValues.get(1)).longValue()).boxed().map(i -> new Key(schema, tableName, i)).collect(toSet());
@@ -847,6 +857,11 @@ public class AerospikeQueryFactory {
             queryValues.add(value.getValue());
         }
 
+        @Override
+        public void visit(DoubleValue value) {
+            queryValues.add(value.getValue());
+        }
+
         public void visit(JdbcParameter parameter) {
             queryValues.add(parameterValues.get(parameter.getIndex() - 1));
         }
@@ -864,5 +879,9 @@ public class AerospikeQueryFactory {
 
     public String getSet() {
         return set;
+    }
+
+    public static boolean isInt(Object v) {
+        return INT_CLASSES.contains(v.getClass());
     }
 }

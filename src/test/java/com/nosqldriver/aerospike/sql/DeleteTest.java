@@ -3,7 +3,6 @@ package com.nosqldriver.aerospike.sql;
 import com.nosqldriver.Person;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
@@ -88,8 +87,8 @@ class DeleteTest {
     }
 
     @Test
-    void deleteByPkBetweenString() throws SQLException {
-        assertEquals("BETWEEN cannot be applied to string", assertThrows(SQLException.class, () -> assertDelete("delete from people where PK between '1' and '3'", p -> false)).getMessage());
+    void deleteByPkBetweenString() {
+        assertEquals("BETWEEN can be applied to integer values only", assertThrows(SQLException.class, () -> assertDelete("delete from people where PK between '1' and '3'", p -> false)).getMessage());
     }
 
     @Test
@@ -113,7 +112,6 @@ class DeleteTest {
     }
 
     @Test
-    @Disabled //FIXME
     void deleteByIdBetween() throws SQLException {
         assertDelete("delete from people where id between 1 and 3", p -> "Ringo".equals(p.getFirstName()));
     }
@@ -134,17 +132,13 @@ class DeleteTest {
         assertDelete("delete from people where first_name=?", new Object[] {"John"}, p -> !"John".equals(p.getFirstName()));
     }
 
-
-
-    private <T> void assertDelete(String deleteSql, Predicate<Person> expectedResultFilter) throws SQLException {
+    private void assertDelete(String deleteSql, Predicate<Person> expectedResultFilter) throws SQLException {
         int expectedUpdatedRowsCount = (int)stream(beatles).filter(person -> !expectedResultFilter.test(person)).count();
         assertDelete(executeUpdate, deleteSql, expectedResultFilter, res -> res == expectedUpdatedRowsCount);
         assertDelete(execute, deleteSql, expectedResultFilter, res -> res);
         assertDelete(executeQuery, deleteSql, expectedResultFilter, rs -> !resultSetNext(rs));
         assertDelete(executeQueryPreparedStatement, deleteSql, expectedResultFilter, rs -> !resultSetNext(rs));
-
         assertDelete(executeQueryPreparedStatementWithParameters, new Object[] {}, deleteSql, expectedResultFilter, rs -> !resultSetNext(rs));
-
     }
 
     private <T> void assertDelete(Function<String, T> executor, String deleteSql, Predicate<Person> expectedResultFilter, Predicate<T> returnValueValidator) throws SQLException {
@@ -158,11 +152,9 @@ class DeleteTest {
         assertEquals(stream(beatles).filter(expectedResultFilter).map(Person::getFirstName).collect(toSet()), names2);
     }
 
-
     private <T> void assertDelete(String deleteSql, Object[] parameters, Predicate<Person> expectedResultFilter) throws SQLException {
         assertDelete(executeQueryPreparedStatementWithParameters, parameters, deleteSql, expectedResultFilter, rs -> !resultSetNext(rs));
     }
-
 
     private <T> void assertDelete(BiFunction<String, Object[], T> executor, Object[] parameters, String deleteSql, Predicate<Person> expectedResultFilter, Predicate<T> returnValueValidator) throws SQLException {
         writeBeatles();

@@ -9,6 +9,7 @@ import com.nosqldriver.util.ThrowingConsumer;
 import com.nosqldriver.util.VariableSource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
@@ -257,18 +259,32 @@ class SelectTest {
             "select * from people where PK<?",
             "select * from people where PK<=?",
     })
-    void unsupportedPkOperationWithPreparedStatement(String sql) throws SQLException {
+    void unsupportedPkOperationWithPreparedStatement(String sql) {
         assertEquals("Filtering by PK supports =, !=, IN", assertThrows(SQLException.class, () -> testConn.prepareStatement(sql)).getMessage());
     }
 
     @Test
     void wrongSyntax() {
-        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("select from"));
-        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("wrong query"));
-        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("select * from one concat select * from two"));
-        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("update nothing"));
-        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("select * from people where year_of_birth between 1941"));
-        assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery("select * from people where first_name between 'Adam' and 'Abel'"));
+        BiConsumer<String, String> startsWithAssert = (expected, actual) -> assertTrue(actual.startsWith(expected));
+
+        assertSQLExceptionMessage("wrong query", "SQL statement wrong query is not supported. SQL should start with one of: [SELECT, INSERT, UPDATE, DELETE, SHOW, USE, CREATE INDEX, DROP INDEX]", Assertions::assertEquals);
+
+        String unexpectedToken = "Encountered unexpected token";
+        assertSQLExceptionMessage("select from", unexpectedToken, startsWithAssert);
+        assertSQLExceptionMessage("select * from one concat select * from two", unexpectedToken, startsWithAssert);
+        assertSQLExceptionMessage("update nothing", unexpectedToken, startsWithAssert);
+        assertSQLExceptionMessage("select * from people where year_of_birth between 1941", unexpectedToken, startsWithAssert);
+
+        String wrongBetweenOperands = "BETWEEN can be applied to integer values only";
+        assertSQLExceptionMessage("select * from people where first_name between 'Adam' and 'Abel'", wrongBetweenOperands, Assertions::assertEquals);
+        assertSQLExceptionMessage("delete from people where first_name between 'Adam' and 'Abel'", wrongBetweenOperands, Assertions::assertEquals);
+        assertSQLExceptionMessage("select * from people where year_of_birth between 2.7 and 3.14", wrongBetweenOperands, Assertions::assertEquals);
+        assertSQLExceptionMessage("delete from people where year_of_birth between 2.7 and 3.14", wrongBetweenOperands, Assertions::assertEquals);
+        assertSQLExceptionMessage("update people set x='nothing' where year_of_birth between 2.7 and 3.14", wrongBetweenOperands, Assertions::assertEquals);
+    }
+
+    private void assertSQLExceptionMessage(String sql, String expectedMessage, BiConsumer<String, String> assertion) {
+        assertion.accept(expectedMessage, assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage());
     }
 
     @Test
@@ -1569,7 +1585,7 @@ class SelectTest {
     @Test
     @DisplayName("select year_of_birth as year, sum(kids_count) as total_kids from people group by year_of_birth")
     void groupByYearOfBirthWithAggregation() throws SQLException {
-        ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true, "year_of_birth", "year", null /*INTEGER*/, "sum(kids_count)", "total_kids", null /*INTEGER*/); // FIXME: types
+        ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true, "year_of_birth", "year", null /*INTEGER*/, "sum(kids_count)", "total_kids", null /*INTEGER*/); // default: types
 
         Collection<Integer> years = new HashSet<>();
         assertTrue(rs.next());

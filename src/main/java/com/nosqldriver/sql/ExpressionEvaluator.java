@@ -31,7 +31,9 @@ public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T
         Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
         bindings.putAll(initialBindings);
         // TODO: this replacement is pretty naive. It might corrupt strings that contain equal sign and words "and" and "or"
-        fixedExpr = expr.replaceAll("(?<![<>])=", "==").replaceAll("(?i) AND ", " && ").replaceAll("(?i) OR ", " || ").replace("<>", "!=")
+        fixedExpr = expr.replaceAll("(?<![<>])=", "==")
+                .replaceAll("(?i)(\\w+)\\s+between\\s+(\\d+)\\s+and\\s+(\\d+)", "$1>=$2 and $1<=$3")
+                .replaceAll("(?i) AND ", " && ").replaceAll("(?i) OR ", " || ").replace("<>", "!=")
                 .replaceAll("(?i) like\\s+'%(.*?)%'", ".match(/.*$1.*/)!=null")
                 .replaceAll("(?i) like\\s+'%(.*?)'", ".match(/.*$1/)!=null")
                 .replaceAll("(?i) like\\s+'(.*?)%'", ".match(/$1.*/)!=null")

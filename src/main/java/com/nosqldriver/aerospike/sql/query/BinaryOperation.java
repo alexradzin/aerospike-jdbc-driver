@@ -4,6 +4,7 @@ import com.aerospike.client.Key;
 import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.aerospike.sql.AerospikeQueryFactory;
 import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.ResultSet;
@@ -139,8 +140,8 @@ public class BinaryOperation {
                 if ("PK".equals(operation.column)) {
                     return queries;
                 }
-                if (operation.values.stream().anyMatch(v -> !(v instanceof Number))) {
-                    SneakyThrower.sneakyThrow(new SQLException("Both operands of BETWEEN must be numbers"));
+                if (operation.values.stream().anyMatch(v -> !AerospikeQueryFactory.isInt(v))) {
+                    SneakyThrower.sneakyThrow(new SQLException("BETWEEN can be applied to integer values only"));
                 }
                 queries.setFilter(Filter.range(operation.column, ((Number) operation.values.get(0)).longValue(), ((Number) operation.values.get(1)).longValue()), operation.column);
                 return queries;
@@ -234,10 +235,6 @@ public class BinaryOperation {
 
             return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, valuesGetter.apply(operation)));
         }
-    }
-
-    public Statement getStatement() {
-        return statement;
     }
 
     public void setStatement(Statement statement) {
