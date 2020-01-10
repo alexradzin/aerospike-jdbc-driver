@@ -281,6 +281,12 @@ class SelectTest {
         assertSQLExceptionMessage("select * from people where year_of_birth between 2.7 and 3.14", wrongBetweenOperands, Assertions::assertEquals);
         assertSQLExceptionMessage("delete from people where year_of_birth between 2.7 and 3.14", wrongBetweenOperands, Assertions::assertEquals);
         assertSQLExceptionMessage("update people set x='nothing' where year_of_birth between 2.7 and 3.14", wrongBetweenOperands, Assertions::assertEquals);
+
+        String compositeQuery = "select first_name, last_name from people %s select first_name, last_name from people";
+        String compositeError = "Unsupported chain operation %s. This version supports UNION and UNION ALL only";
+        assertEquals(format(compositeError, "MINUS"), assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(format(compositeQuery, "minus"))).getMessage());
+        assertEquals(format(compositeError, "EXCEPT"), assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(format(compositeQuery, "EXCEPT"))).getMessage());
+        assertEquals(format(compositeError, "INTERSECT"), assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(format(compositeQuery, "INTERSECT"))).getMessage());
     }
 
     private void assertSQLExceptionMessage(String sql, String expectedMessage, BiConsumer<String, String> assertion) {
@@ -775,7 +781,11 @@ class SelectTest {
     @ValueSource(strings = {
             "select 1 as number union all select 2 as number",
             "select 1 as number union select 2 as number",
-    })
+            "select 1 as number union select 2 as number union select 2 as number",
+            "select 1 as number union select 1 as number union select 2 as number",
+            "select 1 as number union all select 2 as number limit 5",
+            "select 2 as number union (select 1 as number) order by number",
+   })
     void selectIntUnion(String sql) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
@@ -797,6 +807,8 @@ class SelectTest {
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select 1 as number union select 1 as number",
+            "select 1 as number union all (select 2 as number) limit 1",
+            "select 2 as number union all (select 1 as number) offset 1",
     })
     void selectIntUnionWithRepeatedValues(String sql) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(sql);

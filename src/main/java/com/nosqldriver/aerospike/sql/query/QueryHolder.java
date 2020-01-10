@@ -155,14 +155,14 @@ public class QueryHolder implements QueryContainer<ResultSet> {
 
     private Function<IAerospikeClient, ResultSet> getQueryWithSubQueries(java.sql.Statement sqlStatement) {
         //TODO: add support of chained UNION and sub queries
+        final Function<IAerospikeClient, ResultSet> query;
         if (subQeueries.stream().anyMatch(q -> ChainOperation.UNION_ALL.equals(q.chainOperation))) {
-            return client -> new ChainedResultSetWrapper(
+            query = wrap(sqlStatement, client -> new ChainedResultSetWrapper(
                     sqlStatement,
                     subQeueries.stream()
                             .filter(q -> ChainOperation.UNION_ALL.equals(q.chainOperation))
-                            .map(queryHolder -> queryHolder.getQuery(sqlStatement)).map(f -> f.apply(client)).collect(toList()), indexByName);
-        }
-        if (subQeueries.stream().anyMatch(q -> ChainOperation.UNION.equals(q.chainOperation))) {
+                            .map(queryHolder -> queryHolder.getQuery(sqlStatement)).map(f -> f.apply(client)).collect(toList()), indexByName));
+        } else if (subQeueries.stream().anyMatch(q -> ChainOperation.UNION.equals(q.chainOperation))) {
             Function<IAerospikeClient, ResultSet> chained = client -> new ChainedResultSetWrapper(
                     sqlStatement,
                     subQeueries.stream()
@@ -170,14 +170,10 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                             .map(queryHolder -> queryHolder.getQuery(sqlStatement)).map(f -> f.apply(client)).collect(toList()), indexByName);
 
 
-            return client -> new FilteredResultSet(
+            query = wrap(sqlStatement, client -> new FilteredResultSet(
                     chained.apply(client), columns,
-                    new ResultSetDistinctFilter<>(new ResultSetHashExtractor(), new TreeSet<>(new ByteArrayComparator())), indexByName);
-        }
-
-
-
-        if (subQeueries.stream().anyMatch(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation))) { // nested queries
+                    new ResultSetDistinctFilter<>(new ResultSetHashExtractor(), new TreeSet<>(new ByteArrayComparator())), indexByName));
+        } else if (subQeueries.stream().anyMatch(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation))) { // nested queries
             List<QueryHolder> all = subQeueries.stream().filter(q -> ChainOperation.SUB_QUERY.equals(q.chainOperation)).collect(toList());
             all.add(0, this);
             Collections.reverse(all);
@@ -188,9 +184,12 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             for (QueryHolder h : all) {
                 currentRsRef.set(h.wrap(sqlStatement, currentRsRef.get()));
             }
-            return currentRsRef.get();
+            query = currentRsRef.get();
+        } else {
+            query = null;
         }
-        return null;
+
+        return query;
     }
 
 

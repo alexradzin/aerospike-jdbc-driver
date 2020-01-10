@@ -24,7 +24,7 @@ repositories {
 dependencies {
     compile group: 'com.github.jsqlparser', name: 'jsqlparser', version: '1.4'
     compile group: 'com.aerospike', name: 'aerospike-client', version: '4.3.1'
-    compile 'com.jason-goodwin:better-monads:0.4.0'
+//    compile 'com.jason-goodwin:better-monads:0.4.0'
 
     testCompile group: 'org.mockito', name: 'mockito-core', version: '3.0.0'
     testImplementation 'org.awaitility:awaitility:4.0.1'

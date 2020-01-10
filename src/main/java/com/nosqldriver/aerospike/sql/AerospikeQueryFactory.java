@@ -259,20 +259,22 @@ public class AerospikeQueryFactory {
                     setOpList.getOrderByElements().stream().map(o -> new OrderItem(o.getExpression().toString(), o.isAsc() ? ASC :DESC)).forEach(queries::addOrdering);
                 }
                 List<SetOperation> operations = setOpList.getOperations();
-                if (operations.size() != 1) {
-                    SneakyThrower.sneakyThrow(new SQLException(format("Query can contain only one concatenation operation but was %d: %s", operations.size(), operations)));
-                }
-                SetOperation operation = operations.get(0);
-                final ChainOperation chainOperation;
-                if (operation instanceof UnionOp) {
-                    UnionOp union = (UnionOp)operation;
-                    chainOperation = union.isAll() ? ChainOperation.UNION_ALL : ChainOperation.UNION;
-                } else {
-                    throw new UnsupportedOperationException(operation.toString());
-                }
+                List<ChainOperation> chainOperations = operations.stream()
+                        .map(o -> {
+                            if (!(o instanceof UnionOp)) {
+                                SneakyThrower.sneakyThrow(new SQLException(format("Unsupported chain operation %s. This version supports UNION and UNION ALL only", o.toString())));
+                            }
+                            return (UnionOp) o;
+                        })
+                        .map(union -> union.isAll() ? ChainOperation.UNION_ALL : ChainOperation.UNION)
+                        .collect(Collectors.toList());
+                chainOperations.add(chainOperations.get(chainOperations.size() - 1));
 
-
-                setOpList.getSelects().forEach(sb -> createSelect(sb, queries.addSubQuery(chainOperation)));
+                List<SelectBody> selects = setOpList.getSelects();
+                int n = selects.size();
+                for (int i = 0; i < n; i++) {
+                    createSelect(selects.get(i), queries.addSubQuery(chainOperations.get(i)));
+                }
             }
 
             @Override
