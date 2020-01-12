@@ -116,6 +116,29 @@ abstract class UpdateTest {
 
 
     @Test
+    void updateOneFieldLimitedNumberOfRows() throws SQLException {
+        writeBeatles();
+        Map<Integer, Integer> expectedKidsCount = Arrays.stream(beatles).collect(toMap(Person::getId, Person::getKidsCount));
+
+        Map<Integer, Integer> kidsCount1 = new HashMap<>();
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> kidsCount1.put(rec.getInt("id"), rec.getInt("kids_count")));
+        assertEquals(expectedKidsCount, kidsCount1);
+
+        int limit = 2;
+        executeUpdate("update people set kids_count=0 limit " + limit, limit);
+        Map<Integer, Integer> kidsCount2 = new HashMap<>();
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> kidsCount2.put(rec.getInt("id"), rec.getInt("kids_count")));
+        assertEquals(limit, kidsCount2.values().stream().filter(c -> c == 0).count());
+
+        Map<Integer, Integer> kidsCount3 = new HashMap<>();
+        executeUpdate("update people set kids_count=123 limit " + limit, limit);
+        client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> kidsCount3.put(rec.getInt("id"), rec.getInt("kids_count")));
+        assertEquals(limit, kidsCount3.values().stream().filter(c -> c == 123).count());
+    }
+
+
+
+    @Test
     void updateCopyFieldToFieldSeveralRows() throws SQLException {
         writeBeatles();
 

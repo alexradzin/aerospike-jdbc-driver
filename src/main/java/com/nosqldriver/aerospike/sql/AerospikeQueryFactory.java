@@ -54,6 +54,7 @@ import net.sf.jsqlparser.statement.drop.Drop;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.FromItemVisitorAdapter;
 import net.sf.jsqlparser.statement.select.Join;
+import net.sf.jsqlparser.statement.select.Limit;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectBody;
@@ -554,7 +555,7 @@ public class AerospikeQueryFactory {
 
     private QueryContainer<Integer> createUpdatePlan(String sql, Object[] parameterValues) throws SQLException {
         try {
-            AtomicInteger limit = new AtomicInteger(0);
+            AtomicInteger limit = new AtomicInteger(-1);
             AtomicReference<String> tableName = new AtomicReference<>(null);
             AtomicReference<String> schema = new AtomicReference<>(AerospikeQueryFactory.this.schema);
             AtomicReference<String> whereExpr = new AtomicReference<>(null);
@@ -579,14 +580,7 @@ public class AerospikeQueryFactory {
                         }
                     }
 
-                    if (delete.getLimit() != null && delete.getLimit().getRowCount() != null) {
-                        delete.getLimit().getRowCount().accept(new ExpressionVisitorAdapter() {
-                            @Override
-                            public void visit(LongValue value) {
-                                limit.set((int)value.getValue());
-                            }
-                        });
-                    }
+                    initLimit(delete.getLimit(), limit);
                     Expression where = delete.getWhere();
                     if (where != null) {
                         WhereVisitor whereVisitor = new WhereVisitor(AerospikeQueryFactory.this.schema, tableName.get(), Arrays.asList(parameterValues));
@@ -718,6 +712,7 @@ public class AerospikeQueryFactory {
                     worker.set(updater);
 
 
+                    initLimit(update.getLimit(), limit);
                     Expression where = update.getWhere();
                     if (where != null) {
                         WhereVisitor whereVisitor = new WhereVisitor(AerospikeQueryFactory.this.schema, tableName.get(), Arrays.asList(parameterValues));
@@ -734,9 +729,9 @@ public class AerospikeQueryFactory {
             if (useWhereRecord.get() && whereExpr.get() != null) {
                 int totalParamCount = parseParameters(sql, 0).getValue();
                 int whereParamCount = parseParameters(whereExpr.get(), 0).getValue();
-                int offset = totalParamCount - whereParamCount;
+                int paramOffset = totalParamCount - whereParamCount;
                 Map<String, Object> psValues = IntStream.range(0, parameterValues.length).boxed().filter(i -> parameterValues[i] != null).collect(Collectors.toMap(i -> "$" + (i + 1), i -> parameterValues[i]));
-                recordPredicate.set(new RecordExpressionEvaluator(parseParameters(whereExpr.get(), offset).getKey(), psValues));
+                recordPredicate.set(new RecordExpressionEvaluator(parseParameters(whereExpr.get(), paramOffset).getKey(), psValues));
             } else if (filterByPk.get()) {
                 recordPredicate.set(r -> false);
             }
@@ -747,9 +742,10 @@ public class AerospikeQueryFactory {
                 public Function<IAerospikeClient, Integer> getQuery(Statement statement) {
                     return client -> {
                         AtomicInteger count = new AtomicInteger(0);
+                        int limitValue = limit.get();
                         client.scanAll(policyProvider.getScanPolicy(), schema.get(), tableName.get(),
                                 (key, record) -> {
-                                    if (keyPredicate.get().test(key) || recordPredicate.get().test(record)) {
+                                    if ((limitValue < 0 || count.get() < limitValue) && (keyPredicate.get().test(key) || recordPredicate.get().test(record))) {
                                         worker.get().apply(client, singletonMap(key, record).entrySet().iterator().next());
                                         count.incrementAndGet();
                                     }
@@ -781,6 +777,20 @@ public class AerospikeQueryFactory {
         } catch (JSQLParserException e) {
             String msg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
             throw new SQLException(msg, e);
+        }
+    }
+
+
+    private void initLimit(Limit statementLimit, AtomicInteger limit) {
+        if (statementLimit != null) {
+            if (statementLimit.getRowCount() != null) {
+                statementLimit.getRowCount().accept(new ExpressionVisitorAdapter() {
+                    @Override
+                    public void visit(LongValue value) {
+                        limit.set((int) value.getValue());
+                    }
+                });
+            }
         }
     }
 

@@ -82,6 +82,11 @@ class DeleteTest {
     }
 
     @Test
+    void deleteByPkInLimit() throws SQLException {
+        assertDelete("delete from people where PK in (1, 2, 3) limit 2", p -> "George".equals(p.getFirstName()) || "Ringo".equals(p.getFirstName()));
+    }
+
+    @Test
     void deleteByPkBetween() throws SQLException {
         assertDelete("delete from people where PK between 1 and 3", p -> "Ringo".equals(p.getFirstName()));
     }

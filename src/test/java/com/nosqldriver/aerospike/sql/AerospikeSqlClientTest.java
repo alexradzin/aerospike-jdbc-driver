@@ -35,6 +35,7 @@ import com.aerospike.client.query.IndexCollectionType;
 import com.aerospike.client.query.IndexType;
 import com.aerospike.client.query.Statement;
 import com.aerospike.client.task.ExecuteTask;
+import com.aerospike.client.task.IndexTask;
 import com.aerospike.client.task.RegisterTask;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -164,6 +165,10 @@ class AerospikeSqlClientTest {
 
         when(mock.queryAggregateNode(qp, statement, node)).thenReturn(null);
         assertNull(wrapperClient.queryAggregateNode(qp, statement, node));
+
+        IndexTask it = new IndexTask(null, p, "test", "test_set_index", false);
+        when(mock.createIndex(p, "test", "set", "test_set_index", "bin", IndexType.NUMERIC)).thenReturn(it);
+        assertEquals(it, wrapperClient.createIndex(p, "test", "set", "test_set_index", "bin", IndexType.NUMERIC));
 
         User user = new User();
         when(mock.queryUser(ap, "user")).thenReturn(user);
@@ -593,6 +598,8 @@ class AerospikeSqlClientTest {
         doThrow(ase).when(mock).queryAggregateNode(any(QueryPolicy.class), any(Statement.class), any(Node.class));
         assertThrows(SQLException.class, () -> wrapperClient.queryAggregateNode(new QueryPolicy(), new Statement(), mock(Node.class)));
 
+        doThrow(ase).when(mock).createIndex(any(Policy.class), any(String.class), any(String.class), any(String.class), any(String.class), any(IndexType.class));
+        assertThrows(SQLException.class, () -> wrapperClient.createIndex(new Policy(), "test", "set", "test_set_index", "bin", IndexType.NUMERIC));
 
         doThrow(ase).when(mock).createIndex(any(Policy.class), eq(NAMESPACE), eq(PEOPLE), eq("index1"), eq("bin1"), eq(IndexType.NUMERIC));
         assertThrows(SQLException.class, () -> wrapperClient.createIndex(new Policy(), NAMESPACE, PEOPLE, "index1", "bin1", IndexType.NUMERIC));

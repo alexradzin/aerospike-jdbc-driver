@@ -287,6 +287,8 @@ class SelectTest {
         assertEquals(format(compositeError, "MINUS"), assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(format(compositeQuery, "minus"))).getMessage());
         assertEquals(format(compositeError, "EXCEPT"), assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(format(compositeQuery, "EXCEPT"))).getMessage());
         assertEquals(format(compositeError, "INTERSECT"), assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(format(compositeQuery, "INTERSECT"))).getMessage());
+
+        assertSQLExceptionMessage("select field, count(*) from table", "Cannot perform aggregation operation with query that contains regular fields", Assertions::assertEquals);
     }
 
     private void assertSQLExceptionMessage(String sql, String expectedMessage, BiConsumer<String, String> assertion) {
