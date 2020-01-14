@@ -490,10 +490,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                         return set;
                     }
                     Optional<String> joinAlias = joins.stream().filter(j -> Objects.equals(table, j.setAlias)).findFirst().map(j -> j.setAlias);
-                    if (joinAlias.isPresent()) {
-                        return joinAlias.get();
-                    }
-                    return table;
+                    return joinAlias.orElse(table);
                 }
 
                 @Override

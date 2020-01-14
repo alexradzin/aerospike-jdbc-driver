@@ -306,6 +306,9 @@ class SelectTest {
         assertEquals(format(compositeError, "INTERSECT"), assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(format(compositeQuery, "INTERSECT"))).getMessage());
 
         assertSQLExceptionMessage("select field, count(*) from table", "Cannot perform aggregation operation with query that contains regular fields", Assertions::assertEquals);
+
+        assertSQLExceptionMessage("select distinct(first_name), distinct(last_name) from people", "Encountered unexpected token: \"distinct\" \"DISTINCT\"", startsWithAssert);
+        assertSQLExceptionMessage("select distinct(first_name), last_name from people", "Wrong query syntax: distinct is used together with other fields", Assertions::assertEquals);
     }
 
     private void assertSQLExceptionMessage(String sql, String expectedMessage, BiConsumer<String, String> assertion) {
