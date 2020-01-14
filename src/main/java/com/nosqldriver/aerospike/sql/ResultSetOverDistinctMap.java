@@ -81,7 +81,7 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
         if (row == null) {
             getRecord();
         }
-        return currentIndex < row.size();
+        return nextResult = currentIndex < row.size();
     }
 
     @Override

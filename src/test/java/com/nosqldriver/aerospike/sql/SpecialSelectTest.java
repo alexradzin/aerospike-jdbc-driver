@@ -1,5 +1,8 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.aerospike.client.Bin;
+import com.aerospike.client.Key;
+import com.aerospike.client.policy.WritePolicy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +26,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.SELECT_ALL;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SUBJECT_SELECTION;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.write;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeData;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeMainPersonalInstruments;
@@ -147,6 +151,27 @@ class SpecialSelectTest {
         ResultSet rs = testConn.createStatement().executeQuery("select * from data where PK='one'");
         assertTrue(rs.next());
         assertFalse(rs.next());
+        rs.close();
+    }
+
+    @Test
+    void groupByDouble() throws SQLException {
+        WritePolicy writePolicy = new WritePolicy();
+        write(writePolicy, new Key(NAMESPACE, DATA, "pi"), new Bin("name", "PI"), new Bin("value", 3.14));
+        write(writePolicy, new Key(NAMESPACE, DATA, "e"), new Bin("name", "EXP"), new Bin("value", 2.7));
+
+        ResultSet rs = testConn.createStatement().executeQuery("select value, count(*) from data group by value");
+
+        Map<Double, Integer> actual = new HashMap<>();
+        while(rs.next()) {
+            actual.put(rs.getDouble(1), rs.getInt(2));
+        }
+        assertFalse(rs.next());
+        Map<Double, Integer> expected = new HashMap<>();
+        expected.put(3.14, 1);
+        expected.put(2.7, 1);
+
+        assertEquals(expected, actual);
         rs.close();
     }
 }
