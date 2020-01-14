@@ -520,17 +520,14 @@ public class AerospikeSqlClient implements IAerospikeClient {
     }
 
 
-    @SuppressWarnings("ConstantConditions") // In fact SQLException and RuntimeException are expected here
     private <R> R get(Supplier<R> c) {
         try {
             return c.get();
         } catch (Exception e) {
-            processException(e);
-            throw new IllegalStateException(e); // shold never happen because processException() should never return normally.
+            return processException(e);
         }
     }
 
-    @SuppressWarnings("ConstantConditions") // In fact SQLException and RuntimeException are expected here
     private void call(Consumer<IAerospikeClient> c) {
         try {
             c.accept(client);
@@ -539,7 +536,7 @@ public class AerospikeSqlClient implements IAerospikeClient {
         }
     }
 
-    private void processException(Exception e) {
+    private <R> R processException(Exception e) {
         if (e instanceof AerospikeException) {
             throwSqlException((AerospikeException) e);
         } else if (e instanceof SQLException) {

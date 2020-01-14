@@ -104,12 +104,12 @@ class PreparedStatementWithComplexTypesTest {
         insert.setLong(2, nanos);
         assertEquals(1, insert.executeUpdate());
 
-        assertFilteringByDate(format("select * from data where date in (date(%d))", millis), millis, nanos);
-        assertFilteringByDate(format("select * from data where date in (calendar(%d))", millis), millis, nanos);
+        assertFilteringByDate(format("select * from data where date in (date(%d))", millis), nanos);
+        assertFilteringByDate(format("select * from data where date in (calendar(%d))", millis), nanos);
     }
 
-    private void assertFilteringByDate(String sql, long millis, long nanos) throws SQLException {
-        ResultSet rs = testConn.createStatement().executeQuery(format("select * from data where date in (date(%d))", millis));
+    private void assertFilteringByDate(String sql, long nanos) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
         assertTrue(rs.next());
         assertEquals(nanos, rs.getLong(1));
         assertFalse(rs.next());

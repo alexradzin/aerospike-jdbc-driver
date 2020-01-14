@@ -6,7 +6,6 @@ import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.Array;
 import java.sql.SQLException;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -29,14 +28,11 @@ public class ValueHolderPredExp<T> extends FakePredExp {
 
     public static PredExp create(Object val) {
         if (val == null) {
-            throw new IllegalArgumentException("Predicate value cannot be null");
+            SneakyThrower.sneakyThrow(new SQLException("Predicate value cannot be null"));
         }
         Function<Object, PredExp> factory = predExpFactories.get(val.getClass());
         if (factory != null) {
             return factory.apply(val);
-        }
-        if (val instanceof Calendar) {
-            return PredExp.integerValue((Calendar)val);
         }
         if (val.getClass().isArray()) {
             return new ValueHolderPredExp<>((Object[])val);
@@ -44,7 +40,7 @@ public class ValueHolderPredExp<T> extends FakePredExp {
         if (val instanceof Array) {
             return SneakyThrower.get(() -> createSqlArrayHolder((Array)val));
         }
-        throw new IllegalArgumentException("" + val);
+        return SneakyThrower.sneakyThrow(new SQLException("" + val));
     }
 
 

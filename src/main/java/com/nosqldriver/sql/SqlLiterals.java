@@ -94,7 +94,7 @@ public class SqlLiterals {
             predExpOperators.put(operatorKey(type, "OR"), () -> PredExp.or(2));
             predExpOperators.put(operatorKey(type, "IN"), () -> new OperatorRefPredExp("IN"));
         }
-        for (Class type : new Class[] {byte[].class, int[].class, long[].class, Array.class, BasicArray.class}) {
+        for (Class type : new Class[] {byte[].class, int[].class, long[].class, Byte[].class, Integer[].class, Long[].class, Array.class, BasicArray.class}) {
             predExpOperators.put(operatorKey(type, "IN"), () -> new OperatorRefPredExp("IN"));
         }
 
