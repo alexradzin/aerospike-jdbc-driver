@@ -116,6 +116,9 @@ class DelegatingResultSetTest {
     void getAllSimpleTypes(ResultSet rs, String name) throws SQLException, MalformedURLException {
         assertEquals(0, rs.getRow());
         assertTrue(rs.next());
+        assertEquals(1, rs.getRow());
+        assertTrue(rs.isFirst());
+        //assertTrue(rs.isLast()); //FIXME does not work for filtered RS
 
         assertEquals(simpleRow[0], rs.getByte(1));
         assertEquals(simpleRow[0], rs.getByte("byte"));
@@ -248,13 +251,15 @@ class DelegatingResultSetTest {
     }
 
 
-
-
     @ParameterizedTest(name = "{1}")
     @VariableSource("resultSetsForCompositeTypes")
     void getAllCompositeTypes(ResultSet rs, String name) throws SQLException, IOException {
+        assertTrue(rs.isBeforeFirst());
+        assertFalse(rs.isFirst());
         assertTrue(rs.next());
 
+        assertTrue(rs.isFirst());
+        //assertTrue(rs.isLast()); // FIXME does not work for filtered RS
 
         assertArrayEquals((byte[])compositeRow[0], rs.getBytes(1));
         assertArrayEquals((byte[])compositeRow[0], rs.getBytes("bytes"));
@@ -304,6 +309,8 @@ class DelegatingResultSetTest {
         assertEquals(expNClob, new String(IOUtils.toByteArray(rs.getAsciiStream("nclob"))));
 
         assertFalse(rs.next());
+        //assertFalse(rs.isFirst()); //FIXME does not work for filtered
+        assertTrue(rs.isAfterLast());
     }
 
 
@@ -319,6 +326,7 @@ class DelegatingResultSetTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getRowId("any"));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getSQLXML(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> rs.getSQLXML("any"));
+        assertThrows(SQLFeatureNotSupportedException.class, rs::getCursorName);
     }
 
 

@@ -103,7 +103,7 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public boolean isFirst() throws SQLException {
-        return row == 1;
+        return row == 1 && !afterLast;
     }
 
     @Override

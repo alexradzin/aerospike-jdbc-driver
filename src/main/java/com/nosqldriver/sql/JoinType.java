@@ -37,6 +37,7 @@ public enum JoinType {
         }
         Set<Boolean> skip = Arrays.stream(types).map(t -> t.skipMissing).collect(toSet());
         if (skip.size() > 1) {
+            // This is impossible. There is not full inner join. Such expresion will be blocked by the SQL parser.
             throw new IllegalArgumentException(format("Incompatible join types %s", Arrays.toString(types)));
         }
         return skip.iterator().next();
