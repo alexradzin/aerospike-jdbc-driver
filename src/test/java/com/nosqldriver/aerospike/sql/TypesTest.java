@@ -46,7 +46,8 @@ class TypesTest {
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select text, integer, bigint, decimal, true_flag, false_flag from " + TYPE_TEST_TABLE,
-            "select text, integer, bigint, decimal, true_flag, false_flag from " + TYPE_TEST_TABLE + " as p left join secondary_table as s on p.text=s.text"
+            "select text, integer, bigint, decimal, true_flag, false_flag from " + TYPE_TEST_TABLE + " as p left join secondary_table as s on p.text=s.text",
+            "select text, integer, bigint, decimal, true_flag, false_flag from " + TYPE_TEST_TABLE + " as p left join secondary_table as s on s.text=p.text"
     })
     void simpleTypes(String sql) throws Exception {
         long now = currentTimeMillis();

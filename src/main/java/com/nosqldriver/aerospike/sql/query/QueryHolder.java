@@ -650,12 +650,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                 PredExp exp = result.get(i);
                 if (exp instanceof ValueRefPredExp) {
                     ValueRefPredExp ref = (ValueRefPredExp)exp;
-                    final Object value;
-                    try {
-                        value = rs.getObject(ref.getName());
-                    } catch (SQLException e) {
-                        return SneakyThrower.sneakyThrow(e);
-                    }
+                    final Object value = SneakyThrower.get(() -> rs.getObject(ref.getName()));
 
                     if (value instanceof String) {
                         result.set(i, PredExp.stringValue((String)value));
