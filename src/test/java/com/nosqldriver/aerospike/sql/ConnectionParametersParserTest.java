@@ -108,6 +108,13 @@ class ConnectionParametersParserTest {
     }
 
     @Test
+    void parseOneIndex1() {
+        Collection<String> indexes = new ConnectionParametersParser().indexesParser("ns=test:set=people:indexname=PEOPLE_YOB_INDEX:bin=year_of_birth:type=NUMERIC:indextype=NONE:path=year_of_birth:state=RW;", "ns", "set", "bin");
+        assertEquals(1, indexes.size());
+        assertEquals("test.people.year_of_birth", indexes.iterator().next());
+    }
+
+    @Test
     void parseTwoIndex() {
         Collection<String> indexes = new HashSet<>(new ConnectionParametersParser().indexesParser(
                 "ns=test:set=people:indexname=PEOPLE_YOB_INDEX:bin=year_of_birth:type=NUMERIC:indextype=NONE:path=year_of_birth:state=RW;ns=test:set=people:indexname=PEOPLE_FIRST_NAME_INDEX:bin=first_name:type=STRING:indextype=NONE:path=first_name:state=RW;"

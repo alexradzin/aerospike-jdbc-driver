@@ -246,7 +246,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
         this.connection = connection;
         this.schema = schema;
         this.policyProvider = policyProvider;
-        indexes = new ConnectionParametersParser().indexesParser(Info.request(client.getNodes()[0], "sindex"));
+        indexes = new ConnectionParametersParser().indexesParser(Info.request(client.getNodes()[0], "sindex"), "ns", "set", "bin");
     }
 
 

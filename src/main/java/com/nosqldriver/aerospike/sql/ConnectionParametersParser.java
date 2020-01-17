@@ -88,17 +88,23 @@ class ConnectionParametersParser {
 
     @VisibleForPackage
     Collection<String> indexesParser(String infos) {
+        return indexesParser(infos, "type", "ns", "set", "bin", "indexname");
+    }
+
+    @VisibleForPackage
+    Collection<String> indexesParser(String infos, String ... propNames) {
         return Arrays.stream(infos.split(";"))
                 .filter(info -> !info.isEmpty())
                 .map(info -> new StringReader(info.replace(":", "\n")))
                 .map(r -> {
-            Properties props = new Properties();
-            try {
-                props.load(r);
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
-            return props;
-        }).map(p -> join(".", p.getProperty("type"), p.getProperty("ns"), p.getProperty("set"), p.getProperty("bin"), p.getProperty("indexname"))).collect(toSet());
+                    Properties props = new Properties();
+                    try {
+                        props.load(r);
+                    } catch (IOException e) {
+                        throw new IllegalStateException(e);
+                    }
+                    return props;
+                }).map(p -> join(".", Arrays.stream(propNames).map(p::getProperty).toArray(String[]::new)))
+                .collect(toSet());
     }
 }
