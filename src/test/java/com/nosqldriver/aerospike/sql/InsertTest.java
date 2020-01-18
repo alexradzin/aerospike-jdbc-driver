@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mockito;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -428,7 +429,7 @@ class InsertTest {
 
 
     @Test
-    void insertBlobs() throws SQLException {
+    void insertBlobs() throws SQLException, IOException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
         assertNull(client.get(null, key1));
         PreparedStatement ps = testConn.prepareStatement("insert into data (PK, blob, input_stream, limited_is) values (?, ?, ?, ?)");
@@ -443,6 +444,14 @@ class InsertTest {
         ps.setBlob(2, blob);
         ps.setBlob(3, new ByteArrayInputStream(bytes));
         ps.setBlob(4, new ByteArrayInputStream(bytes), bytes.length);
+
+        InputStream in1 = Mockito.mock(InputStream.class);
+        when(in1.read(any(byte[].class), any(int.class), any(int.class))).thenThrow(EOFException.class);
+        assertThrows(SQLException.class, () -> ps.setBlob(4, in1, bytes.length));
+
+        InputStream in2 = Mockito.mock(InputStream.class);
+        when(in2.read(any(byte[].class), any(int.class), any(int.class))).thenThrow(IOException.class);
+        assertThrows(SQLException.class, () -> ps.setBlob(4, in2, bytes.length));
 
         assertEquals(1, ps.executeUpdate());
 
