@@ -11,7 +11,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -30,6 +29,7 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
@@ -43,6 +43,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -266,12 +267,12 @@ class SelectTest {
 
     @Test
     void preparedStatementPkIsNull() throws SQLException {
-        preparedStatementByPkWrongValue(null, "Predicate value cannot be null");
+        preparedStatementByPkWrongValue(null, "Filter by null is not supported right now. Use either number or string");
     }
 
     @Test
     void preparedStatementPkUnsupportedType() throws SQLException {
-        preparedStatementByPkWrongValue(this, toString());
+        preparedStatementByPkWrongValue(this, "Filter by class com.nosqldriver.aerospike.sql.SelectTest is not supported right now. Use either number or string");
     }
 
     private void preparedStatementByPkWrongValue(Object value, String expectedErrorMessage) throws SQLException {
@@ -1284,11 +1285,33 @@ class SelectTest {
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {"1",  "2", "3", "4","1, 2", "2, 3", "3, 4", "1, 2, 3, 4"})
-    @Disabled //FIXME: this test does not work and has to be fixed
     void selectPsSeveralRecordsIdInUsingLongArray(String keys) throws SQLException {
         long[] ids = stream(keys.split("\\s*,\\s*")).map(Long::parseLong).mapToLong(i -> i).toArray();
         selectPsSeveralRecordsInUsingPrimitiveArray("id", keys, ids);
     }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {"1",  "2", "3", "4","1, 2", "2, 3", "3, 4", "1, 2, 3, 4"})
+    void selectPsSeveralRecordsIdInUsingList(String keys) throws SQLException {
+        List<Long> ids = stream(keys.split("\\s*,\\s*")).map(Long::parseLong).collect(Collectors.toList());
+        selectPsSeveralRecordsInUsingPrimitiveArray("id", keys, ids);
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {"1",  "2", "3", "4","1, 2", "2, 3", "3, 4", "1, 2, 3, 4"})
+    void selectPsSeveralRecordsIdInSetValuesOneByOne(String keys) throws SQLException {
+        List<Long> ids = stream(keys.split("\\s*,\\s*")).map(Long::parseLong).collect(Collectors.toList());
+        String[] questions = new String[ids.size()];
+        Arrays.fill(questions, "?");
+        PreparedStatement ps = testConn.prepareStatement(format("select * from people where id in (%s)", String.join(",", questions)));
+        for (int i = 0; i < ids.size(); i++) {
+            ps.setLong(i + 1, ids.get(i));
+        }
+        int[] pids = stream(keys.split("\\s*,\\s*")).map(Integer::parseInt).mapToInt(i -> i).toArray();
+        ResultSet rs = ps.executeQuery();
+        assertPeople(rs, beatles, pids);
+    }
+
 
 
     private void selectPsSeveralRecordsInUsingPrimitiveArray(String name, String values, Object idsToSet) throws SQLException {

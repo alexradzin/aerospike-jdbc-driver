@@ -78,7 +78,6 @@ import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 
 public class QueryHolder implements QueryContainer<ResultSet> {
-    private static final Collection<Class> intTypes = new HashSet<>(asList(Byte.class, Short.class, Integer.class, Long.class, byte.class, short.class, int.class, long.class));
     private String schema;
     private final Collection<String> indexes;
     private final AerospikePolicyProvider policyProvider;
@@ -207,14 +206,15 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         }
 
         NavigableSet<Integer> indexesToRemove = new TreeSet<>();
+        Class paramType = null;
         Class type = null;
         for (int i = 0; i < predExps.size(); i++) {
             PredExp predExp = predExps.get(i);
             if (predExp instanceof PredExpValuePlaceholder) {
                 PredExpValuePlaceholder placeholder = ((PredExpValuePlaceholder)predExp);
                 Object parameter = parameters[dataIndex + placeholder.getIndex() - 1];
-                predExps.set(i, placeholder.createPredExp(parameter));
-                type = parameter == null ? String.class : parameter.getClass();
+                paramType = parameter == null ? String.class : parameter.getClass();
+                type = paramType;
                 if (predExps.get(i - 1) instanceof ColumnRefPredExp) {
                     String binName = ((ColumnRefPredExp)predExps.get(i - 1)).getName();
                     if ("PK".equals(binName)) {
@@ -236,16 +236,18 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                         }
 
                         indexesToRemove.addAll(asList(i - 1, i, i +1 ));
+                    } else {
+                        type = placeholder.updatePreExp(predExps, i, parameter);
                     }
-                    PredExp binExp = createBinPredExp(binName, type);
+                    PredExp binExp = PredExpValuePlaceholder.createBinPredExp(binName, type);
                     predExps.set(i - 1, binExp);
                 }
             }
             if (predExp instanceof OperatorRefPredExp) {
-                if (type == null) {
+                if (paramType == null) {
                     SneakyThrower.sneakyThrow(new SQLException("Cannot retrieve type of parameter of prepared statement"));
                 }
-                predExps.set(i, predExpOperators.get(operatorKey(type, ((OperatorRefPredExp)predExp).getOp())).get());
+                predExps.set(i, predExpOperators.get(operatorKey(paramType, ((OperatorRefPredExp)predExp).getOp())).get());
             }
 
         }
@@ -255,24 +257,6 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         }
     }
 
-    private PredExp createBinPredExp(String name, Class<?> type) {
-        if (intTypes.contains(type)) {
-            return PredExp.integerBin(name);
-        }
-        if (String.class.equals(type)) {
-            return PredExp.stringBin(name);
-        }
-        if (Array.class.isAssignableFrom(type) || type.isArray() || Collection.class.isAssignableFrom(type)) {
-            return PredExp.listBin(name);
-        }
-        if (Map.class.isAssignableFrom(type)) {
-            return PredExp.mapBin(name);
-        }
-
-        // TODO: add GeoJson
-
-        return SneakyThrower.sneakyThrow(new SQLException(format("Cannot create where clause using type %s", type)));
-    }
 
     @SafeVarargs
     private final void assertNull(Function<IAerospikeClient, ResultSet>... queries) {
