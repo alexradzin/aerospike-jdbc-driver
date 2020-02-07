@@ -107,16 +107,19 @@ function from_base64(s) {
 ///////////////////////////////////////////////////////////
 function _parse(str, fmt) {
     var d = fmt ? new java.text.SimpleDateFormat(fmt).parse(str) : com.nosqldriver.util.DateParser.date(str);
-    return new Date(d.getTime());
+    return new java.util.Date(d.getTime());
 }
 
 /**
  * @arg - (optional) epoch or string representation of date
  */
 function date(arg) {
+    if(typeof arg === 'object' ) {
+        return arg; // it is java.util.Date
+    }
     result = (arg == null || typeof arg === 'undefined') ? new java.util.Date() : typeof arg === 'number' ? new java.util.Date(arg) : typeof arg === 'string' ? _parse(arg) : typeof arg.getMonth === 'function' ? arg : null;
     if (!result) {
-        throw new java.sql.SQLException("Wrong argument " + arg);
+        throw new java.sql.SQLException("Wrong argument " + arg + " type: " + (typeof arg));
     }
     return result;
 }
@@ -157,7 +160,9 @@ function second(d) {
 }
 
 function millisecond(d) {
-    return date(d).getMilliseconds();
+    var millis = date(d).getTime();
+    var ms = millis - Math.floor(millis / 1000) * 1000;
+    return ms;
 }
 
 function epoch(str, fmt) {
