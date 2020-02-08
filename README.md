@@ -132,3 +132,11 @@ Typical Aerospike installation consists of several instances, so several IP addr
 | `epoch(str, fmt)`                | parses given string representation of date using given format to epoch   |
 
 (*) `[date]` is optional argument. If omitted current date is used. Otherwise can be either Date object or epoch or string representation of date parsed using one of the following formats: yyyy-MM-dd HH:mm:ss.SSS z, yyyy-MM-dd HH:mm:ss z, yyyy-MM-dd HH:mm:ss.SSS, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd HH:mm, yyyy-MM-dd
+
+## Download
+You can download binaries here:
+
+* [aerospike-jdbc-driver-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1jF1jKHEFsry5xt_QTQRhMOm785eJ4JeZ/view?usp=sharing)
+* [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1W9C7ubbjFnnYNvKqPWD1A1DwSC55REm1/view?usp=sharing)
+
+
