@@ -138,5 +138,6 @@ You can download binaries here:
 
 * [aerospike-jdbc-driver-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1jF1jKHEFsry5xt_QTQRhMOm785eJ4JeZ/view?usp=sharing)
 * [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1W9C7ubbjFnnYNvKqPWD1A1DwSC55REm1/view?usp=sharing)
+* [aerospike-jdbc-driver-all-js-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1Tp1zU8W71-hq8t6xwRfbqaarZ4TbWH42/view?usp=sharing) - jar that contains all dependencies including javascript engine that may be unavailable in JRE 11 and later.
 
 
