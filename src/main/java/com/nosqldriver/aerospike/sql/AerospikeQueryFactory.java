@@ -52,6 +52,7 @@ import net.sf.jsqlparser.statement.create.index.CreateIndex;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.drop.Drop;
 import net.sf.jsqlparser.statement.insert.Insert;
+import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.FromItemVisitorAdapter;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.Limit;
@@ -315,20 +316,25 @@ public class AerospikeQueryFactory {
                     for (Join join : plainSelect.getJoins()) {
                         QueryHolder currentJoin = queries.addJoin(JoinType.skipIfMissing(JoinType.getTypes(join)));
 
-                        if (join.getRightItem() != null) {
-                            join.getRightItem().accept(new FromItemVisitorAdapter() {
-                                @Override
-                                public void visit(Table tableName) {
-                                    if (tableName.getSchemaName() != null) {
-                                        currentJoin.setSchema(tableName.getSchemaName());
+                        FromItem joinFrom = join.getRightItem();
+                        if (joinFrom != null) {
+                            if (joinFrom instanceof Table) {
+                                joinFrom.accept(new FromItemVisitorAdapter() {
+                                    @Override
+                                    public void visit(Table tableName) {
+                                        if (tableName.getSchemaName() != null) {
+                                            currentJoin.setSchema(tableName.getSchemaName());
+                                        }
+                                        String joinedSetAlias = ofNullable(tableName.getAlias()).map(Alias::getName).orElse(null);
+                                        updateJoinedQuery(queries, currentJoin, tableName.getName(), joinedSetAlias);
                                     }
-                                    currentJoin.setSetName(tableName.getName(), ofNullable(tableName.getAlias()).map(Alias::getName).orElse(null));
-                                    String joinedSetAlias = currentJoin.getSetAlias();
-                                    if (joinedSetAlias != null) {
-                                        queries.copyColumnsForTable(joinedSetAlias, currentJoin);
-                                    }
-                                }
-                            });
+                                });
+                            } else if (joinFrom instanceof SubSelect) {
+                                SubSelect subSelect = (SubSelect)joinFrom;
+                                createSelect(subSelect.getSelectBody(), currentJoin);
+                                String joinedSetAlias = subSelect.getAlias().getName();
+                                updateJoinedQuery(queries, currentJoin, currentJoin.getSetName(), joinedSetAlias);
+                            }
                         }
 
                         join.getOnExpression().accept(new ExpressionVisitorAdapter() {
@@ -545,6 +551,12 @@ public class AerospikeQueryFactory {
         });
     }
 
+    private void updateJoinedQuery(QueryHolder queries, QueryHolder currentJoin, String table, String alias) {
+        currentJoin.setSetName(table, alias);
+        if (alias != null) {
+            queries.copyColumnsForTable(alias, currentJoin);
+        }
+    }
 
     @VisibleForPackage
     Function<IAerospikeClient, Integer> createUpdate(Statement statement, String sql) throws SQLException {

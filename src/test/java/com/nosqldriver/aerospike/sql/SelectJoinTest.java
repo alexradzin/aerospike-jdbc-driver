@@ -60,6 +60,8 @@ class SelectJoinTest {
             "select first_name, i.name as instrument from people as p inner join instruments as i on p.id=i.person_id",
             "select first_name, i.name as instrument from people as p left join instruments as i on p.id=i.person_id",
             "select first_name, i.name as instrument from test.people as p join test.instruments as i on p.id=i.person_id",
+
+            "select first_name, i.name as instrument from people as p join (select * from instruments) as i on p.id=i.person_id",
     })
     void oneToManyJoin(String sql) throws SQLException {
         ResultSet rs = executeQuery(sql, NAMESPACE, true, "first_name", "first_name", VARCHAR, "name", "instrument", VARCHAR);

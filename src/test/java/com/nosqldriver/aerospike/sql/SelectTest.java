@@ -1064,8 +1064,8 @@ class SelectTest {
             "select * from people where PK=?"
     })
     void selectSpecificColumsUsingPreparedStatementFilteredByPrimaryKeyAndValidateMetadata(String sql) throws SQLException {
-        selectSpecificColumsUsingPreparedStatementAndValidateMetadata(sql, 1, 0 /*PK type cannot be discovered*/);
-        selectSpecificColumsUsingPreparedStatementAndValidateMetadata(sql, 2, 0 /*PK type cannot be discovered*/);
+        selectSpecificColumnsUsingPreparedStatementAndValidateMetadata(sql, 1, 0 /*PK type cannot be discovered*/);
+        selectSpecificColumnsUsingPreparedStatementAndValidateMetadata(sql, 2, 0 /*PK type cannot be discovered*/);
     }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
@@ -1074,12 +1074,12 @@ class SelectTest {
             "select * from people where id=?"
     })
     void selectSpecificColumsUsingPreparedStatementFilteredByFieldAndValidateMetadata(String sql) throws SQLException {
-        selectSpecificColumsUsingPreparedStatementAndValidateMetadata(sql, 1, BIGINT);
-        selectSpecificColumsUsingPreparedStatementAndValidateMetadata(sql, 2, BIGINT);
+        selectSpecificColumnsUsingPreparedStatementAndValidateMetadata(sql, 1, BIGINT);
+        selectSpecificColumnsUsingPreparedStatementAndValidateMetadata(sql, 2, BIGINT);
     }
 
 
-    private void selectSpecificColumsUsingPreparedStatementAndValidateMetadata(String sql, int paramValue, int expectedParamType) throws SQLException {
+    private void selectSpecificColumnsUsingPreparedStatementAndValidateMetadata(String sql, int paramValue, int expectedParamType) throws SQLException {
         PreparedStatement ps = testConn.prepareStatement(sql);
 
         ResultSetMetaData psmd = ps.getMetaData();
