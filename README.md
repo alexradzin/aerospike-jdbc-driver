@@ -136,8 +136,41 @@ Typical Aerospike installation consists of several instances, so several IP addr
 ## Download
 You can download binaries here:
 
-* [aerospike-jdbc-driver-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1jF1jKHEFsry5xt_QTQRhMOm785eJ4JeZ/view?usp=sharing)
-* [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1W9C7ubbjFnnYNvKqPWD1A1DwSC55REm1/view?usp=sharing)
-* [aerospike-jdbc-driver-all-js-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1Tp1zU8W71-hq8t6xwRfbqaarZ4TbWH42/view?usp=sharing) - jar that contains all dependencies including javascript engine that may be unavailable in JRE 11 and later.
+* [aerospike-jdbc-driver-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1gevcYWsznuLW5147q18roaAI5V-_kek0/view?usp=sharing)
+* [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ap9wRa5qdFHn_1UH8oyI3CAkGJ_tUOPd/view?usp=sharing)
+
+## Configuration of UI clients
+Download [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ap9wRa5qdFHn_1UH8oyI3CAkGJ_tUOPd/view?usp=sharing) to your computer. This jar file contains the driver's binaris together with all dependenciees. 
+
+### Squirel SQL
+#### Define driver
+Copy `aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar` under `$SQUIREL_SQL_HOME/drivers`.
+Open Squirel SQL application, choose drivers tab at the left pane, press "add" button and fill form:
+* Name: Aerospike
+* Example URL: `jdbc:aerospike:host:3000/test`
+* Class name: `com.nosqldriver.aerospike.sql.AerospikeDriver`
+Add the path to jar file to "Extra class path" panel. 
+
+#### Create DB connection
+Choose Aliases tab at the left pane and press add button. 
+Fill form: name, choose driver from list, URL, username and password (if needed)
+
+
+
+### DBeaver
+#### Define driver
+Choose Database/DriverManager, then press button "New."
+Fill the following data
+* Driver name: Aerospike
+* Class name: `com.nosqldriver.aerospike.sql.AerospikeDriver`
+* URL template: `jdbc:aerospike:{host}[:{port}]/[{database}]`
+* Default port: 3000
+
+#### Create DB connection
+* Choose Database/New Database Connection
+* Find just defined Aerospike driver in list and choose it. 
+* Fill form: host, port (if it is not default), Database/Schema (namespace) (if needed); username and password (if needed)
+
+
 
 
