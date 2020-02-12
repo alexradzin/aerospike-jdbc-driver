@@ -1,7 +1,6 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.util.SneakyThrower;
-import jdk.nashorn.api.scripting.ScriptObjectMirror;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -10,9 +9,9 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toCollection;
-import static java.util.stream.IntStream.range;
 
 public class ExpressionAwareResultSetFactory {
     private final List<String> functionNames = new ArrayList<>();
@@ -23,8 +22,9 @@ public class ExpressionAwareResultSetFactory {
 
     public ExpressionAwareResultSetFactory() {
         SneakyThrower.call(() -> {
-            ScriptObjectMirror definedFunctions = (ScriptObjectMirror) new JavascriptEngineFactory().getEngine().eval("functions");
-            range(0, definedFunctions.size()).boxed().forEach(i -> functionNames.add((String) definedFunctions.getSlot(i)));
+            @SuppressWarnings("unchecked")
+            List<String> definedFunctions = (List<String>) new JavascriptEngineFactory().getEngine().eval("functions");
+            functionNames.addAll(definedFunctions.stream().filter(f -> !f.startsWith("_")).collect(Collectors.toList()));
         });
     }
 
