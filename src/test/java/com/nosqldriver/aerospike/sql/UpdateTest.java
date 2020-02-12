@@ -217,11 +217,6 @@ abstract class UpdateTest {
         retrieveData("first_name", "absolute_zero", o -> o).values().forEach(Assert::assertNull);
     }
 
-    @Test
-    void updateSeveralTables() {
-        assertEquals("Update statement can proceed one table only but was 2", assertThrows(SQLException.class, () -> executeUpdate("update one, two set something=1", 0)).getMessage());
-    }
-
     private <T> Map<String, T> retrieveData(String keyName, String valueName, Function<Object, T> typeTransformer) {
         Map<String, T> actualValues = new HashMap<>();
         client.scanAll(null, NAMESPACE, PEOPLE, (key, rec) -> {actualValues.put(rec.getString(keyName), typeTransformer.apply(rec.getValue(valueName)));});

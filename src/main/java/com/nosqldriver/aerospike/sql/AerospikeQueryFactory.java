@@ -521,8 +521,8 @@ public class AerospikeQueryFactory {
                     plainSelect.getOrderByElements().stream().map(o -> new OrderItem(o.getExpression().toString(), o.isAsc() ? ASC :DESC)).forEach(queries::addOrdering);
                 }
 
-                if (plainSelect.getGroupByColumnReferences() != null) {
-                    plainSelect.getGroupByColumnReferences().forEach(e -> queries.addGroupField(((Column) e).getColumnName()));
+                if (plainSelect.getGroupBy() != null) {
+                    plainSelect.getGroupBy().getGroupByExpressions().forEach(e -> queries.addGroupField(((Column) e).getColumnName()));
                 }
 
                 if (plainSelect.getHaving() != null) {
@@ -598,11 +598,7 @@ public class AerospikeQueryFactory {
 
                 @Override
                 public void visit(Update update) {
-                    List<Table> tables = update.getTables();
-                    if (tables.size() != 1) {
-                        SneakyThrower.sneakyThrow(new SQLException("Update statement can proceed one table only but was " + tables.size()));
-                    }
-                    Table table = tables.get(0);
+                    Table table = update.getTable();
                     tableName.set(table.getName());
                     if (table.getSchemaName() != null) {
                         schema.set(table.getSchemaName());
