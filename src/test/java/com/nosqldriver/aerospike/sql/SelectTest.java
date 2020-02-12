@@ -250,7 +250,7 @@ class SelectTest {
             "select * from people where PK>4",
             "select * from people where PK>=4",
     })
-    void unsupportedPkOperation(String sql) throws SQLException {
+    void unsupportedPkOperation(String sql) {
         assertEquals("Filtering by PK supports =, !=, IN", assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage());
     }
 
@@ -317,7 +317,7 @@ class SelectTest {
     }
 
     @Test
-    void wrongMethod() throws SQLException {
+    void wrongMethod() {
         assertEquals("SELECT does not support executeUpdate", assertThrows(SQLException.class, () -> testConn.createStatement().executeUpdate(SELECT_ALL)).getMessage());
     }
 
@@ -1328,15 +1328,13 @@ class SelectTest {
         PreparedStatement ps = testConn.prepareStatement(format("select * from people where PK in (%s)", questions));
         int[] pids = stream(keys.split("\\s*,\\s*")).map(Integer::parseInt).mapToInt(i -> i).toArray();
 
-        selectPsSeveralRecordsPKIn(ps, pids, ps1 -> {
-            IntStream.range(0, pids.length).forEach(i -> {
-                try {
-                    ps.setInt(i + 1, pids[i]);
-                } catch (SQLException e) {
-                    throw new IllegalStateException(e);
-                }
-            });
-        });
+        selectPsSeveralRecordsPKIn(ps, pids, ps1 -> IntStream.range(0, pids.length).forEach(i -> {
+            try {
+                ps.setInt(i + 1, pids[i]);
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        }));
     }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
@@ -1572,7 +1570,7 @@ class SelectTest {
             "select first_name, count(*) from people",
             "select first_name, max(kids_count) from people",
     })
-    void wrongAggregation(String sql) throws SQLException {
+    void wrongAggregation(String sql) {
         assertEquals("Cannot perform aggregation operation with query that contains regular fields", assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage());
     }
 
@@ -1581,7 +1579,7 @@ class SelectTest {
             "select distinct(first_name), last_name from people",
             "select distinct(first_name), count(*) from people",
     })
-    void wrongDistinct(String sql) throws SQLException {
+    void wrongDistinct(String sql) {
         assertEquals("Wrong query syntax: distinct is used together with other fields", assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage());
     }
 

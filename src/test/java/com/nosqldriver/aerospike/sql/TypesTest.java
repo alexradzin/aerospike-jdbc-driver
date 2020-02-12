@@ -398,6 +398,7 @@ class TypesTest {
         assertEquals("text", new String(IOUtils.toByteArray(rs.getBinaryStream(4))));
         assertEquals("text", IOUtils.toString(rs.getCharacterStream(4)));
         assertEquals("text", IOUtils.toString(rs.getNCharacterStream(4)));
+        //noinspection deprecation
         assertEquals("text", new String(IOUtils.toByteArray(rs.getUnicodeStream(4))));
 
         long timestamp = 1578140272981L;
