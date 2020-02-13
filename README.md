@@ -139,6 +139,9 @@ You can download binaries here:
 * [aerospike-jdbc-driver-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1gevcYWsznuLW5147q18roaAI5V-_kek0/view?usp=sharing)
 * [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ap9wRa5qdFHn_1UH8oyI3CAkGJ_tUOPd/view?usp=sharing)
 
+If you are running under Java 11 and highier you need nashorn - java script engine that should be added to the classpath together with the driver. Take the nashorn jar file [here](https://drive.google.com/file/d/1pb_5sxJbw-afxvJWNHuLf0ownvmM0Fjf/view?usp=sharing).
+
+
 ## Configuration of UI clients
 Download [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ap9wRa5qdFHn_1UH8oyI3CAkGJ_tUOPd/view?usp=sharing) to your computer. This jar file contains the driver's binaris together with all dependenciees. 
 
