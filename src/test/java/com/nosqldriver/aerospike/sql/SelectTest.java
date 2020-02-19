@@ -651,7 +651,9 @@ class SelectTest {
             Arguments.of("select * from people where first_name like 'John%'", new String[] {"John"}),
             Arguments.of("select * from people where first_name like 'Ri%'", new String[] {"Ringo"}),
             Arguments.of("select * from people where first_name like '%aul%'", new String[] {"Paul"}),
-            Arguments.of("select * from people where last_name like '%ris%'", new String[] {"George"})
+            Arguments.of("select * from people where last_name like '%ris%'", new String[] {"George"}),
+            Arguments.of("select * from people where last_name like '%nothing%'", new String[] {}),
+            Arguments.of("select * from people where first_name like 'oh%'", new String[] {})
     );
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @VariableSource("like")

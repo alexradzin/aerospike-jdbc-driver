@@ -35,8 +35,8 @@ public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T
                 .replaceAll("(?i)(\\w+)\\s+between\\s+(\\d+)\\s+and\\s+(\\d+)", "$1>=$2 and $1<=$3")
                 .replaceAll("(?i) AND ", " && ").replaceAll("(?i) OR ", " || ").replace("<>", "!=")
                 .replaceAll("(?i) like\\s+'%(.*?)%'", ".match(/.*$1.*/)!=null")
-                .replaceAll("(?i) like\\s+'%(.*?)'", ".match(/.*$1/)!=null")
-                .replaceAll("(?i) like\\s+'(.*?)%'", ".match(/$1.*/)!=null")
+                .replaceAll("(?i) like\\s+'%(.*?)'", ".match(/.*$1__ENDOFLINEINLIKEEXPRESSION__/)!=null").replace("__ENDOFLINEINLIKEEXPRESSION__", "$")
+                .replaceAll("(?i) like\\s+'(.*?)%'", ".match(/^$1.*/)!=null")
                 .replaceAll("(?i)like ", "==");
     }
 
