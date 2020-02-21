@@ -387,6 +387,7 @@ public class AerospikeQueryFactory {
                     AtomicBoolean predExpsEmpty = new AtomicBoolean(true);
                     BinaryOperation operation = new BinaryOperation();
                     AtomicBoolean ignoreNextOp = new AtomicBoolean(false);
+                    AtomicBoolean isPreparedStatement = new AtomicBoolean(false);
                     where.accept(new ExpressionVisitorAdapter() {
                         @Override
                         public void visit(Between expr) {
@@ -401,17 +402,77 @@ public class AerospikeQueryFactory {
                         }
 
                         public void visit(InExpression expr) {
+                            System.out.println("visit(InExpression expr) " + expr);
                             in.set(true);
                             super.visit(expr);
+                            AtomicBoolean inExpression = new AtomicBoolean(false);
+
                             expr.getRightItemsList().accept(new ItemsListVisitorAdapter() {
                                 @Override
                                 public void visit(ExpressionList expressionList) {
-                                Operator.IN.update(queries, operation);
-                                if ("PK".equals(operation.getColumn())) {
-                                    queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
+                                    System.out.println("visit(ExpressionList expressionList) " + expressionList);
+                                    inExpression.set(true);
+
+//                                    Operator.IN.update(queries, operation);
+//                                    if ("PK".equals(operation.getColumn())) {
+//                                        queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
+//                                    }
                                 }
+                                @Override
+                                public void visit(SubSelect subSelect) {
+                                    System.out.println("visit(SubSelect subSelect) " + subSelect);
+                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider);
+                                    SelectBody selectBody = subSelect.getSelectBody();
+                                    createSelect(selectBody, subHolder);
+                                    operation.addValue(subHolder);
+//                                    if (in.get()) {
+//                                        return;
+//                                    }
+
+
+//                                    queries.queries(operation.getTable()).addPredExp(new ColumnRefPredExp(set, operation.getColumn()));
+//                                    queries.queries(operation.getTable()).addPredExp(new InnerQueryPredExp(subHolder));
+
+                                    /// aaaaaaaaaaaaaaaaaaaaaaaa
+                                    //String sql = selectBody.toString();
+                                    //createSelect(subSelect.getSelectBody(), queries.addSubQuery(ChainOperation.SUB_QUERY));
+
+                                    //queries.queries(operation.getTable()).addPredExp(new ColumnRefPredExp(set, operation.getColumn()));
+                                    //queries.queries(operation.getTable()).addPredExp(new PredExpValuePlaceholder(sql));
+                                    //queries.addSubQuery()
+
+
+
+//                                    try {
+//                                        AerospikeStatement as = null; //new AerospikeStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider)
+//                                        AerospikeStatement.getStatementType(sql).executeQuery(as, sql);
+//                                    } catch (SQLException e) {
+//                                        e.printStackTrace();
+//                                    }
+
                                 }
+
                             });
+//                            Operator.IN.update(queries, operation);
+//                            if (!inExpression.get() && "PK".equals(operation.getColumn())) {
+//                                queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
+//                            }
+
+
+//                            if (!isPreparedStatement.get()) {
+//                                Operator.IN.update(queries, operation);
+//                            }
+//                            if ((!inExpression.get() || isPreparedStatement.get()) && "PK".equals(operation.getColumn())) {
+//                                queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
+//                            }
+
+                            Operator.IN.update(queries, operation);
+                            if ("PK".equals(operation.getColumn())) {
+                                queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
+                            }
+
+
+
                             in.set(false);
                         }
 
@@ -506,6 +567,7 @@ public class AerospikeQueryFactory {
                             System.out.println("visit(JdbcParameter parameter): " + parameter);
                             queries.queries(operation.getTable()).addPredExp(new ColumnRefPredExp(set, operation.getColumn()));
                             queries.queries(operation.getTable()).addPredExp(new PredExpValuePlaceholder(parameter.getIndex()));
+                            isPreparedStatement.set(true);
                         }
 
                         @Override

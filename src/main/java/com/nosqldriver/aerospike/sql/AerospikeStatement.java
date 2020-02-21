@@ -6,6 +6,8 @@ import com.aerospike.client.query.IndexCollectionType;
 import com.aerospike.client.query.IndexType;
 import com.aerospike.client.task.IndexTask;
 import com.nosqldriver.aerospike.sql.query.AerospikeInsertQuery;
+import com.nosqldriver.aerospike.sql.query.QueryContainer;
+import com.nosqldriver.aerospike.sql.query.QueryHolder;
 import com.nosqldriver.sql.ChainedResultSetWrapper;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.PreparedStatementUtil;
@@ -15,6 +17,7 @@ import com.nosqldriver.util.ThrowingSupplier;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLSyntaxErrorException;
@@ -56,7 +59,10 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 AerospikeQueryFactory aqf = statement.createQueryFactory();
-                Function<IAerospikeClient, ResultSet> query = aqf.createQueryPlan(sql).getQuery(statement);
+                QueryContainer<ResultSet> plan = aqf.createQueryPlan(sql);
+                QueryHolder holder = (QueryHolder)plan;
+                holder.setParameters(statement, null);
+                Function<IAerospikeClient, ResultSet> query = plan.getQuery(statement);
                 statement.set = aqf.getSet();
                 return query.apply(statement.client);
             }
@@ -512,5 +518,9 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
 
     protected AerospikeQueryFactory createQueryFactory() {
         return new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes);
+    }
+
+    public IAerospikeClient getClient() {
+        return client;
     }
 }

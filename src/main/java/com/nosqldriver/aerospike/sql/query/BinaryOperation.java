@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 import static com.aerospike.client.query.PredExp.integerBin;
 import static com.aerospike.client.query.PredExp.integerEqual;
@@ -150,24 +151,29 @@ public class BinaryOperation {
         IN("IN") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                if ("PK".equals(operation.column)) {
+                if ("PK".equals(operation.column) && operation.values.stream().noneMatch(v -> v instanceof QueryHolder)) {
                     queries.createPkBatchQuery(operation.statement, operation.values.stream().map(v -> createKey(v, queries)).toArray(Key[]::new));
                 } else {
                     int nValues = operation.values.size(); // nValues cannot be 0: in() is syntactically wrong. Probably this may be a case with sub select "... in(select x from t)"
                     QueryHolder qh = queries.queries(operation.getTable());
-                    operation.values.stream().map(v -> prefix(operation.column, v)).flatMap(List::stream).forEach(qh::addPredExp);
-                    qh.addPredExp(or(nValues));
+                    //operation.values.stream().map(v -> prefix(operation.getTable(), operation.column, v)).flatMap(List::stream).forEach(qh::addPredExp);
+                    IntStream.range(0, operation.values.size()).mapToObj(i -> prefix(operation.getTable(), operation.column, i, operation.values.get(i))).flatMap(List::stream).forEach(qh::addPredExp);
+                    if (operation.values.size() > 1) {
+                        qh.addPredExp(or(nValues));
+                    }
                 }
                 return queries;
             }
 
-            private List<PredExp> prefix(String column, Object value) {
+            private List<PredExp> prefix(String table, String column, int index, Object value) {
                 final List<PredExp> prefixes;
                 if (value instanceof Long || value instanceof Integer || value instanceof Short || value instanceof Byte) {
                     prefixes = asList(integerBin(column), integerValue(((Number) value).longValue()), integerEqual());
                 } else if (value instanceof Date || value instanceof Calendar) {
                     Calendar calendar = value instanceof Calendar ? (Calendar)value : calendar((Date)value);
                     prefixes = asList(integerBin(column), integerValue(calendar), integerEqual());
+                } else if (value instanceof QueryHolder) {
+                    prefixes = asList(new ColumnRefPredExp(table, column), new InnerQueryPredExp(index, (QueryHolder)value), new OperatorRefPredExp("IN"));
                 } else {
                     prefixes = asList(stringBin(column), stringValue(value == null ? null : value.toString()), stringEqual());
                 }

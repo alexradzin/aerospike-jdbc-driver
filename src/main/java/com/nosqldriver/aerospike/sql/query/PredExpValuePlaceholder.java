@@ -32,6 +32,20 @@ public class PredExpValuePlaceholder extends FakePredExp {
         return ValueHolderPredExp.create(val);
     }
 
+//    private PredExp createPredExp(Object val, boolean real) {
+//        if (real) {
+//            if (val instanceof Long || val instanceof Integer || val instanceof Short || val instanceof Byte) {
+//                return PredExp.integerValue(((Number) val).longValue());
+//            } else if (val instanceof String) {
+//                return PredExp.stringValue((String) val);
+//            } else {
+//                SneakyThrower.sneakyThrow(new SQLException(format("Value %s belongs to unsupported type %s. Only string and integer types are supported", val, val == null ? null : val.getClass())));
+//            }
+//        }
+//
+//        return ValueHolderPredExp.create(val);
+//    }
+
     public int getIndex() {
         return index;
     }

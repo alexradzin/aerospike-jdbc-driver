@@ -127,6 +127,11 @@ class SelectTest {
             "select\r\n*\r\nfrom\r\npeople",
             "select * from people;",
             "select * from people where PK in (1,2); select * from people where PK in (3,4)",
+
+            //IN "select * from people where PK in (select PK from people)",
+            //IN "select * from people where PK in (select id from people)",
+            //IN "select * from people where id in (select PK from people)",
+
             //"select * from people where PK=1; select * from people where PK in (2,3); select * from people where PK=4", //TODO: fix absolute()
     })
     void selectAll(String sql) throws SQLException {
@@ -238,6 +243,7 @@ class SelectTest {
             "select * from people where id in (0)",
             "select * from people limit 0",
             "select * from people offset 4",
+            "select * from people where id in (select 0)",
     })
     void selectEmpty(String sql) throws SQLException {
         assertFalse(testConn.createStatement().executeQuery(sql).next());
@@ -249,6 +255,7 @@ class SelectTest {
             "select * from people where PK<=1",
             "select * from people where PK>4",
             "select * from people where PK>=4",
+            "select * from people where PK in (select 123)",
     })
     void unsupportedPkOperation(String sql) {
         assertEquals("Filtering by PK supports =, !=, IN", assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage());
@@ -551,6 +558,7 @@ class SelectTest {
             "select first_name, year_of_birth from (select year_of_birth, first_name from people)",
             "select name as first_name, year as year_of_birth from (select first_name as name, year_of_birth as year from people)",
             "select first_name, year_of_birth from (select year_of_birth, first_name from (select first_name, last_name, year_of_birth from people))",
+            //IN "select first_name, year_of_birth from people where PK in (select PK from people)",
     })
     void selectSpecificFields(String sql) throws SQLException {
         selectSpecificFields(sql, sql1 -> {
@@ -663,7 +671,6 @@ class SelectTest {
         assertEquals(expected.length, list.size());
         assertEquals(new HashSet<>(asList(expected)), list.stream().map(e -> (String)e.get("first_name")).collect(toSet()));
     }
-
 
 
     private void selectSpecificFields(String sql, Function<String, ResultSet> resultSetFactory, String keyColumn, String valueColumn) throws SQLException {
@@ -810,7 +817,7 @@ class SelectTest {
             "select 1 as number union select 1 as number union select 2 as number",
             "select 1 as number union all select 2 as number limit 5",
             "select 2 as number union (select 1 as number) order by number",
-   })
+    })
     void selectIntUnion(String sql) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
@@ -1226,22 +1233,34 @@ class SelectTest {
         assertSelect("select * from people where PK in (2, 3)", 2, 3);
     }
 
-    @Test
-    @DisplayName("PK IN (20, 30) -> []")
-    void selectNoRecordsByPkInWrongIds() throws SQLException {
-        assertSelect("select * from people where PK in (20, 30)");
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people where PK in (20, 30)",
+            "select * from people where PK in (select id from people where PK in (20, 30))",
+            "select * from people where PK in (select id from people where id in (20, 30))",
+    })
+    void selectNoRecordsByPkInWrongIds(String sql) throws SQLException {
+        assertSelect(sql);
     }
 
-    @Test
-    @DisplayName("id IN (2, 3) -> [Paul, George]")
-    void selectSeveralRecordsByIntColumnIn() throws SQLException {
-        assertSelect("select * from people where id in (2, 3)", 2, 3);
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people where id in (2, 3)",
+            "select * from people where id in (select id from people where PK in (2, 3))",
+            "select * from people where id in (select id from people where id in (2, 3))"
+    })
+    void selectSeveralRecordsByIntColumnIn(String sql) throws SQLException {
+        assertSelect(sql, 2, 3);
     }
 
-    @Test
-    @DisplayName("id IN (1) -> [John]")
-    void selectOneRecordByIntColumnIn() throws SQLException {
-        assertSelect("select * from people where id in (1)", 1);
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select * from people where id in (1)",
+            "select * from people where id in (select id from people where PK=1)",
+            "select * from people where id in (select id from people where id=1)"
+    })
+    void selectOneRecordByIntColumnIn1(String sql) throws SQLException {
+        assertSelect(sql, 1);
     }
 
     @Test
@@ -1528,8 +1547,8 @@ class SelectTest {
         while(rs.next()) {
             years.add(rs.getInt(1));
         }
-       Collections.sort(years);
-       assertEquals(asList(1940, 1942, 1943), years);
+        Collections.sort(years);
+        assertEquals(asList(1940, 1942, 1943), years);
     }
 
     @Test
