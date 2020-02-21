@@ -9,6 +9,8 @@ import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
+import com.nosqldriver.aerospike.sql.AerospikeStatement;
+import com.nosqldriver.aerospike.sql.query.BinaryOperation.Operator;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation.PrimaryKeyEqualityPredicate;
 import com.nosqldriver.sql.ChainedResultSetWrapper;
 import com.nosqldriver.sql.DataColumn;
@@ -33,7 +35,7 @@ import net.sf.jsqlparser.expression.SignedExpression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 
-import java.sql.Array;
+import java.lang.reflect.Array;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -43,10 +45,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -208,33 +210,32 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         NavigableSet<Integer> indexesToRemove = new TreeSet<>();
         Class paramType = null;
         Class type = null;
+        String columnName = null;
+        PREDICATES:
         for (int i = 0; i < predExps.size(); i++) {
             PredExp predExp = predExps.get(i);
+
+            if (predExp instanceof ColumnRefPredExp) {
+                columnName = ((ColumnRefPredExp)predExp).getName();
+            }
+
+
             if (predExp instanceof PredExpValuePlaceholder) {
                 PredExpValuePlaceholder placeholder = ((PredExpValuePlaceholder)predExp);
-                Object parameter = parameters[dataIndex + placeholder.getIndex() - 1];
+                final Object parameter;
+                if (predExp instanceof InnerQueryPredExp) {
+                    parameter = retrieveParameterValueFromInnerQuery(sqlStatement, i, predExp, columnName, indexesToRemove);
+                } else {
+                    parameter = parameters[dataIndex + placeholder.getIndex() - 1];
+                }
+
                 paramType = parameter == null ? String.class : parameter.getClass();
                 type = paramType;
-                if (predExps.get(i - 1) instanceof ColumnRefPredExp) {
+                if (!(predExp instanceof InnerQueryPredExp) && predExps.get(i - 1) instanceof ColumnRefPredExp) {
                     String binName = ((ColumnRefPredExp)predExps.get(i - 1)).getName();
                     if ("PK".equals(binName)) {
                         String op = predExps.stream().skip(i).filter(exp -> exp instanceof OperatorRefPredExp).findFirst().map(exp -> ((OperatorRefPredExp) exp).getOp()).orElseThrow(() -> new IllegalStateException("Cannot find operation"));
-                        // TODO: move this to BinaryOperation or at least do it better as map of functions or something.
-                        switch(op) {
-                            case "=":
-                                createPkQuery(sqlStatement, createKey(getSchema(), getSetName(), parameter));
-                                break;
-                            case "IN":
-                                createPkBatchQuery(sqlStatement, createKeys(getSchema(), getSetName(), parameter));
-                                break;
-                            case "!=":
-                            case "<>":
-                                createScanQuery(sqlStatement, new PrimaryKeyEqualityPredicate(createKey(getSchema(), getSetName(), parameter), false));
-                                break;
-                            default:
-                                SneakyThrower.sneakyThrow(new SQLException("Unsupported PK operation " + op));
-                        }
-
+                        createQuery(sqlStatement, parameter, op);
                         indexesToRemove.addAll(asList(i - 1, i, i +1 ));
                     } else {
                         type = placeholder.updatePreExp(predExps, i, parameter);
@@ -242,20 +243,123 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                     PredExp binExp = PredExpValuePlaceholder.createBinPredExp(binName, type);
                     predExps.set(i - 1, binExp);
                 }
+
+                if (predExps.get(i - 1) instanceof ColumnRefPredExp) {
+                    String binName = ((ColumnRefPredExp)predExps.get(i - 1)).getName();
+                    if ("PK".equals(binName)) {
+                        String op = predExps.stream().skip(i).filter(exp -> exp instanceof OperatorRefPredExp).findFirst().map(exp -> ((OperatorRefPredExp) exp).getOp()).orElseThrow(() -> new IllegalStateException("Cannot find operation"));
+                        createQuery(sqlStatement, parameter, op);
+                        break PREDICATES;
+                    }
+                }
             }
+
             if (predExp instanceof OperatorRefPredExp) {
                 if (paramType == null) {
                     SneakyThrower.sneakyThrow(new SQLException("Cannot retrieve type of parameter of prepared statement"));
                 }
-                predExps.set(i, predExpOperators.get(operatorKey(paramType, ((OperatorRefPredExp)predExp).getOp())).get());
+                predExps.set(i, predExpOperators.get(operatorKey(type, ((OperatorRefPredExp)predExp).getOp())).get());
             }
-
         }
 
         for (int i : indexesToRemove.descendingSet()) {
             predExps.remove(i);
         }
+
+        // this happens when inner sql is used: select * from table where id in (select ...)
+        // This is a patch, better solition should be found
+        if (!predExps.isEmpty() && "com.aerospike.client.query.PredExp$AndOr".equals(predExps.get(0).getClass().getName())) {
+            predExps.remove(0);
+        }
     }
+
+
+    private Object retrieveParameterValueFromInnerQuery(java.sql.Statement sqlStatement, int i, PredExp predExp, String columnName, Collection<Integer> indexesToRemove) {
+        Object parameter = null;
+        QueryHolder holder = ((InnerQueryPredExp)predExp).getHolder();
+        AerospikeStatement statement = (AerospikeStatement)sqlStatement;
+        try {
+            ResultSet rs = holder.getQuery(statement.getConnection().createStatement()).apply(statement.getClient());
+            ResultSetMetaData md = rs.getMetaData();
+            int n = md.getColumnCount();
+            if (n != 1) {
+                SneakyThrower.sneakyThrow(new SQLException("Inner query must return only one column but were " + n));
+            }
+            List<Object> values = new ArrayList<>();
+            Set<Class> types = new HashSet<>();
+            while (rs.next()) {
+                Object value = rs.getObject(1);
+                values.add(value);
+                types.add(value == null ? Object.class : value.getClass());
+            }
+            Class elemType = types.size() == 1 ? types.iterator().next() : Object.class;
+            Object array = Array.newInstance(elemType, values.size());
+            for (int j = 0; j < values.size(); j++) {
+                Array.set(array, j, values.get(j));
+            }
+            parameter = array;
+
+            PredExp nextExp = predExps.get(i + 1);
+            if (nextExp instanceof OperatorRefPredExp) {
+                BinaryOperation operation = new BinaryOperation();
+                operation.setStatement(statement);
+                operation.setColumn(columnName);
+                values.forEach(operation::addValue);
+                Optional<Operator> operatorOpt = Operator.find(((OperatorRefPredExp)nextExp).getOp());
+                if (operatorOpt.isPresent()) {
+                    Operator operator = operatorOpt.get();
+                    if (operator.isBinaryComparison()) {
+                        Object value = null;
+                        int paramsCount = Array.getLength(parameter);
+                        switch (paramsCount) {
+                            case 0: value = null; break;
+                            case 1: value = Array.get(parameter, 0); break;
+                            default: SneakyThrower.sneakyThrow(new SQLException(format("Operator %s requires 1 parameter but were %d", operator, paramsCount)));
+                        }
+                        parameter = value;
+
+                        if (value instanceof Long || value instanceof Integer || value instanceof Short || value instanceof Byte) {
+                            predExps.set(i, PredExp.integerValue(((Number)value).longValue()));
+                        } else if (value instanceof String) {
+                            predExps.set(i, PredExp.stringValue((String)value));
+                        } else {
+                            SneakyThrower.sneakyThrow(new SQLException(format("Value %s belongs to unsupported type %s. Only string and integer types are supported", value, value.getClass())));
+                        }
+                    } else {
+                        indexesToRemove.addAll(asList(i - 1, i, i +1 )); // IN
+                    }
+
+                } else {
+                    SneakyThrower.sneakyThrow(new SQLException(format("Operator %s does not exist", ((OperatorRefPredExp)nextExp).getOp())));
+                }
+
+                Operator.find(((OperatorRefPredExp)nextExp).getOp()).map(op -> op.update(this, operation));
+            }
+        } catch (SQLException e) {
+            SneakyThrower.sneakyThrow(e);
+        }
+
+        return parameter;
+    }
+
+    private void createQuery(java.sql.Statement sqlStatement, Object parameter, String op) {
+        switch(op) {
+            case "=":
+                createPkQuery(sqlStatement, createKey(getSchema(), getSetName(), parameter));
+                break;
+            case "IN":
+                createPkBatchQuery(sqlStatement, createKeys(getSchema(), getSetName(), parameter));
+                break;
+            case "!=":
+            case "<>":
+                createScanQuery(sqlStatement, new PrimaryKeyEqualityPredicate(createKey(getSchema(), getSetName(), parameter), false));
+                break;
+            default:
+                SneakyThrower.sneakyThrow(new SQLException("Unsupported PK operation " + op));
+        }
+
+    }
+
 
 
     @SafeVarargs
@@ -669,36 +773,6 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             }
             return result;
         }
-
-//        private int index(List<PredExp> predicates, int i, Class placeholderType, int increment) {
-//            int j = i + increment;
-//            return j >= 0 && j < predicates.size() && placeholderType.equals(predicates.get(j).getClass()) ? j : -1;
-//        }
-
-
-//        private PredExp preparePredicate(ResultSet rs, PredExp definedPredExp) {
-//            if (!(definedPredExp instanceof ColumnRefPredExp)) {
-//                return definedPredExp;
-//            }
-//
-//            ColumnRefPredExp ref = (ColumnRefPredExp)definedPredExp;
-//            final Object value;
-//            try {
-//                value = rs.getObject(ref.getName());
-//            } catch (SQLException e) {
-//                throw new IllegalStateException(e);
-//            }
-//
-//            if (value instanceof String) {
-//                return PredExp.stringValue((String)value);
-//            }
-//            if (value instanceof Number) {
-//                return PredExp.integerValue(((Number)value).longValue());
-//            }
-//            throw new IllegalStateException(value.getClass().getName());
-//        }
-
-
     }
 
 
@@ -726,10 +800,6 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     public void addData(List<Object> dataRow)  {
         data.add(new ArrayList<>(dataRow));
     }
-
-//    public boolean isSkipDuplicates() {
-//        return skipDuplicates;
-//    }
 
     public void setSkipDuplicates(boolean skipDuplicates) {
         this.skipDuplicates = skipDuplicates;

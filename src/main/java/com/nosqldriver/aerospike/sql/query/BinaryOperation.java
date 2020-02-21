@@ -13,7 +13,9 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -21,6 +23,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 import static com.aerospike.client.query.PredExp.integerBin;
 import static com.aerospike.client.query.PredExp.integerEqual;
@@ -70,7 +73,8 @@ public class BinaryOperation {
         EQ("=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                if (!operation.values.isEmpty()) {
+                boolean subSelect = operation.values.stream().anyMatch(v -> v instanceof QueryHolder);
+                if (!operation.values.isEmpty() && !subSelect) {
                     Object value = operation.values.get(0);
                     if ("PK".equals(operation.column)) {
                         final Key key = createKey(value, queries);
@@ -98,7 +102,7 @@ public class BinaryOperation {
         NE("!=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                if (!operation.values.isEmpty() && "PK".equals(operation.column)) {
+                if (!operation.values.isEmpty() &&  "PK".equals(operation.column)) {
                     queries.createScanQuery(operation.statement, new PrimaryKeyEqualityPredicate(createKey(operation.values.get(0), queries), false));
                 }
                 return queries;
@@ -113,7 +117,12 @@ public class BinaryOperation {
         GT(">") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                return updateComparisonOperation(queries, operation, o -> asList(((Number) operation.values.get(0)).longValue() + 1, Long.MAX_VALUE));
+                if (operation.values.isEmpty() || operation.values.get(0) instanceof QueryHolder) {
+                    assertPkFiltering(operation);
+                    return queries;
+                }
+                List<Object> values = asList(((Number) operation.values.get(0)).longValue() + 1, Long.MAX_VALUE);
+                return updateComparisonOperation(queries, operation, o -> values);
             }
         },
         GE(">=") {
@@ -125,7 +134,13 @@ public class BinaryOperation {
         LT("<") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                return updateComparisonOperation(queries, operation, o -> asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1));
+                if (operation.values.isEmpty() || operation.values.get(0) instanceof QueryHolder) {
+                    assertPkFiltering(operation);
+                    return queries;
+                }
+                //List<Object> values = operation.values.isEmpty() || operation.values.get(0) instanceof QueryHolder ? Collections.singletonList(null) : asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1);
+                List<Object> values = asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1);
+                return updateComparisonOperation(queries, operation, o -> values);
             }
         },
         LE("<=") {
@@ -137,7 +152,7 @@ public class BinaryOperation {
         BETWEEN("BETWEEN") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                if ("PK".equals(operation.column)) {
+                if ("PK".equals(operation.column) || operation.values.stream().anyMatch(v -> v instanceof QueryHolder)) {
                     return queries;
                 }
                 if (operation.values.stream().anyMatch(v -> !AerospikeQueryFactory.isInt(v))) {
@@ -150,24 +165,27 @@ public class BinaryOperation {
         IN("IN") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                if ("PK".equals(operation.column)) {
+                if ("PK".equals(operation.column) && operation.values.stream().noneMatch(v -> v instanceof QueryHolder)) {
                     queries.createPkBatchQuery(operation.statement, operation.values.stream().map(v -> createKey(v, queries)).toArray(Key[]::new));
                 } else {
                     int nValues = operation.values.size(); // nValues cannot be 0: in() is syntactically wrong. Probably this may be a case with sub select "... in(select x from t)"
                     QueryHolder qh = queries.queries(operation.getTable());
-                    operation.values.stream().map(v -> prefix(operation.column, v)).flatMap(List::stream).forEach(qh::addPredExp);
-                    qh.addPredExp(or(nValues));
+                    //operation.values.stream().map(v -> prefix(operation.getTable(), operation.column, v)).flatMap(List::stream).forEach(qh::addPredExp);
+                    IntStream.range(0, operation.values.size()).mapToObj(i -> prefix(operation.getTable(), operation.column, i, operation.values.get(i))).flatMap(List::stream).forEach(qh::addPredExp);
+                    qh.addPredExp(or(nValues)); // or is needed even if number of values of in() statement is 1. It is used later to identify in statement in PredExpValuePlaceholder
                 }
                 return queries;
             }
 
-            private List<PredExp> prefix(String column, Object value) {
+            private List<PredExp> prefix(String table, String column, int index, Object value) {
                 final List<PredExp> prefixes;
                 if (value instanceof Long || value instanceof Integer || value instanceof Short || value instanceof Byte) {
                     prefixes = asList(integerBin(column), integerValue(((Number) value).longValue()), integerEqual());
                 } else if (value instanceof Date || value instanceof Calendar) {
                     Calendar calendar = value instanceof Calendar ? (Calendar)value : calendar((Date)value);
                     prefixes = asList(integerBin(column), integerValue(calendar), integerEqual());
+                } else if (value instanceof QueryHolder) {
+                    prefixes = asList(new ColumnRefPredExp(table, column), new InnerQueryPredExp(index, (QueryHolder)value), new OperatorRefPredExp("IN"));
                 } else {
                     prefixes = asList(stringBin(column), stringValue(value == null ? null : value.toString()), stringEqual());
                 }
@@ -199,6 +217,7 @@ public class BinaryOperation {
         static {
             operators.putAll(Arrays.stream(Operator.values()).collect(toMap(e -> e.operator, e -> e)));
         }
+        private final static Collection<Operator> binaryComparisonOperators = new HashSet<>(Arrays.asList(Operator.EQ, Operator.LT, Operator.LE, Operator.GE, Operator.GT, Operator.NE, Operator.NEQ));
         private final String operator;
         private final boolean requiresColumn;
 
@@ -228,12 +247,19 @@ public class BinaryOperation {
             return operator;
         }
 
+        public boolean isBinaryComparison() {
+            return binaryComparisonOperators.contains(this);
+        }
+
         protected QueryHolder updateComparisonOperation(QueryHolder queries, BinaryOperation operation, Function<BinaryOperation, List<Object>> valuesGetter) {
+            assertPkFiltering(operation);
+            return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, valuesGetter.apply(operation)));
+        }
+
+        protected void assertPkFiltering(BinaryOperation operation) {
             if ("PK".equals(operation.column)) {
                 SneakyThrower.sneakyThrow(new SQLException("Filtering by PK supports =, !=, IN"));
             }
-
-            return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, valuesGetter.apply(operation)));
         }
     }
 

@@ -10,6 +10,7 @@ import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation.Operator;
 import com.nosqldriver.aerospike.sql.query.ColumnRefPredExp;
+import com.nosqldriver.aerospike.sql.query.InnerQueryPredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
 import com.nosqldriver.aerospike.sql.query.PredExpValuePlaceholder;
 import com.nosqldriver.aerospike.sql.query.QueryContainer;
@@ -387,6 +388,7 @@ public class AerospikeQueryFactory {
                     AtomicBoolean predExpsEmpty = new AtomicBoolean(true);
                     BinaryOperation operation = new BinaryOperation();
                     AtomicBoolean ignoreNextOp = new AtomicBoolean(false);
+                    AtomicBoolean isPreparedStatement = new AtomicBoolean(false);
                     where.accept(new ExpressionVisitorAdapter() {
                         @Override
                         public void visit(Between expr) {
@@ -401,17 +403,36 @@ public class AerospikeQueryFactory {
                         }
 
                         public void visit(InExpression expr) {
+                            System.out.println("visit(InExpression expr) " + expr);
                             in.set(true);
                             super.visit(expr);
+                            AtomicBoolean inExpression = new AtomicBoolean(false);
+
                             expr.getRightItemsList().accept(new ItemsListVisitorAdapter() {
                                 @Override
                                 public void visit(ExpressionList expressionList) {
-                                Operator.IN.update(queries, operation);
-                                if ("PK".equals(operation.getColumn())) {
-                                    queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
+                                    System.out.println("visit(ExpressionList expressionList) " + expressionList);
+                                    inExpression.set(true);
                                 }
+                                @Override
+                                public void visit(SubSelect subSelect) {
+                                    System.out.println("visit(SubSelect subSelect) " + subSelect);
+                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider);
+                                    SelectBody selectBody = subSelect.getSelectBody();
+                                    createSelect(selectBody, subHolder);
+                                    operation.addValue(subHolder);
                                 }
+
                             });
+                            if (!isPreparedStatement.get() || !"PK".equals(operation.getColumn())) {
+                                Operator.IN.update(queries, operation);
+                            }
+                            if ((!inExpression.get() || isPreparedStatement.get()) && "PK".equals(operation.getColumn())) {
+                                queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
+                            }
+
+
+
                             in.set(false);
                         }
 
@@ -421,12 +442,25 @@ public class AerospikeQueryFactory {
                             super.visitBinaryExpression(expr);
                             System.out.println("visitBinaryExpression " + expr);
                             Optional<Operator> operator = Operator.find(expr.getStringExpression());
+                            String op = expr.getStringExpression();
+
+                            expr.getRightExpression().accept(new ExpressionVisitorAdapter() {
+                                public void visit(SubSelect subSelect) {
+                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider);
+                                    SelectBody selectBody = subSelect.getSelectBody();
+                                    createSelect(selectBody, subHolder);
+                                    operation.addValue(subHolder);
+                                    queries.queries(operation.getTable()).addPredExp(PredExp.integerBin(operation.getColumn()));
+                                    queries.queries(operation.getTable()).addPredExp(new InnerQueryPredExp(1, subHolder)); // TODO: add normal suport for index (it is 1 here)
+                                }
+                            });
+
+
                             if (!operator.isPresent() || (operator.get().doesRequireColumn() && operation.getColumn() == null)) {
                                 queries.queries(operation.getTable()).removeLastPredicates(4);
                                 ignoreNextOp.set(true);
                                 queries.setWhereExpression(whereExpression);
                             } else {
-                                String op = expr.getStringExpression();
                                 if (ignoreNextOp.get() && ("AND".equals(op) || "OR".equals(op))) {
                                     ignoreNextOp.set(false);
                                 } else {
@@ -434,8 +468,10 @@ public class AerospikeQueryFactory {
                                     queries.queries(operation.getTable()).addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), op)).get());
                                 }
                             }
+
                             operation.clear();
                         }
+
 
                         @Override
                         public void visit(Column column) {
@@ -506,6 +542,7 @@ public class AerospikeQueryFactory {
                             System.out.println("visit(JdbcParameter parameter): " + parameter);
                             queries.queries(operation.getTable()).addPredExp(new ColumnRefPredExp(set, operation.getColumn()));
                             queries.queries(operation.getTable()).addPredExp(new PredExpValuePlaceholder(parameter.getIndex()));
+                            isPreparedStatement.set(true);
                         }
 
                         @Override
