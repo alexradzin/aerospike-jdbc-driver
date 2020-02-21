@@ -343,12 +343,12 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         for (int i : indexesToRemove.descendingSet()) {
             predExps.remove(i);
         }
-//        for (Iterator<PredExp> it = predExps.iterator(); it.hasNext(); ) {
-//            PredExp pe = it.next();
-//            if (pe instanceof FakePredExp) {
-//                it.remove();
-//            }
-//        }
+
+        // this happens when inner sql is used: select * from table where id in (select ...)
+        // This is a patch, better solition should be found
+        if (!predExps.isEmpty() && "com.aerospike.client.query.PredExp$AndOr".equals(predExps.get(0).getClass().getName())) {
+            predExps.remove(0);
+        }
     }
 
 

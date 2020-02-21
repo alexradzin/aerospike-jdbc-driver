@@ -412,11 +412,6 @@ public class AerospikeQueryFactory {
                                 public void visit(ExpressionList expressionList) {
                                     System.out.println("visit(ExpressionList expressionList) " + expressionList);
                                     inExpression.set(true);
-
-//                                    Operator.IN.update(queries, operation);
-//                                    if ("PK".equals(operation.getColumn())) {
-//                                        queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
-//                                    }
                                 }
                                 @Override
                                 public void visit(SubSelect subSelect) {
@@ -425,49 +420,13 @@ public class AerospikeQueryFactory {
                                     SelectBody selectBody = subSelect.getSelectBody();
                                     createSelect(selectBody, subHolder);
                                     operation.addValue(subHolder);
-//                                    if (in.get()) {
-//                                        return;
-//                                    }
-
-
-//                                    queries.queries(operation.getTable()).addPredExp(new ColumnRefPredExp(set, operation.getColumn()));
-//                                    queries.queries(operation.getTable()).addPredExp(new InnerQueryPredExp(subHolder));
-
-                                    /// aaaaaaaaaaaaaaaaaaaaaaaa
-                                    //String sql = selectBody.toString();
-                                    //createSelect(subSelect.getSelectBody(), queries.addSubQuery(ChainOperation.SUB_QUERY));
-
-                                    //queries.queries(operation.getTable()).addPredExp(new ColumnRefPredExp(set, operation.getColumn()));
-                                    //queries.queries(operation.getTable()).addPredExp(new PredExpValuePlaceholder(sql));
-                                    //queries.addSubQuery()
-
-
-
-//                                    try {
-//                                        AerospikeStatement as = null; //new AerospikeStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider)
-//                                        AerospikeStatement.getStatementType(sql).executeQuery(as, sql);
-//                                    } catch (SQLException e) {
-//                                        e.printStackTrace();
-//                                    }
-
                                 }
 
                             });
-//                            Operator.IN.update(queries, operation);
-//                            if (!inExpression.get() && "PK".equals(operation.getColumn())) {
-//                                queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
-//                            }
-
-
-//                            if (!isPreparedStatement.get()) {
-//                                Operator.IN.update(queries, operation);
-//                            }
-//                            if ((!inExpression.get() || isPreparedStatement.get()) && "PK".equals(operation.getColumn())) {
-//                                queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
-//                            }
-
-                            Operator.IN.update(queries, operation);
-                            if ("PK".equals(operation.getColumn())) {
+                            if (!isPreparedStatement.get() || !"PK".equals(operation.getColumn())) {
+                                Operator.IN.update(queries, operation);
+                            }
+                            if ((!inExpression.get() || isPreparedStatement.get()) && "PK".equals(operation.getColumn())) {
                                 queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
                             }
 

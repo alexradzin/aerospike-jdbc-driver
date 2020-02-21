@@ -255,7 +255,6 @@ class SelectTest {
             "select * from people where PK<=1",
             "select * from people where PK>4",
             "select * from people where PK>=4",
-            "select * from people where PK in (select 123)",
     })
     void unsupportedPkOperation(String sql) {
         assertEquals("Filtering by PK supports =, !=, IN", assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage());
@@ -1233,6 +1232,7 @@ class SelectTest {
         assertSelect("select * from people where PK in (2, 3)", 2, 3);
     }
 
+    // 2222222222222222
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select * from people where PK in (20, 30)",
@@ -1304,6 +1304,7 @@ class SelectTest {
     }
 
 
+    //1111111111111111
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {"1",  "2", "3", "4","1, 2", "2, 3", "3, 4", "1, 2, 3, 4"})
     void selectPsSeveralRecordsIdInUsingLongArray(String keys) throws SQLException {

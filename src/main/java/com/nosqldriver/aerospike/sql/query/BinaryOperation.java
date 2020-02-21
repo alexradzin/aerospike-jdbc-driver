@@ -158,9 +158,7 @@ public class BinaryOperation {
                     QueryHolder qh = queries.queries(operation.getTable());
                     //operation.values.stream().map(v -> prefix(operation.getTable(), operation.column, v)).flatMap(List::stream).forEach(qh::addPredExp);
                     IntStream.range(0, operation.values.size()).mapToObj(i -> prefix(operation.getTable(), operation.column, i, operation.values.get(i))).flatMap(List::stream).forEach(qh::addPredExp);
-                    if (operation.values.size() > 1) {
-                        qh.addPredExp(or(nValues));
-                    }
+                    qh.addPredExp(or(nValues)); // or is needed even if number of values of in() statement is 1. It is used later to identify in statement in PredExpValuePlaceholder
                 }
                 return queries;
             }
