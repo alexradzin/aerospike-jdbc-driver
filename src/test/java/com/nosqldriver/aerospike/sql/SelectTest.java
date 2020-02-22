@@ -127,11 +127,7 @@ class SelectTest {
             "select\r\n*\r\nfrom\r\npeople",
             "select * from people;",
             "select * from people where PK in (1,2); select * from people where PK in (3,4)",
-
-            //IN "select * from people where PK in (select PK from people)",
-            //IN "select * from people where PK in (select id from people)",
-            //IN "select * from people where id in (select PK from people)",
-
+            "select * from people where PK in (select id from people)",
             //"select * from people where PK=1; select * from people where PK in (2,3); select * from people where PK=4", //TODO: fix absolute()
     })
     void selectAll(String sql) throws SQLException {
@@ -557,7 +553,7 @@ class SelectTest {
             "select first_name, year_of_birth from (select year_of_birth, first_name from people)",
             "select name as first_name, year as year_of_birth from (select first_name as name, year_of_birth as year from people)",
             "select first_name, year_of_birth from (select year_of_birth, first_name from (select first_name, last_name, year_of_birth from people))",
-            //IN "select first_name, year_of_birth from people where PK in (select PK from people)",
+            "select first_name, year_of_birth from people where PK in (select id from people)",
     })
     void selectSpecificFields(String sql) throws SQLException {
         selectSpecificFields(sql, sql1 -> {
@@ -1232,7 +1228,6 @@ class SelectTest {
         assertSelect("select * from people where PK in (2, 3)", 2, 3);
     }
 
-    // 2222222222222222
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select * from people where PK in (20, 30)",
@@ -1304,7 +1299,6 @@ class SelectTest {
     }
 
 
-    //1111111111111111
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {"1",  "2", "3", "4","1, 2", "2, 3", "3, 4", "1, 2, 3, 4"})
     void selectPsSeveralRecordsIdInUsingLongArray(String keys) throws SQLException {

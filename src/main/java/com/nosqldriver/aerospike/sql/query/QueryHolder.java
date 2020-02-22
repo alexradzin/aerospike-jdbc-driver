@@ -43,9 +43,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Optional;
@@ -763,36 +761,6 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             }
             return result;
         }
-
-//        private int index(List<PredExp> predicates, int i, Class placeholderType, int increment) {
-//            int j = i + increment;
-//            return j >= 0 && j < predicates.size() && placeholderType.equals(predicates.get(j).getClass()) ? j : -1;
-//        }
-
-
-//        private PredExp preparePredicate(ResultSet rs, PredExp definedPredExp) {
-//            if (!(definedPredExp instanceof ColumnRefPredExp)) {
-//                return definedPredExp;
-//            }
-//
-//            ColumnRefPredExp ref = (ColumnRefPredExp)definedPredExp;
-//            final Object value;
-//            try {
-//                value = rs.getObject(ref.getName());
-//            } catch (SQLException e) {
-//                throw new IllegalStateException(e);
-//            }
-//
-//            if (value instanceof String) {
-//                return PredExp.stringValue((String)value);
-//            }
-//            if (value instanceof Number) {
-//                return PredExp.integerValue(((Number)value).longValue());
-//            }
-//            throw new IllegalStateException(value.getClass().getName());
-//        }
-
-
     }
 
 
@@ -820,10 +788,6 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     public void addData(List<Object> dataRow)  {
         data.add(new ArrayList<>(dataRow));
     }
-
-//    public boolean isSkipDuplicates() {
-//        return skipDuplicates;
-//    }
 
     public void setSkipDuplicates(boolean skipDuplicates) {
         this.skipDuplicates = skipDuplicates;
