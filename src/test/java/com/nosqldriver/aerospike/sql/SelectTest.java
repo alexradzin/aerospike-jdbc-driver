@@ -251,6 +251,7 @@ class SelectTest {
             "select * from people where PK<=1",
             "select * from people where PK>4",
             "select * from people where PK>=4",
+            "select * from people where PK>=(select count(*) from people)"
     })
     void unsupportedPkOperation(String sql) {
         assertEquals("Filtering by PK supports =, !=, IN", assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage());
@@ -634,7 +635,10 @@ class SelectTest {
             Arguments.of("select * from people where id<>1", new String[] {"George", "Paul", "Ringo"}),
             Arguments.of("select * from people where PK!=1", new String[] {"George", "Paul", "Ringo"}),
             Arguments.of("select * from people where PK<>1", new String[] {"George", "Paul", "Ringo"}),
-            Arguments.of("select * from people where PK!=12345", new String[] {"John", "George", "Paul", "Ringo"})
+            Arguments.of("select * from people where PK!=12345", new String[] {"John", "George", "Paul", "Ringo"}),
+            //TODO: fix this
+            //Arguments.of("select * from people where PK!=(select 12345)", new String[] {"John", "George", "Paul", "Ringo"}),
+            Arguments.of("select * from people where id!=(select 12345)", new String[] {"John", "George", "Paul", "Ringo"})
     );
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @VariableSource("notEqual")
@@ -1013,7 +1017,9 @@ class SelectTest {
             "select * from people where year_of_birth=1940 and first_name='John' and 'a'='a'",
             "select * from people where year_of_birth=1940 and 1>0 and first_name='John'",
             "select * from people where 2>=2 and year_of_birth=1940 and first_name='John'",
-            "select * from people where 2>=2 and year_of_birth=1940 and 0<=0 and first_name='John' and 2<3"
+            "select * from people where 2>=2 and year_of_birth=1940 and 0<=0 and first_name='John' and 2<3",
+            "select * from people where PK=(select id from people where PK=1)",
+            "select * from people where id=(select id from people where PK=1)",
     })
     void selectOneRecordByOneNumericIndexedFieldEqAndOneNotIndexedField(String sql) throws SQLException {
         createIndex("year_of_birth", IndexType.NUMERIC);
@@ -1778,6 +1784,10 @@ class SelectTest {
             "select * from people where id>=1+0",
             "select * from (select * from people)",
             "select * from people limit 100",
+            "select * from people where id>=(select id from people where PK=1)",
+            "select * from people where id>(select 0)",
+            "select * from people where id<(select 5)",
+            "select * from people where id<=(select id from people where PK=4)",
     })
     void notEmptyNavigation(String query) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(query);

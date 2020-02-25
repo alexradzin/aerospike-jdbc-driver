@@ -13,7 +13,9 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -71,7 +73,8 @@ public class BinaryOperation {
         EQ("=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                if (!operation.values.isEmpty()) {
+                boolean subSelect = operation.values.stream().anyMatch(v -> v instanceof QueryHolder);
+                if (!operation.values.isEmpty() && !subSelect) {
                     Object value = operation.values.get(0);
                     if ("PK".equals(operation.column)) {
                         final Key key = createKey(value, queries);
@@ -99,7 +102,7 @@ public class BinaryOperation {
         NE("!=") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                if (!operation.values.isEmpty() && "PK".equals(operation.column)) {
+                if (!operation.values.isEmpty() &&  "PK".equals(operation.column)) {
                     queries.createScanQuery(operation.statement, new PrimaryKeyEqualityPredicate(createKey(operation.values.get(0), queries), false));
                 }
                 return queries;
@@ -114,7 +117,12 @@ public class BinaryOperation {
         GT(">") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                return updateComparisonOperation(queries, operation, o -> asList(((Number) operation.values.get(0)).longValue() + 1, Long.MAX_VALUE));
+                if (operation.values.isEmpty() || operation.values.get(0) instanceof QueryHolder) {
+                    assertPkFiltering(operation);
+                    return queries;
+                }
+                List<Object> values = asList(((Number) operation.values.get(0)).longValue() + 1, Long.MAX_VALUE);
+                return updateComparisonOperation(queries, operation, o -> values);
             }
         },
         GE(">=") {
@@ -126,7 +134,13 @@ public class BinaryOperation {
         LT("<") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                return updateComparisonOperation(queries, operation, o -> asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1));
+                if (operation.values.isEmpty() || operation.values.get(0) instanceof QueryHolder) {
+                    assertPkFiltering(operation);
+                    return queries;
+                }
+                //List<Object> values = operation.values.isEmpty() || operation.values.get(0) instanceof QueryHolder ? Collections.singletonList(null) : asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1);
+                List<Object> values = asList(Long.MIN_VALUE, ((Number) operation.values.get(0)).longValue() - 1);
+                return updateComparisonOperation(queries, operation, o -> values);
             }
         },
         LE("<=") {
@@ -138,7 +152,7 @@ public class BinaryOperation {
         BETWEEN("BETWEEN") {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
-                if ("PK".equals(operation.column)) {
+                if ("PK".equals(operation.column) || operation.values.stream().anyMatch(v -> v instanceof QueryHolder)) {
                     return queries;
                 }
                 if (operation.values.stream().anyMatch(v -> !AerospikeQueryFactory.isInt(v))) {
@@ -203,6 +217,7 @@ public class BinaryOperation {
         static {
             operators.putAll(Arrays.stream(Operator.values()).collect(toMap(e -> e.operator, e -> e)));
         }
+        private final static Collection<Operator> binaryComparisonOperators = new HashSet<>(Arrays.asList(Operator.EQ, Operator.LT, Operator.LE, Operator.GE, Operator.GT, Operator.NE, Operator.NEQ));
         private final String operator;
         private final boolean requiresColumn;
 
@@ -232,12 +247,19 @@ public class BinaryOperation {
             return operator;
         }
 
+        public boolean isBinaryComparison() {
+            return binaryComparisonOperators.contains(this);
+        }
+
         protected QueryHolder updateComparisonOperation(QueryHolder queries, BinaryOperation operation, Function<BinaryOperation, List<Object>> valuesGetter) {
+            assertPkFiltering(operation);
+            return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, valuesGetter.apply(operation)));
+        }
+
+        protected void assertPkFiltering(BinaryOperation operation) {
             if ("PK".equals(operation.column)) {
                 SneakyThrower.sneakyThrow(new SQLException("Filtering by PK supports =, !=, IN"));
             }
-
-            return BETWEEN.update(queries, new BinaryOperation(operation.statement, operation.table, operation.column, valuesGetter.apply(operation)));
         }
     }
 

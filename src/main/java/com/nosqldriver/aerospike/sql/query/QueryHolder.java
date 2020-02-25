@@ -10,6 +10,7 @@ import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
 import com.nosqldriver.aerospike.sql.AerospikeStatement;
+import com.nosqldriver.aerospike.sql.query.BinaryOperation.Operator;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation.PrimaryKeyEqualityPredicate;
 import com.nosqldriver.sql.ChainedResultSetWrapper;
 import com.nosqldriver.sql.DataColumn;
@@ -250,12 +251,38 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                         PredExp nextExp = predExps.get(i + 1);
                         if (nextExp instanceof OperatorRefPredExp) {
                             BinaryOperation operation = new BinaryOperation();
-                            //operation.setTable(set);
                             operation.setStatement(statement);
                             operation.setColumn(columnName);
                             values.forEach(operation::addValue);
-                            indexesToRemove.addAll(asList(i - 1, i, i +1 ));
-                            BinaryOperation.Operator.valueOf(((OperatorRefPredExp)nextExp).getOp()).update(this, operation);
+                            Optional<Operator> operatorOpt = Operator.find(((OperatorRefPredExp)nextExp).getOp());
+                            if (operatorOpt.isPresent()) {
+                                Operator operator = operatorOpt.get();
+                                if (operator.isBinaryComparison()) {
+                                    Object value = null;
+                                    int paramsCount = Array.getLength(parameter);
+                                    switch (paramsCount) {
+                                        case 0: value = null; type = paramType = String.class; break;
+                                        case 1: value = Array.get(parameter, 0); type = paramType = value.getClass(); break;
+                                        default: SneakyThrower.sneakyThrow(new SQLException(format("Operator %s requires 1 parameter but were %d", operator, paramsCount)));
+                                    }
+                                    parameter = value;
+
+                                    if (value instanceof Long || value instanceof Integer || value instanceof Short || value instanceof Byte) {
+                                        predExps.set(i, PredExp.integerValue(((Number)value).longValue()));
+                                    } else if (value instanceof String) {
+                                        predExps.set(i, PredExp.stringValue((String)value));
+                                    } else {
+                                        SneakyThrower.sneakyThrow(new SQLException(format("Value %s belongs to unsupported type %s. Only string and integer types are supported", value, value.getClass())));
+                                    }
+                                } else {
+                                    indexesToRemove.addAll(asList(i - 1, i, i +1 )); // IN
+                                }
+
+                            } else {
+                                SneakyThrower.sneakyThrow(new SQLException(format("Operator %s does not exist", ((OperatorRefPredExp)nextExp).getOp())));
+                            }
+
+                            Operator.find(((OperatorRefPredExp)nextExp).getOp()).map(op -> op.update(this, operation));
                         }
                     } catch (SQLException e) {
                         SneakyThrower.sneakyThrow(e);

@@ -10,6 +10,7 @@ import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation.Operator;
 import com.nosqldriver.aerospike.sql.query.ColumnRefPredExp;
+import com.nosqldriver.aerospike.sql.query.InnerQueryPredExp;
 import com.nosqldriver.aerospike.sql.query.OperatorRefPredExp;
 import com.nosqldriver.aerospike.sql.query.PredExpValuePlaceholder;
 import com.nosqldriver.aerospike.sql.query.QueryContainer;
@@ -441,12 +442,28 @@ public class AerospikeQueryFactory {
                             super.visitBinaryExpression(expr);
                             System.out.println("visitBinaryExpression " + expr);
                             Optional<Operator> operator = Operator.find(expr.getStringExpression());
+                            String op = expr.getStringExpression();
+
+                            expr.getRightExpression().accept(new ExpressionVisitorAdapter() {
+                                public void visit(SubSelect subSelect) {
+                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider);
+                                    SelectBody selectBody = subSelect.getSelectBody();
+                                    createSelect(selectBody, subHolder);
+                                    operation.addValue(subHolder);
+                                    //aaaaaaaaaaaaaaaaaaaa
+                                    //Operator.find(op).map(o -> o.update(queries, operation));
+//                                    queries.queries(operation.getTable()).addPredExp(new OperatorRefPredExp("IN"));
+                                    queries.queries(operation.getTable()).addPredExp(PredExp.integerBin(operation.getColumn()));
+                                    queries.queries(operation.getTable()).addPredExp(new InnerQueryPredExp(1, subHolder)); // TODO: add normal suport for index (it is 1 here)
+                                }
+                            });
+
+
                             if (!operator.isPresent() || (operator.get().doesRequireColumn() && operation.getColumn() == null)) {
                                 queries.queries(operation.getTable()).removeLastPredicates(4);
                                 ignoreNextOp.set(true);
                                 queries.setWhereExpression(whereExpression);
                             } else {
-                                String op = expr.getStringExpression();
                                 if (ignoreNextOp.get() && ("AND".equals(op) || "OR".equals(op))) {
                                     ignoreNextOp.set(false);
                                 } else {
@@ -454,8 +471,17 @@ public class AerospikeQueryFactory {
                                     queries.queries(operation.getTable()).addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), op)).get());
                                 }
                             }
+
                             operation.clear();
                         }
+
+
+//                        @Override
+//                        public void visit(SubSelect subSelect) {
+//                            System.out.println("visit(SubSelect subSelect): " + subSelect + " 1");
+//                            super.visit(subSelect);
+//                            System.out.println("visit(SubSelect subSelect): " + subSelect + " 2");
+//                        }
 
                         @Override
                         public void visit(Column column) {
