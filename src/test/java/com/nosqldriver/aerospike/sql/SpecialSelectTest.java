@@ -12,7 +12,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -173,5 +175,33 @@ class SpecialSelectTest {
 
         assertEquals(expected, actual);
         rs.close();
+    }
+
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select text from data;abc,abcd,bcd",
+            "select text from data where text like '%c%';abc,abcd,bcd",
+            "select text from data where text like 'a%';abc,abcd",
+            "select text from data where text like '%a%';abc,abcd",
+            "select text from data where text like '%c';abc",
+            "select text from data where text like '%d';abcd,bcd",
+            "select text from data where text like '%bcd';abcd,bcd",
+            "select text from data where text like 'a';",
+            "select text from data where text like '%a';",
+    })
+    void selectLike(String queryAndResult) throws SQLException {
+        String[] parts = queryAndResult.split(";");
+        String sql = parts[0];
+        Collection<String> expected = parts.length == 1 ? Collections.emptySet() : new HashSet<>(Arrays.asList(parts[1].split(",")));
+        testConn.createStatement().executeUpdate("insert into data (PK, text) values (1, 'abc'), (2, 'abcd'), (3, 'bcd')");
+
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        Collection<String> actual  = new HashSet<>();
+        while(rs.next()) {
+            actual.add(rs.getString(1));
+        }
+        assertEquals(expected, actual);
     }
 }
