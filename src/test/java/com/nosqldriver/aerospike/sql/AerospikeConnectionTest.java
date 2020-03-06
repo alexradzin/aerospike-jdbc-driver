@@ -145,10 +145,18 @@ class AerospikeConnectionTest {
 
     @Test
     void commit() throws SQLException {
+        testConn.clearWarnings();
         assertTrue(testConn.getAutoCommit());
         testConn.setAutoCommit(true);
+        assertNull(testConn.getWarnings()); // transaction type was not changed, so the setAutoCommit() is no-op
         testConn.commit(); //ignored
-        assertThrows(SQLFeatureNotSupportedException.class, () -> testConn.setAutoCommit(false));
+
+        testConn.setAutoCommit(false);
+        assertEquals("Aerospike does not  support transactions and therefore behaves like autocommit ON", testConn.getWarnings().getMessage());
+        assertFalse(testConn.getAutoCommit());
+        testConn.clearWarnings();
+        testConn.setAutoCommit(true);
+        assertNull(testConn.getWarnings()); // transaction type was changed to auto-commit - no warnings
     }
 
 

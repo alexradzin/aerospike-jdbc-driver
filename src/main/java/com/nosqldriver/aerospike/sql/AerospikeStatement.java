@@ -12,12 +12,12 @@ import com.nosqldriver.sql.ChainedResultSetWrapper;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.PreparedStatementUtil;
 import com.nosqldriver.sql.SimpleWrapper;
+import com.nosqldriver.sql.WarningsHolder;
 import com.nosqldriver.util.SneakyThrower;
 import com.nosqldriver.util.ThrowingSupplier;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLSyntaxErrorException;
@@ -48,7 +48,7 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
     protected String set;
     private int maxRows = Integer.MAX_VALUE;
     private int queryTimeout = 0;
-    private volatile SQLWarning sqlWarning;
+    private final WarningsHolder warningsHolder = new WarningsHolder();
     protected final AerospikePolicyProvider policyProvider;
     protected final Collection<String> indexes;
     private ResultSet resultSet;
@@ -328,12 +328,12 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
 
     @Override
     public SQLWarning getWarnings() throws SQLException {
-        return sqlWarning;
+        return warningsHolder.getWarnings();
     }
 
     @Override
     public void clearWarnings() throws SQLException {
-        sqlWarning = null;
+        warningsHolder.clearWarnings();
     }
 
     @Override

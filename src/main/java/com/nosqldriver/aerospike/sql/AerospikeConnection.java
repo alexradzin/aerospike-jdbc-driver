@@ -10,6 +10,7 @@ import com.nosqldriver.sql.BasicArray;
 import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.SimpleWrapper;
 import com.nosqldriver.sql.StringClob;
+import com.nosqldriver.sql.WarningsHolder;
 import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.Array;
@@ -31,6 +32,7 @@ import java.sql.Struct;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.String.format;
@@ -49,12 +51,13 @@ class AerospikeConnection implements Connection, SimpleWrapper {
     private static final ConnectionParametersParser parser = new ConnectionParametersParser();
     private final IAerospikeClient client;
     private volatile boolean readOnly = false;
-    private volatile SQLWarning sqlWarning;
     private volatile Map<String, Class<?>> typeMap = emptyMap();
     private volatile int holdability = HOLD_CURSORS_OVER_COMMIT;
     private final Properties clientInfo = new Properties();
     private final AtomicReference<String> schema = new AtomicReference<>(null); // schema can be updated by use statement
     private final AerospikePolicyProvider policyProvider;
+    private volatile AtomicBoolean autoCommit = new AtomicBoolean(true);
+    private final WarningsHolder warningsHolder = new WarningsHolder();
 
     @VisibleForPackage
     AerospikeConnection(String url, Properties props) {
@@ -97,14 +100,15 @@ class AerospikeConnection implements Connection, SimpleWrapper {
 
     @Override
     public void setAutoCommit(boolean autoCommit) throws SQLException {
-        if (!autoCommit) {
-            throw new SQLFeatureNotSupportedException("Aerospike does not  support transactions and therefore behaves like autocommit ON");
+        boolean prevValue = this.autoCommit.getAndSet(autoCommit);
+        if (prevValue != autoCommit && !autoCommit) {
+            warningsHolder.addWarning("Aerospike does not  support transactions and therefore behaves like autocommit ON");
         }
     }
 
     @Override
     public boolean getAutoCommit() throws SQLException {
-        return true;
+        return autoCommit.get();
     }
 
     @Override
@@ -114,7 +118,7 @@ class AerospikeConnection implements Connection, SimpleWrapper {
 
     @Override
     public void rollback() throws SQLException {
-        throw new SQLFeatureNotSupportedException("Aerospike is not transactional, so rollback isnot supported");
+        throw new SQLFeatureNotSupportedException("Aerospike is not transactional, so rollback is not supported");
     }
 
     @Override
@@ -169,12 +173,12 @@ class AerospikeConnection implements Connection, SimpleWrapper {
 
     @Override
     public SQLWarning getWarnings() throws SQLException {
-        return sqlWarning;
+        return warningsHolder.getWarnings();
     }
 
     @Override
     public void clearWarnings() throws SQLException {
-        sqlWarning = null;
+        warningsHolder.clearWarnings();
     }
 
     @Override

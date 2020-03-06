@@ -51,7 +51,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     protected final String table;
     protected final List<DataColumn> columns;
     private boolean wasNull = false;
-    private volatile SQLWarning sqlWarning;
+    private final WarningsHolder warningsHolder = new WarningsHolder();
     protected volatile int index = 0;
     private volatile boolean closed = false;
 
@@ -174,12 +174,12 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
 
     @Override
     public SQLWarning getWarnings() throws SQLException {
-        return sqlWarning;
+        return warningsHolder.getWarnings();
     }
 
     @Override
     public void clearWarnings() throws SQLException {
-        sqlWarning = null;
+        warningsHolder.clearWarnings();
     }
 
     @Override
@@ -303,12 +303,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     @Override
     public void setFetchDirection(int direction) throws SQLException {
         if (direction != FETCH_FORWARD) {
-            SQLWarning warning = new SQLWarning(format("Attempt to set unsupported fetch direction %d. Only FETCH_FORWARD=%d is supported. The value is ignored.", direction, FETCH_FORWARD));
-            if (sqlWarning == null) {
-                sqlWarning = warning;
-            } else {
-                sqlWarning.setNextWarning(warning);
-            }
+            warningsHolder.addWarning(format("Attempt to set unsupported fetch direction %d. Only FETCH_FORWARD=%d is supported. The value is ignored.", direction, FETCH_FORWARD));
         }
     }
 
