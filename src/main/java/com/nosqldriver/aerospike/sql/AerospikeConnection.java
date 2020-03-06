@@ -24,7 +24,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLClientInfoException;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Savepoint;
 import java.sql.Statement;
@@ -45,7 +44,7 @@ import static java.util.Arrays.stream;
 import static java.util.Collections.emptyMap;
 
 @VisibleForPackage
-class AerospikeConnection implements Connection, SimpleWrapper {
+class AerospikeConnection extends WarningsHolder implements Connection, SimpleWrapper {
     private final String url;
     private final Properties props;
     private static final ConnectionParametersParser parser = new ConnectionParametersParser();
@@ -57,7 +56,6 @@ class AerospikeConnection implements Connection, SimpleWrapper {
     private final AtomicReference<String> schema = new AtomicReference<>(null); // schema can be updated by use statement
     private final AerospikePolicyProvider policyProvider;
     private volatile AtomicBoolean autoCommit = new AtomicBoolean(true);
-    private final WarningsHolder warningsHolder = new WarningsHolder();
 
     @VisibleForPackage
     AerospikeConnection(String url, Properties props) {
@@ -102,7 +100,7 @@ class AerospikeConnection implements Connection, SimpleWrapper {
     public void setAutoCommit(boolean autoCommit) throws SQLException {
         boolean prevValue = this.autoCommit.getAndSet(autoCommit);
         if (prevValue != autoCommit && !autoCommit) {
-            warningsHolder.addWarning("Aerospike does not  support transactions and therefore behaves like autocommit ON");
+            addWarning("Aerospike does not  support transactions and therefore behaves like autocommit ON");
         }
     }
 
@@ -169,16 +167,6 @@ class AerospikeConnection implements Connection, SimpleWrapper {
     @Override
     public int getTransactionIsolation() throws SQLException {
         return TRANSACTION_NONE;
-    }
-
-    @Override
-    public SQLWarning getWarnings() throws SQLException {
-        return warningsHolder.getWarnings();
-    }
-
-    @Override
-    public void clearWarnings() throws SQLException {
-        warningsHolder.clearWarnings();
     }
 
     @Override

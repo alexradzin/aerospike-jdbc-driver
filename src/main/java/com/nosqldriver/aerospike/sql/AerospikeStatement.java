@@ -21,7 +21,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLSyntaxErrorException;
-import java.sql.SQLWarning;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,14 +40,13 @@ import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static java.util.Collections.emptyList;
 import static java.util.Optional.ofNullable;
 
-public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
+public class AerospikeStatement extends WarningsHolder implements java.sql.Statement, SimpleWrapper {
     protected final IAerospikeClient client;
     private final Connection connection;
     protected final AtomicReference<String> schema;
     protected String set;
     private int maxRows = Integer.MAX_VALUE;
     private int queryTimeout = 0;
-    private final WarningsHolder warningsHolder = new WarningsHolder();
     protected final AerospikePolicyProvider policyProvider;
     protected final Collection<String> indexes;
     private ResultSet resultSet;
@@ -324,16 +322,6 @@ public class AerospikeStatement implements java.sql.Statement, SimpleWrapper {
     @Override
     public void cancel() throws SQLException {
         throw new SQLFeatureNotSupportedException("Statement cannot be canceled");
-    }
-
-    @Override
-    public SQLWarning getWarnings() throws SQLException {
-        return warningsHolder.getWarnings();
-    }
-
-    @Override
-    public void clearWarnings() throws SQLException {
-        warningsHolder.clearWarnings();
     }
 
     @Override

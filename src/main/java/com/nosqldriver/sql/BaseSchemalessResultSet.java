@@ -20,7 +20,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Time;
@@ -45,13 +44,12 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toSet;
 
 // TODO: extend this class from DelegatingResultSet, move all type transformations to TypeTransformer and remove getX() method from here.
-public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSetAdaptor, SimpleWrapper, IndexToLabelResultSet {
+public abstract class BaseSchemalessResultSet<R> extends WarningsHolder implements ResultSet, ResultSetAdaptor, SimpleWrapper, IndexToLabelResultSet {
     private final Statement statement;
     protected final String schema;
     protected final String table;
     protected final List<DataColumn> columns;
     private boolean wasNull = false;
-    private final WarningsHolder warningsHolder = new WarningsHolder();
     protected volatile int index = 0;
     private volatile boolean closed = false;
 
@@ -170,16 +168,6 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     @Override
     public InputStream getBinaryStream(String columnLabel) throws SQLException {
         return wasNull(cast(getValue(getRecord(), columnLabel), InputStream.class));
-    }
-
-    @Override
-    public SQLWarning getWarnings() throws SQLException {
-        return warningsHolder.getWarnings();
-    }
-
-    @Override
-    public void clearWarnings() throws SQLException {
-        warningsHolder.clearWarnings();
     }
 
     @Override
@@ -303,7 +291,7 @@ public abstract class BaseSchemalessResultSet<R> implements ResultSet, ResultSet
     @Override
     public void setFetchDirection(int direction) throws SQLException {
         if (direction != FETCH_FORWARD) {
-            warningsHolder.addWarning(format("Attempt to set unsupported fetch direction %d. Only FETCH_FORWARD=%d is supported. The value is ignored.", direction, FETCH_FORWARD));
+            addWarning(format("Attempt to set unsupported fetch direction %d. Only FETCH_FORWARD=%d is supported. The value is ignored.", direction, FETCH_FORWARD));
         }
     }
 
