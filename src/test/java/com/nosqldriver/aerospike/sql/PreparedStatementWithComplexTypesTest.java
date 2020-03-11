@@ -118,7 +118,7 @@ class PreparedStatementWithComplexTypesTest {
         assertFalse(rs.next());
     }
 
-    private <T> void assertOneInsertedRowUsingPreparedStatementWithDifferentKeyType(ThrowingConsumer<PreparedStatement, SQLException> setter, Key key) throws SQLException {
+    private void assertOneInsertedRowUsingPreparedStatementWithDifferentKeyType(ThrowingConsumer<PreparedStatement, SQLException> setter, Key key) throws SQLException {
         PreparedStatement insert = testConn.prepareStatement("insert into people (PK, id, first_name, last_name, kids) values (?, ?, ?, ?, ?)");
         setter.accept(insert);
 
@@ -390,17 +390,6 @@ class PreparedStatementWithComplexTypesTest {
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
     @Test
     void insertOneRowWithStringKey() throws SQLException {
         insertOneRowWithTypedKey("one", new Key("test", "people", "one"));
@@ -556,12 +545,7 @@ class PreparedStatementWithComplexTypesTest {
     void getFieldsSerializableClass(String query) throws SQLException {
         String text = "my number is the best one";
         int n = 123;
-        MySerializableClass obj = new MySerializableClass(n, text);
-
-        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, struct) values (?, ?)");
-        insert.setInt(1, 1);
-        insert.setObject(2, obj);
-        assertEquals(1, insert.executeUpdate());
+        insertOneRowCustomClass(text, n);
         ResultSet rs = testConn.createStatement().executeQuery(query);
 
         ResultSetMetaData md = rs.getMetaData();
@@ -588,14 +572,7 @@ class PreparedStatementWithComplexTypesTest {
             "select struct[number], struct[text] from (select struct from data) where struct[number]=321",
     })
     void getFieldsSerializableClassFalseFilter(String query) throws SQLException {
-        String text = "my number is the best one";
-        int n = 123;
-        MySerializableClass obj = new MySerializableClass(n, text);
-
-        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, struct) values (?, ?)");
-        insert.setInt(1, 1);
-        insert.setObject(2, obj);
-        assertEquals(1, insert.executeUpdate());
+        insertOneRowCustomClass("my number is the best one", 123);
         ResultSet rs = testConn.createStatement().executeQuery(query);
 
         ResultSetMetaData md = rs.getMetaData();
@@ -608,8 +585,46 @@ class PreparedStatementWithComplexTypesTest {
         assertFalse(rs.next());
     }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select struct[nothing] from (select struct from data)",
+    })
+    void getNotExistingFieldsInSelectSerializableClass(String query) throws SQLException {
+        insertOneRowCustomClass("my number is the best one", 123);
 
-    <T> void insertOneRowWithTypedKey(T id, Key key) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(1, md.getColumnCount());
+        assertTrue(rs.next());
+
+        assertThrows(SQLException.class, () -> rs.getObject(1));
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select struct[number] from (select struct from data) where struct[nothing]=321",
+    })
+    void getNotExistingFieldsInWhereSerializableClass(String query) throws SQLException {
+        insertOneRowCustomClass("my number is the best one", 123);
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(1, md.getColumnCount());
+        assertThrows(SQLException.class, rs::next);
+    }
+
+
+    private void insertOneRowCustomClass(String text, int n) throws SQLException {
+        MySerializableClass obj = new MySerializableClass(n, text);
+
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, struct) values (?, ?)");
+        insert.setInt(1, 1);
+        insert.setObject(2, obj);
+        assertEquals(1, insert.executeUpdate());
+    }
+
+    private <T> void insertOneRowWithTypedKey(T id, Key key) throws SQLException {
         PreparedStatement insert = testConn.prepareStatement("insert into people (PK, id, first_name, last_name) values (?, ?, ?, ?, ?)");
         insert.setObject(1, id);
         insert.setInt(2, 1);

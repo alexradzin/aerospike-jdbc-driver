@@ -1,11 +1,13 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.util.SneakyThrower;
 
 import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -73,7 +75,7 @@ public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T
             bindings.putAll(ctx);
             return engine.eval(trimmedExpr);
         } catch (ScriptException e) {
-            throw new IllegalArgumentException(this.expr, e);
+            return SneakyThrower.sneakyThrow(new SQLException(e.getMessage(), e));
         }
     }
 
