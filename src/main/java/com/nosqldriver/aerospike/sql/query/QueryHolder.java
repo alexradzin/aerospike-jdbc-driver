@@ -27,6 +27,7 @@ import com.nosqldriver.sql.ResultSetWrapper;
 import com.nosqldriver.sql.SortedResultSet;
 import com.nosqldriver.util.ByteArrayComparator;
 import com.nosqldriver.util.SneakyThrower;
+import net.sf.jsqlparser.expression.ArrayExpression;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
@@ -672,6 +673,28 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                     columns.add(AGGREGATED.create(catalog, table, getText(expr), alias));
                 }
             },
+            new ColumnType(e -> e instanceof ArrayExpression) {
+
+                @Override
+                protected String getCatalog(Expression expr) {
+                    return schema;
+                }
+
+                @Override
+                protected String getTable(Expression expr) {
+                    return null;
+                }
+
+                @Override
+                protected String getText(Expression expr) {
+                    return expr == null ? null : expr.toString();
+                }
+
+                @Override
+                public void addColumn(Expression expr, String alias, boolean visible, String schema, String table) {
+                    columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
+                }
+            }
     };
 
     public void addGroupField(String field) {

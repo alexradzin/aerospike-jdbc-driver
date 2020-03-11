@@ -13,6 +13,7 @@ import java.util.TreeMap;
 import java.util.function.Supplier;
 
 import static java.sql.Types.NULL;
+import static java.sql.Types.OTHER;
 import static java.util.Arrays.asList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toMap;
@@ -26,6 +27,12 @@ public class SqlLiterals {
         sqlTypes.put(Boolean.class, Types.BOOLEAN);
         sqlTypes.put(Float.class, Types.FLOAT);
         sqlTypes.put(Double.class, Types.DOUBLE);
+        sqlTypes.put(short.class, Types.SMALLINT);
+        sqlTypes.put(int.class, Types.INTEGER);
+        sqlTypes.put(long.class, Types.BIGINT);
+        sqlTypes.put(boolean.class, Types.BOOLEAN);
+        sqlTypes.put(float.class, Types.FLOAT);
+        sqlTypes.put(double.class, Types.DOUBLE);
         sqlTypes.put(String.class, Types.VARCHAR);
         sqlTypes.put(byte[].class, Types.BLOB);
         sqlTypes.put(java.sql.Date.class, Types.DATE);
@@ -109,6 +116,6 @@ public class SqlLiterals {
     }
 
     public static int getSqlType(Object value) {
-        return value == null ? NULL : sqlTypes.getOrDefault(value.getClass(), NULL);
+        return value == null ? NULL : sqlTypes.getOrDefault(value.getClass(), OTHER);
     }
 }

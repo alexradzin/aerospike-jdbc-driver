@@ -13,6 +13,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
+import java.io.NotSerializableException;
+import java.io.Serializable;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.NClob;
@@ -46,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -471,6 +474,140 @@ class PreparedStatementWithComplexTypesTest {
         });
     }
 
+    @Test
+    void setNotSerializableObject() throws SQLException {
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, data) values (?, ?)");
+        insert.setObject(1, 1);
+        insert.setObject(2, new MyNotSerializableClass());
+        SQLException sqlException = assertThrows(SQLException.class, insert::execute);
+        NotSerializableException nse = null;
+        for(Throwable t = sqlException; t != null && t != t.getCause(); t = t.getCause()) {
+            if (t instanceof NotSerializableException) {
+                nse = (NotSerializableException)t;
+                break;
+            }
+        }
+        assertNotNull(nse);
+    }
+
+    @Test
+    void setSerializableObject() throws SQLException {
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, data) values (?, ?)");
+        insert.setObject(1, 1);
+        MySerializableClass obj1 = new MySerializableClass(123, "something");
+        insert.setObject(2, obj1);
+        assertTrue(insert.execute());
+
+        PreparedStatement select = testConn.prepareStatement("select * from data where PK=?");
+        select.setObject(1, 1);
+        ResultSet rs = select.executeQuery();
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(1, md.getColumnCount());
+        assertEquals("data", md.getColumnName(1));
+
+        assertTrue(rs.next());
+
+        MySerializableClass obj2 = (MySerializableClass)rs.getObject(1);
+        assertNotNull(obj2);
+        assertNotSame(obj1, obj2);
+        assertEquals(obj1.number, obj2.number);
+        assertEquals(obj1.text, obj2.text);
+
+        assertFalse(rs.next());
+    }
+
+    @Test
+    @Disabled
+    void getFieldsOfMap() throws SQLException {
+        Map<String, Object> map = new TreeMap<>();
+        map.put("number", 123456);
+        String text = "my number is the best one";
+        map.put("text", text);
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, map) values (?, ?)");
+        insert.setInt(1, 1);
+        insert.setObject(2, map);
+        assertEquals(1, insert.executeUpdate());
+        ResultSet rs = testConn.createStatement().executeQuery("select map[number], map[text] from (select map from data)");
+
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(2, md.getColumnCount());
+        assertEquals("map[number]", md.getColumnName(1));
+        assertEquals("map[text]", md.getColumnName(2));
+
+
+//        assertTrue(rs.next());
+//        assertEquals(123456, rs.getInt(1));
+//        assertEquals(123456, rs.getInt("map[number]"));
+//        assertEquals(text, rs.getString(2));
+//        assertEquals(text, rs.getString("map[text]"));
+//
+//        assertFalse(rs.next());
+    }
+
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select struct[number], struct[text] from (select struct from data)",
+            "select struct[number], struct[text] from (select struct from data where PK=1)",
+            "select struct[number], struct[text] from (select struct from data where 1=1)",
+            "select struct[number], struct[text] from (select struct from data) where struct[number]=123",
+    })
+    void getFieldsSerializableClass(String query) throws SQLException {
+        String text = "my number is the best one";
+        int n = 123;
+        MySerializableClass obj = new MySerializableClass(n, text);
+
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, struct) values (?, ?)");
+        insert.setInt(1, 1);
+        insert.setObject(2, obj);
+        assertEquals(1, insert.executeUpdate());
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(2, md.getColumnCount());
+        assertEquals("struct[number]", md.getColumnName(1));
+        assertEquals("struct[text]", md.getColumnName(2));
+        assertEquals(Types.INTEGER, md.getColumnType(1));
+        assertEquals(Types.VARCHAR, md.getColumnType(2));
+
+
+        assertTrue(rs.next());
+        assertEquals(n, rs.getInt(1));
+        assertEquals(n, rs.getInt("struct[number]"));
+        assertEquals(text, rs.getString(2));
+        assertEquals(text, rs.getString("struct[text]"));
+
+        assertFalse(rs.next());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select struct[number], struct[text] from (select struct from data where PK=0)",
+            "select struct[number], struct[text] from (select struct from data where 1=2)",
+            "select struct[number], struct[text] from (select struct from data) where struct[number]=321",
+    })
+    void getFieldsSerializableClassFalseFilter(String query) throws SQLException {
+        String text = "my number is the best one";
+        int n = 123;
+        MySerializableClass obj = new MySerializableClass(n, text);
+
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, struct) values (?, ?)");
+        insert.setInt(1, 1);
+        insert.setObject(2, obj);
+        assertEquals(1, insert.executeUpdate());
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(2, md.getColumnCount());
+        assertEquals("struct[number]", md.getColumnName(1));
+        assertEquals("struct[text]", md.getColumnName(2));
+        assertEquals(Types.INTEGER, md.getColumnType(1));
+        assertEquals(Types.VARCHAR, md.getColumnType(2));
+
+        assertFalse(rs.next());
+    }
+
 
     <T> void insertOneRowWithTypedKey(T id, Key key) throws SQLException {
         PreparedStatement insert = testConn.prepareStatement("insert into people (PK, id, first_name, last_name) values (?, ?, ?, ?, ?)");
@@ -513,5 +650,27 @@ class PreparedStatementWithComplexTypesTest {
         Map<K, V> outMap = (Map<K, V>)rs.getObject(1);
         assertFalse(rs.next());
         return outMap;
+    }
+
+    public static class MyNotSerializableClass {
+        // nothing
+    }
+
+    public static class MySerializableClass implements Serializable {
+        private final int number;
+        private final String text;
+
+        public MySerializableClass(int number, String text) {
+            this.number = number;
+            this.text = text;
+        }
+
+        public int getNumber() {
+            return number;
+        }
+
+        public String getText() {
+            return text;
+        }
     }
 }

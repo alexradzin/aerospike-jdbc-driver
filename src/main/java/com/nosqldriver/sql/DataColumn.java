@@ -10,7 +10,7 @@ public class DataColumn {
     private final String expression;
     private int type;
 
-    private final DataColumnRole role;
+    private DataColumnRole role;
 
     public enum DataColumnRole {
         DATA, HIDDEN, AGGREGATED, GROUP, EXPRESSION {

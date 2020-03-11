@@ -7,6 +7,7 @@ import com.nosqldriver.sql.BaseSchemalessResultSet;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.sql.TypeDiscoverer;
+import com.nosqldriver.util.ValueExtractor;
 
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -34,6 +35,7 @@ public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map
     private static final Function<Record, Map<String, Object>> recordDataExtractor = record -> record != null ? record.bins : emptyMap();
     private static final Function<KeyRecord, Map<String, Object>> keyRecordDataExtractor = keyRecord -> keyRecord != null ? recordDataExtractor.apply(keyRecord.record) : emptyMap();
     private static final Pattern functionOfField = Pattern.compile("\\w+\\(\\s*(\\w+)\\s*\\)");
+    private final ValueExtractor valueExtractor = new ValueExtractor();
 
 
     public ResultSetOverAerospikeResultSet(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, TypeDiscoverer typeDiscoverer) {
@@ -102,7 +104,7 @@ public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map
 
     @Override
     protected Object getValue(Map<String, Object> record, String label) {
-        return record.get(label);
+        return valueExtractor.getValue(record, label);
     }
 
     @Override

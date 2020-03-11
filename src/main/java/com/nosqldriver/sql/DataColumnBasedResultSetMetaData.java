@@ -16,7 +16,6 @@ import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
-import static java.util.Collections.emptyList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 
@@ -72,10 +71,6 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
     private final List<DataColumn> columns;
     private boolean discovered;
 
-    public DataColumnBasedResultSetMetaData(String schema, String table) {
-        this(schema, table, emptyList());
-    }
-
     public DataColumnBasedResultSetMetaData(List<DataColumn> columns) {
         this(null, null, columns);
     }
@@ -90,7 +85,7 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
         return columns;
     }
 
-    public DataColumnBasedResultSetMetaData updateData(ResultSetMetaData md) throws SQLException {
+    public DataColumnBasedResultSetMetaData updateData(ResultSetMetaData md, boolean hideAdditionalFields) throws SQLException {
         List<DataColumn> additionalColumns = new ArrayList<>();
 
         for (DataColumn c  : ((DataColumnBasedResultSetMetaData)md).columns) {
@@ -121,8 +116,9 @@ public class DataColumnBasedResultSetMetaData implements ResultSetMetaData, Simp
             }
 
             if (!updated) {
-                additionalColumns.add(c);
+                additionalColumns.add(hideAdditionalFields ? HIDDEN.create(c.getCatalog(), c.getTable(), c.getName(), c.getLabel()).withType(c.getType()) : c);
             }
+
         }
         return new DataColumnBasedResultSetMetaData(Stream.of(columns, additionalColumns).flatMap(Collection::stream).collect(toList()));
     }
