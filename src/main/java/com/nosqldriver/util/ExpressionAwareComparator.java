@@ -8,7 +8,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class ExpressionAwareComparator<T> extends OrderItemsComparator<T> {
-    public ExpressionAwareComparator(List<OrderItem> orderItems, BiFunction<T, String, Object> propGetter, Function<T, Iterable<String>> nameLister) {
-        super(orderItems, new ExpressionAwarePropertyGetter<>(propGetter, nameLister));
+    public ExpressionAwareComparator(List<OrderItem> orderItems, BiFunction<T, String, Object> propGetter, Function<T, Iterable<String>> nameLister, FunctionManager functionManager) {
+        super(orderItems, new ExpressionAwarePropertyGetter<>(propGetter, nameLister, functionManager));
     }
 }

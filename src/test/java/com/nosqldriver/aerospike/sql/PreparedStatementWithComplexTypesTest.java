@@ -12,11 +12,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.NotSerializableException;
 import java.io.Serializable;
 import java.sql.Blob;
 import java.sql.Clob;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -33,6 +39,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Function;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -134,7 +141,7 @@ class PreparedStatementWithComplexTypesTest {
         expectedData.put("id", 1L);
         expectedData.put("first_name", "John");
         expectedData.put("last_name", "Lennon");
-        expectedData.put("kids", Arrays.<String>asList("Sean", "Julian"));
+        expectedData.put("kids", Arrays.asList("Sean", "Julian"));
         assertEquals(expectedData, record.bins);
 
 
@@ -467,7 +474,7 @@ class PreparedStatementWithComplexTypesTest {
     void setNotSerializableObject() throws SQLException {
         PreparedStatement insert = testConn.prepareStatement("insert into data (PK, data) values (?, ?)");
         insert.setObject(1, 1);
-        insert.setObject(2, new MyNotSerializableClass());
+        insert.setObject(2, new MyNotSerializableClass(123, "text"));
         SQLException sqlException = assertThrows(SQLException.class, insert::execute);
         NotSerializableException nse = null;
         for(Throwable t = sqlException; t != null && t != t.getCause(); t = t.getCause()) {
@@ -614,6 +621,109 @@ class PreparedStatementWithComplexTypesTest {
         assertThrows(SQLException.class, rs::next);
     }
 
+    @Test
+    void setNotSerializableObjectWithCustomSerialization() throws SQLException, IOException {
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, blob) values (?, ?)");
+        insert.setObject(1, 1);
+        MyNotSerializableClass obj1 = new MyNotSerializableClass(123, "something");
+        insert.setObject(2, MyNotSerializableClass.serialize(obj1));
+        assertTrue(insert.execute());
+
+        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        PreparedStatement select = conn.prepareStatement("select deserialize(blob) as object from data where PK=?");
+        select.setObject(1, 1);
+        ResultSet rs = select.executeQuery();
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(1, md.getColumnCount());
+        assertEquals("deserialize(blob)", md.getColumnName(1));
+        assertEquals("object", md.getColumnLabel(1));
+
+        assertTrue(rs.next());
+
+        MyNotSerializableClass obj2 = (MyNotSerializableClass)rs.getObject(1);
+        assertNotNull(obj2);
+        assertNotSame(obj1, obj2);
+        assertEquals(obj1.number, obj2.number);
+        assertEquals(obj1.text, obj2.text);
+
+        assertFalse(rs.next());
+    }
+
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data)",
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[number]=321",
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[text]='my text'",
+    })
+    void writeAndReadObjectUsingCustomSerialization(String query) throws SQLException, IOException {
+        int n = 321;
+        String text = "my text";
+        MyNotSerializableClass obj = new MyNotSerializableClass(n, text);
+
+        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        PreparedStatement insert = conn.prepareStatement("insert into data (PK, blob) values (?, ?)");
+        insert.setInt(1, 1);
+        insert.setBytes(2, MyNotSerializableClass.serialize(obj));
+        assertEquals(1, insert.executeUpdate());
+
+        ResultSet rs = conn.createStatement().executeQuery(query);
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(2, md.getColumnCount());
+        assertEquals("custom[number]", md.getColumnName(1));
+        assertEquals("custom[text]", md.getColumnName(2));
+        assertEquals(Types.INTEGER, md.getColumnType(1));
+        assertEquals(Types.VARCHAR, md.getColumnType(2));
+        assertTrue(rs.next());
+
+        assertEquals(n, rs.getInt(1));
+        assertEquals(n, rs.getInt("custom[number]"));
+        assertEquals(text, rs.getString(2));
+        assertEquals(text, rs.getString("custom[text]"));
+
+        assertFalse(rs.next());
+
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[number]=567",
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[text]='other text'",
+    })
+    void writeAndReadObjectUsingCustomSerializationWithFalseFilter(String query) throws SQLException, IOException {
+        int n = 321;
+        String text = "my text";
+        MyNotSerializableClass obj = new MyNotSerializableClass(n, text);
+
+        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        PreparedStatement insert = conn.prepareStatement("insert into data (PK, blob) values (?, ?)");
+        insert.setInt(1, 1);
+        insert.setBytes(2, MyNotSerializableClass.serialize(obj));
+        assertEquals(1, insert.executeUpdate());
+
+        ResultSet rs = conn.createStatement().executeQuery(query);
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(2, md.getColumnCount());
+        assertEquals("custom[number]", md.getColumnName(1));
+        assertEquals("custom[text]", md.getColumnName(2));
+        assertEquals(Types.INTEGER, md.getColumnType(1));
+        assertEquals(Types.VARCHAR, md.getColumnType(2));
+        assertFalse(rs.next());
+    }
+
+
+
+    @Test
+    void notExistingCustomFunction() {
+        assertThrows(IllegalArgumentException.class, () -> DriverManager.getConnection("jdbc:aerospike:localhost?custom.function.deserialize=DoesNotExist"));
+    }
+
+    @Test
+    void wrongCustomFunction() {
+        assertThrows(IllegalArgumentException.class, () -> DriverManager.getConnection("jdbc:aerospike:localhost?custom.function.deserialize=" + getClass().getName()));
+    }
+
 
     private void insertOneRowCustomClass(String text, int n) throws SQLException {
         MySerializableClass obj = new MySerializableClass(n, text);
@@ -668,8 +778,51 @@ class PreparedStatementWithComplexTypesTest {
     }
 
     public static class MyNotSerializableClass {
-        // nothing
+        private final int number;
+        private final String text;
+
+        public MyNotSerializableClass(int number, String text) {
+            this.number = number;
+            this.text = text;
+        }
+
+        public int getNumber() {
+            return number;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public static byte[] serialize(MyNotSerializableClass obj) throws IOException {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream dos = new DataOutputStream(baos);
+            dos.writeInt(obj.number);
+            dos.writeUTF(obj.text);
+            dos.flush();
+            dos.close();
+            return baos.toByteArray();
+        }
+
+        public static MyNotSerializableClass deserialize(byte[] bytes) throws IOException {
+            DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
+            return new MyNotSerializableClass(dis.readInt(), dis.readUTF());
+        }
     }
+
+
+    public static class MyCustomDeserializer implements Function<byte[], MyNotSerializableClass> {
+        @Override
+        public MyNotSerializableClass apply(byte[] bytes) {
+            DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
+            try {
+                return new MyNotSerializableClass(dis.readInt(), dis.readUTF());
+            } catch (IOException e) {
+                throw new IllegalArgumentException(e);
+            }
+        }
+    }
+
 
     public static class MySerializableClass implements Serializable {
         private final int number;

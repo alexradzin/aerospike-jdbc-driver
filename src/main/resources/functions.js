@@ -178,9 +178,10 @@ function map(str) {
 }
 
 function list(str) {
-    return com.nosqldriver.util.DataUtil.toList(map(str));
+    return dataUtil.toList(map(str));
 }
 
 function array(str) {
-    return com.nosqldriver.util.DataUtil.toArray(map(str));
+    return dataUtil.toArray(map(str));
 }
+

@@ -1,5 +1,7 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.FunctionManager;
+import com.nosqldriver.util.DataUtil;
 import com.nosqldriver.util.SneakyThrower;
 
 import javax.script.ScriptContext;
@@ -8,6 +10,8 @@ import javax.script.ScriptEngineManager;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.Collections;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -19,7 +23,11 @@ public class JavascriptEngineFactory {
     private static final ThreadLocal<ScriptEngine> threadEngine = new ThreadLocal<>();
     private final ScriptEngine engine;
 
-    public JavascriptEngineFactory() {
+    public JavascriptEngineFactory(FunctionManager functionManager) {
+        this(Collections.emptyMap(), functionManager);
+    }
+
+    public JavascriptEngineFactory(Map<String, Object> bindings, FunctionManager functionManager) {
         synchronized (threadEngine) {
             ScriptEngine tmp = threadEngine.get();
             if (tmp == null) {
@@ -28,6 +36,18 @@ public class JavascriptEngineFactory {
             } else {
                 engine = tmp;
                 engine.getBindings(ScriptContext.ENGINE_SCOPE).clear();
+            }
+            engine.getBindings(ScriptContext.ENGINE_SCOPE).putAll(bindings);
+            engine.getBindings(ScriptContext.ENGINE_SCOPE).put("dataUtil", new DataUtil());
+
+            if (functionManager != null) {
+                functionManager.getCustomFunctionNames().forEach(name -> {
+                    try {
+                        engine.put(name, functionManager.getCustomFunction(name).getConstructor().newInstance());
+                    } catch (ReflectiveOperationException e) {
+                        throw new IllegalStateException(e);
+                    }
+                });
             }
         }
         SneakyThrower.call(() -> {

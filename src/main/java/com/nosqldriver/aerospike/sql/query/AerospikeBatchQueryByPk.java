@@ -6,17 +6,18 @@ import com.aerospike.client.Record;
 import com.aerospike.client.policy.BatchPolicy;
 import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeRecords;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.util.FunctionManager;
 
 import java.sql.ResultSet;
 import java.util.List;
 
 public class AerospikeBatchQueryByPk extends AerospikeQuery<Key[], BatchPolicy, Record> {
-    public AerospikeBatchQueryByPk(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Key[] keys, BatchPolicy policy) {
-        super(sqlStatement, schema, set, columns, keys, policy);
+    public AerospikeBatchQueryByPk(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Key[] keys, BatchPolicy policy, FunctionManager functionManager) {
+        super(sqlStatement, schema, set, columns, keys, policy, functionManager);
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, client.get(policy, criteria), keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set));
+        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, client.get(policy, criteria), keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set), functionManager);
     }
 }

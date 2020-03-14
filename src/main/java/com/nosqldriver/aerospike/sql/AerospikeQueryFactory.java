@@ -22,6 +22,7 @@ import com.nosqldriver.sql.JavascriptEngineFactory;
 import com.nosqldriver.sql.JoinType;
 import com.nosqldriver.sql.OrderItem;
 import com.nosqldriver.sql.RecordExpressionEvaluator;
+import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.SneakyThrower;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
@@ -77,6 +78,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -114,20 +116,23 @@ public class AerospikeQueryFactory {
     private String set;
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
-    private final ScriptEngine engine = new JavascriptEngineFactory().getEngine();
+    private final FunctionManager functionManager;
+    private final ScriptEngine engine;
 
     @VisibleForPackage
-    AerospikeQueryFactory(Statement statement, String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes) {
+    AerospikeQueryFactory(Statement statement, String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes, FunctionManager functionManager) {
         this.statement = statement;
         this.schema = schema;
         this.policyProvider = policyProvider;
         this.indexes = indexes;
+        this.functionManager = functionManager;
+        engine = new JavascriptEngineFactory(functionManager).getEngine();
     }
 
     @VisibleForPackage
     QueryContainer<ResultSet> createQueryPlan(String sql) throws SQLException {
         try {
-            QueryHolder queries = new QueryHolder(schema, indexes, policyProvider);
+            QueryHolder queries = new QueryHolder(schema, indexes, policyProvider, functionManager);
             parserManager.parse(new StringReader(sql)).accept(new StatementVisitorAdapter() {
                 @Override
                 public void visit(Select select) {
@@ -417,7 +422,7 @@ public class AerospikeQueryFactory {
                                 @Override
                                 public void visit(SubSelect subSelect) {
                                     System.out.println("visit(SubSelect subSelect) " + subSelect);
-                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider);
+                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider, functionManager);
                                     SelectBody selectBody = subSelect.getSelectBody();
                                     createSelect(selectBody, subHolder);
                                     operation.addValue(subHolder);
@@ -446,7 +451,7 @@ public class AerospikeQueryFactory {
 
                             expr.getRightExpression().accept(new ExpressionVisitorAdapter() {
                                 public void visit(SubSelect subSelect) {
-                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider);
+                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider, functionManager);
                                     SelectBody selectBody = subSelect.getSelectBody();
                                     createSelect(selectBody, subHolder);
                                     operation.addValue(subHolder);
@@ -670,7 +675,7 @@ public class AerospikeQueryFactory {
                     for (Expression expression : update.getExpressions()) {
                         // If set statement uses any element of expression ()+-*/ or function call - treat it as expression.
                         // Otherwise treat it either as column reference or simple value.
-                        Function<Record, Object> evaluator = new RecordExpressionEvaluator(expression.toString());
+                        Function<Record, Object> evaluator = new RecordExpressionEvaluator(expression.toString(), Collections.emptyMap(), functionManager);
                         AtomicReference<Function<Record, Object>> extractorRef = new AtomicReference<>();
 
                         expression.accept(new ExpressionVisitorAdapter() {
@@ -778,7 +783,7 @@ public class AerospikeQueryFactory {
                 int whereParamCount = parseParameters(whereExpr.get(), 0).getValue();
                 int paramOffset = totalParamCount - whereParamCount;
                 Map<String, Object> psValues = IntStream.range(0, parameterValues.length).boxed().filter(i -> parameterValues[i] != null).collect(Collectors.toMap(i -> "$" + (i + 1), i -> parameterValues[i]));
-                recordPredicate.set(new RecordExpressionEvaluator(parseParameters(whereExpr.get(), paramOffset).getKey(), psValues));
+                recordPredicate.set(new RecordExpressionEvaluator(parseParameters(whereExpr.get(), paramOffset).getKey(), psValues, functionManager));
             } else if (filterByPk.get()) {
                 recordPredicate.set(r -> false);
             }

@@ -2,6 +2,7 @@ package com.nosqldriver.util;
 
 import com.nosqldriver.sql.ExpressionEvaluator;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -13,10 +14,12 @@ public class ExpressionAwarePropertyGetter<T> implements BiFunction<T, String, O
     private static final Pattern namepatern = Pattern.compile("^\\w+[\\w\\d_\\$]*$");
     private final BiFunction<T, String, Object> valueGetter;
     private final Function<T, Iterable<String>> namesLister;
+    private final FunctionManager functionManager;
 
-    public ExpressionAwarePropertyGetter(BiFunction<T, String, Object> valueGetter, Function<T, Iterable<String>> namesLister) {
+    public ExpressionAwarePropertyGetter(BiFunction<T, String, Object> valueGetter, Function<T, Iterable<String>> namesLister, FunctionManager functionManager) {
         this.valueGetter = valueGetter;
         this.namesLister = namesLister;
+        this.functionManager = functionManager;
     }
 
 
@@ -24,7 +27,7 @@ public class ExpressionAwarePropertyGetter<T> implements BiFunction<T, String, O
     public Object apply(T object, String name) {
         Object value = valueGetter.apply(object, name);
         if (value == null && isExpression(name) && find(namesLister.apply(object), name) == null) {
-            Function<T, Object> evaluator = new ExpressionEvaluator<T>(name) {
+            Function<T, Object> evaluator = new ExpressionEvaluator<T>(name, Collections.emptyMap(), functionManager) {
                 @SuppressWarnings("unchecked")
                 @Override
                 protected Map<String, Object> toMap(T record) {

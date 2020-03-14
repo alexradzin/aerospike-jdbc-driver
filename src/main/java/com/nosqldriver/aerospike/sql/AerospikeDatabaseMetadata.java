@@ -62,15 +62,17 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     private final IAerospikeClient client;
     private final Connection connection;
     private final InfoPolicy infoPolicy;
+    private final Collection<String> predefinedFunctions;
     private static final String newLine = System.lineSeparator();
 
 
-    public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client, Connection connection, AerospikePolicyProvider policyProvider) {
+    public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client, Connection connection, AerospikePolicyProvider policyProvider, Collection<String> predefinedFunctions) {
         this.url = url;
         clientInfo = parser.clientInfo(url, info);
         this.client = client;
         this.connection = connection;
         infoPolicy = policyProvider.getInfoPolicy();
+        this.predefinedFunctions = predefinedFunctions;
         manifest = manifest();
         dbInfo = new HashMap<>();
         Arrays.stream(client.getNodes()).forEach(node -> dbInfo.putAll(Info.request(infoPolicy, node)));
@@ -1111,7 +1113,9 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern) {
-        List<List<?>> jsFunctions = new ExpressionAwareResultSetFactory().getClientSideFunctionNames().stream().map(name -> asList(null, null, name, "JavaScript", functionResultUnknown, name)).collect(toList());
+        ExpressionAwareResultSetFactory expressionAwareResultSetFactory = new ExpressionAwareResultSetFactory();
+        expressionAwareResultSetFactory.addFunctionNames(predefinedFunctions);
+        List<List<?>> jsFunctions = expressionAwareResultSetFactory.getClientSideFunctionNames().stream().map(name -> asList(null, null, name, "JavaScript", functionResultUnknown, name)).collect(toList());
         List<List<?>> luaFunctions = Stream.of("min", "max", "sum", "avg", "count", "distinct").map(name -> asList(null, null, name, "Lua", functionResultUnknown, name)).collect(toList());
 
         List<List<?>> functions = new ArrayList<>();

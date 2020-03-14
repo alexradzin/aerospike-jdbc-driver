@@ -11,6 +11,7 @@ import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.SimpleWrapper;
 import com.nosqldriver.sql.StringClob;
 import com.nosqldriver.sql.WarningsHolder;
+import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.Array;
@@ -56,16 +57,20 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     private final AtomicReference<String> schema = new AtomicReference<>(null); // schema can be updated by use statement
     private final AerospikePolicyProvider policyProvider;
     private volatile AtomicBoolean autoCommit = new AtomicBoolean(true);
+    private final FunctionManager functionManager;
+    private static final String CUSTOM_FUNCTION_PREFIX = "custom.function.";
+    private static final int CUSTOM_FUNCTION_PREFIX_LENGTH = CUSTOM_FUNCTION_PREFIX.length();
 
     @VisibleForPackage
     AerospikeConnection(String url, Properties props) {
         this.url = url;
         this.props = props;
         Host[] hosts = parser.hosts(url);
+        Properties info = parser.clientInfo(url, props);
         client = new AerospikeSqlClient(() -> new AerospikeClient(parser.policy(url, props), hosts));
         schema.set(parser.schema(url));
-        policyProvider = new AerospikePolicyProvider(client, parser.clientInfo(url, props));
-
+        policyProvider = new AerospikePolicyProvider(client, info);
+        functionManager = init(new FunctionManager(), info);
         registerScript("stats", "distinct", "groupby");
         getMetaData();
     }
@@ -131,7 +136,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
 
     @Override
     public DatabaseMetaData getMetaData() {
-        return new AerospikeDatabaseMetadata(url, props, client, this, policyProvider);
+        return new AerospikeDatabaseMetadata(url, props, client, this, policyProvider, functionManager.getCustomFunctionNames());
     }
 
     @Override
@@ -238,13 +243,13 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     @Override
     public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
         validateResultSetParameters(resultSetType, resultSetConcurrency, resultSetHoldability);
-        return new AerospikeStatement(client, this, schema, policyProvider);
+        return new AerospikeStatement(client, this, schema, policyProvider, functionManager);
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
         validateResultSetParameters(resultSetType, resultSetConcurrency, resultSetHoldability);
-        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql);
+        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql, functionManager);
     }
 
     @Override
@@ -373,10 +378,17 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
             throw new SQLFeatureNotSupportedException("ResultSet type other than TYPE_FORWARD_ONLY is not supported");
         }
         if (resultSetConcurrency != CONCUR_READ_ONLY) {
-            throw new SQLFeatureNotSupportedException("Updateable ResultSet is not supported yet");
+            throw new SQLFeatureNotSupportedException("Updatable ResultSet is not supported yet");
         }
         if (!(resultSetHoldability == HOLD_CURSORS_OVER_COMMIT || resultSetHoldability == CLOSE_CURSORS_AT_COMMIT)) {
             throw new SQLException(format("Wrong value of resultSetHoldability (%d). Supported values are: HOLD_CURSORS_OVER_COMMIT=%d or CLOSE_CURSORS_AT_COMMIT=%d", resultSetHoldability, HOLD_CURSORS_OVER_COMMIT, CLOSE_CURSORS_AT_COMMIT));
         }
+    }
+
+    private FunctionManager init(FunctionManager functionManager, Properties props) {
+        props.entrySet().stream()
+                .filter(e -> ((String)e.getKey()).startsWith(CUSTOM_FUNCTION_PREFIX))
+                .forEach(e -> functionManager.addCustomFunction(((String)e.getKey()).substring(CUSTOM_FUNCTION_PREFIX_LENGTH), (String)e.getValue()));
+        return functionManager;
     }
 }

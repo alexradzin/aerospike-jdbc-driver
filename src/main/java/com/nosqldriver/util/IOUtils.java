@@ -7,7 +7,6 @@ import java.io.Reader;
 import java.io.StringWriter;
 
 public class IOUtils {
-
     public static byte[] toByteArray(InputStream is) throws IOException {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         int nRead;

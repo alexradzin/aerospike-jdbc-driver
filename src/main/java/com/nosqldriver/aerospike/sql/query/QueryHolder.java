@@ -26,6 +26,7 @@ import com.nosqldriver.sql.ResultSetRowFilter;
 import com.nosqldriver.sql.ResultSetWrapper;
 import com.nosqldriver.sql.SortedResultSet;
 import com.nosqldriver.util.ByteArrayComparator;
+import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.SneakyThrower;
 import net.sf.jsqlparser.expression.ArrayExpression;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -112,19 +113,22 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     private boolean indexByName = false;
 
     private final ExpressionAwareResultSetFactory expressionResultSetWrappingFactory = new ExpressionAwareResultSetFactory();
+    private final FunctionManager functionManager;
 
     public enum ChainOperation {
         UNION, UNION_ALL, SUB_QUERY
     }
 
-    public QueryHolder(String schema, Collection<String> indexes, AerospikePolicyProvider policyProvider) {
+    public QueryHolder(String schema, Collection<String> indexes, AerospikePolicyProvider policyProvider, FunctionManager functionManager) {
         this.schema = schema;
         this.indexes = indexes;
         this.policyProvider = policyProvider;
-         statement = new Statement();
-         if (schema != null) {
-             statement.setNamespace(schema);
-         }
+        this.functionManager = functionManager;
+        statement = new Statement();
+        expressionResultSetWrappingFactory.addFunctionNames(functionManager.getCustomFunctionNames());
+        if (schema != null) {
+            statement.setNamespace(schema);
+        }
     }
 
     public Function<IAerospikeClient, ResultSet> getQuery(java.sql.Statement sqlStatement) {
@@ -149,7 +153,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             return wrap(sqlStatement, secondayIndexQuery);
         }
         if (!data.isEmpty()) {
-            return new AerospikeInsertQuery(sqlStatement, schema, set, columns, data, policyProvider.getWritePolicy(), skipDuplicates);
+            return new AerospikeInsertQuery(sqlStatement, schema, set, columns, data, policyProvider.getWritePolicy(), skipDuplicates, functionManager);
         }
 
         return wrap(sqlStatement, createSecondaryIndexQuery(sqlStatement));
@@ -400,7 +404,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             Optional<Object> value = predExps.stream().filter(e -> isValue(extractType(e))).map(PredExpUtil::getValue).findFirst();
             if (value.isPresent()) {
                 Key key = createKey(schema, set, value.get());
-                return new AerospikeQueryByPk(sqlStatement, schema, columns, key, policyProvider.getQueryPolicy());
+                return new AerospikeQueryByPk(sqlStatement, schema, columns, key, policyProvider.getQueryPolicy(), functionManager);
             }
         }
         if (predExps.size() >= 3) {
@@ -416,7 +420,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                     columns.stream().filter(c -> DATA.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
-            return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having));
+            return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having, functionManager), functionManager);
         }
 
         if (aggregatedFields != null) {
@@ -437,21 +441,21 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                 }
                 String groupField = m.group(1);
                 statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new StringValue(groupField));
-                return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy());
+                return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), functionManager);
             }
 
 
             statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", fieldsForAggregation);
-            return new AerospikeAggregationQuery(sqlStatement, schema, set, columns, statement, policyProvider.getQueryPolicy());
+            return new AerospikeAggregationQuery(sqlStatement, schema, set, columns, statement, policyProvider.getQueryPolicy(), functionManager);
         }
 
 
-        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy());
+        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), functionManager);
     }
 
     @VisibleForPackage
     void createPkQuery(java.sql.Statement statement, Key key) {
-        pkQuery = new AerospikeQueryByPk(statement, schema, columns, key, policyProvider.getPolicy());
+        pkQuery = new AerospikeQueryByPk(statement, schema, columns, key, policyProvider.getPolicy(), functionManager);
     }
 
     @VisibleForPackage
@@ -464,12 +468,12 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             System.arraycopy(keys, 0, allKeys, existingKesys.length, keys.length);
         }
 
-        pkBatchQuery = new AerospikeBatchQueryByPk(statement, schema, set, columns, allKeys, policyProvider.getBatchPolicy());
+        pkBatchQuery = new AerospikeBatchQueryByPk(statement, schema, set, columns, allKeys, policyProvider.getBatchPolicy(), functionManager);
     }
 
     @VisibleForPackage
     void createScanQuery(java.sql.Statement statement, Predicate<ResultSet> predicate) {
-        scanQuery = new AerospikeScanQuery(statement, schema, set, columns, predicate, policyProvider.getScanPolicy());
+        scanQuery = new AerospikeScanQuery(statement, schema, set, columns, predicate, policyProvider.getScanPolicy(), functionManager);
     }
 
 
@@ -539,13 +543,13 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                 }
             };
         } else {
-            expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns, indexByName), columns, indexByName);
+            expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns, indexByName), functionManager, columns, indexByName);
         }
 
 
-        Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), columns, new ResultSetRowFilter(whereExpression), indexByName) : expressioned;
-        Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? filtered : client -> new JoinedResultSet(filtered.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(sqlStatement, client, join), new ResultSetMetadataSupplier(sqlStatement, client, join), join.skipIfMissing)).collect(toList()));
-        Function<IAerospikeClient, ResultSet> ordered = !ordering.isEmpty() ? client -> new SortedResultSet(joined.apply(client), ordering, min(max(offset, 0) + (limit >=0 ? limit : Integer.MAX_VALUE), Integer.MAX_VALUE)) : joined;
+        Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), columns, new ResultSetRowFilter(whereExpression, functionManager), indexByName) : expressioned;
+        Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? filtered : client -> new JoinedResultSet(filtered.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(sqlStatement, client, join, functionManager), new ResultSetMetadataSupplier(sqlStatement, client, join, functionManager), join.skipIfMissing)).collect(toList()));
+        Function<IAerospikeClient, ResultSet> ordered = !ordering.isEmpty() ? client -> new SortedResultSet(joined.apply(client), ordering, min(max(offset, 0) + (limit >=0 ? limit : Integer.MAX_VALUE), Integer.MAX_VALUE), functionManager) : joined;
         Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(ordered.apply(client), columns, new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit), indexByName) : ordered;
         return client -> new NameCheckResultSetWrapper(limited.apply(client), columns, indexByName);
 
@@ -713,7 +717,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     }
 
     public QueryHolder addJoin(boolean skipIfMissing) {
-        QueryHolder join = new QueryHolder(schema, indexes, policyProvider);
+        QueryHolder join = new QueryHolder(schema, indexes, policyProvider, functionManager);
         join.skipIfMissing = skipIfMissing;
         joins.add(join);
         return join;
@@ -724,7 +728,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     }
 
     public QueryHolder addSubQuery(ChainOperation operation) {
-        QueryHolder subQuery = new QueryHolder(schema, indexes, policyProvider);
+        QueryHolder subQuery = new QueryHolder(schema, indexes, policyProvider, functionManager);
         subQeueries.add(subQuery);
         subQuery.chainOperation = operation;
         return subQuery;
@@ -735,16 +739,18 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         private final java.sql.Statement sqlStatement;
         private final IAerospikeClient client;
         private final QueryHolder joinQuery;
+        private final FunctionManager functionManager1;
 
-        public JoinRetriever(java.sql.Statement sqlStatement, IAerospikeClient client, QueryHolder joinQuery) {
+        public JoinRetriever(java.sql.Statement sqlStatement, IAerospikeClient client, QueryHolder joinQuery, FunctionManager functionManager) {
             this.sqlStatement = sqlStatement;
             this.client = client;
             this.joinQuery = joinQuery;
+            this.functionManager1 = functionManager;
         }
 
         @Override
         public ResultSet apply(ResultSet rs) {
-            QueryHolder holder = new QueryHolder(joinQuery.schema, joinQuery.indexes, joinQuery.policyProvider);
+            QueryHolder holder = new QueryHolder(joinQuery.schema, joinQuery.indexes, joinQuery.policyProvider, functionManager1);
             holder.setSetName(joinQuery.getSetName(), joinQuery.setAlias);
             joinQuery.copyColumnsForTable(joinQuery.setAlias, holder);
             holder.predExps = preparePredicates(rs, joinQuery.predExps);
@@ -854,10 +860,10 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         private final QueryHolder metadataQueryHolder;
         private ResultSetMetaData metaData;
 
-        public ResultSetMetadataSupplier(java.sql.Statement sqlStatement, IAerospikeClient client, QueryHolder queryHolder) {
+        public ResultSetMetadataSupplier(java.sql.Statement sqlStatement, IAerospikeClient client, QueryHolder queryHolder, FunctionManager functionManager) {
             this.sqlStatement = sqlStatement;
             this.client = client;
-            this.metadataQueryHolder = new QueryHolder(queryHolder.schema, queryHolder.indexes, queryHolder.policyProvider);
+            this.metadataQueryHolder = new QueryHolder(queryHolder.schema, queryHolder.indexes, queryHolder.policyProvider, functionManager);
             this.metadataQueryHolder.setSetName(queryHolder.getSetName(), queryHolder.setAlias);
             queryHolder.copyColumnsForTable(queryHolder.setAlias, this.metadataQueryHolder);
             this.metadataQueryHolder.setLimit(1);

@@ -13,6 +13,7 @@ import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.PreparedStatementUtil;
 import com.nosqldriver.sql.SimpleWrapper;
 import com.nosqldriver.sql.WarningsHolder;
+import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.SneakyThrower;
 import com.nosqldriver.util.ThrowingSupplier;
 
@@ -51,6 +52,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
     protected final Collection<String> indexes;
     private ResultSet resultSet;
     private int updateCount;
+    private final FunctionManager functionManager;
 
     protected enum StatementType implements Predicate<String> {
         SELECT {
@@ -147,7 +149,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
                 }
 
                 List<String> indexes = new ArrayList<>();
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes);
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes, statement.functionManager);
                 aqf.createQueryPlan(sql);
                 String[] index = aqf.getIndexes().iterator().next().split("\\.");
 
@@ -190,7 +192,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
                 List<String> indexes = new ArrayList<>();
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes);
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes, statement.functionManager);
                 aqf.createQueryPlan(sql);
                 String indexName = aqf.getIndexes().iterator().next().split("\\.")[2];
                 statement.client.dropIndex(null, aqf.getSchema(), aqf.getSet(), indexName);
@@ -245,12 +247,13 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
 
 
 
-    public AerospikeStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider) {
+    public AerospikeStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, FunctionManager functionManager) {
         this.client = client;
         this.connection = connection;
         this.schema = schema;
         this.policyProvider = policyProvider;
         indexes = new ConnectionParametersParser().indexesParser(Info.request(client.getNodes()[0], "sindex"), "ns", "set", "bin");
+        this.functionManager = functionManager;
     }
 
 
@@ -505,7 +508,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
 
 
     protected AerospikeQueryFactory createQueryFactory() {
-        return new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes);
+        return new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes, functionManager);
     }
 
     public IAerospikeClient getClient() {

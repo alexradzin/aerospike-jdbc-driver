@@ -1,5 +1,6 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.ResultSet;
@@ -23,14 +24,17 @@ public class ExpressionAwareResultSetFactory {
     public ExpressionAwareResultSetFactory() {
         SneakyThrower.call(() -> {
             @SuppressWarnings("unchecked")
-            List<String> definedFunctions = (List<String>) new JavascriptEngineFactory().getEngine().eval("functions");
-            functionNames.addAll(definedFunctions.stream().filter(f -> !f.startsWith("_")).collect(Collectors.toList()));
+            List<Object> definedFunctions = (List<Object>) new JavascriptEngineFactory(null).getEngine().eval("functions");
+            this.functionNames.addAll(definedFunctions.stream().filter(f -> f instanceof String).map(f -> (String)f).filter(f -> !f.startsWith("_")).collect(Collectors.toList()));
         });
     }
 
+    public void addFunctionNames(Collection<String> functionNames) {
+        this.functionNames.addAll(functionNames);
+    }
 
-    public ResultSet wrap(ResultSet rs, List<DataColumn> columns, boolean indexByName) {
-        return new ExpressionAwareResultSet(rs, columns, indexByName);
+    public ResultSet wrap(ResultSet rs, FunctionManager functionManager, List<DataColumn> columns, boolean indexByName) {
+        return new ExpressionAwareResultSet(rs, functionManager, columns, indexByName);
     }
 
     public Collection<String> getVariableNames(String expr) {

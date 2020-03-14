@@ -6,6 +6,7 @@ import com.aerospike.client.query.ResultSet;
 import com.nosqldriver.sql.CompositeTypeDiscoverer;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
+import com.nosqldriver.util.FunctionManager;
 
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -56,9 +57,9 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     private static final Function<KeyRecord, Map<String, Object>> keyRecordDataExtractor = keyRecord -> keyRecord != null ? recordDataExtractor.apply(keyRecord.record) : emptyMap();
 
 
-    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
+    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager) {
         super(statement, schema, table, columns, rs, new CompositeTypeDiscoverer(
-                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor),
+                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor, functionManager),
                 columns1 -> {
                     columns1.stream().filter(c -> c.getName().startsWith("count(")).forEach(c -> c.withType(Types.BIGINT));
                     columns1.stream().filter(c -> !c.getName().contains("count(") && c.getName().contains("(")).forEach(c -> c.withType(Types.DOUBLE));

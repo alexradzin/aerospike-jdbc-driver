@@ -9,6 +9,7 @@ import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.sql.SimpleParameterMetaData;
 import com.nosqldriver.sql.StringClob;
 import com.nosqldriver.sql.TypeDiscoverer;
+import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.IOUtils;
 
 import java.io.DataInputStream;
@@ -59,19 +60,21 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
     private final QueryContainer<ResultSet> queryPlan;
     private List<DataColumn> requestedDataColumns = null;
     private final TypeDiscoverer discoverer;
+    private final FunctionManager functionManager;
 
-    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql) throws SQLException {
-        super(client, connection, schema, policyProvider);
+    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql, FunctionManager functionManager) throws SQLException {
+        super(client, connection, schema, policyProvider, functionManager);
         this.sql = sql;
         int n = parseParameters(sql, 0).getValue();
         parameterValues = new Object[n];
         Arrays.fill(parameterValues, Optional.empty());
-        queryPlan = new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes).createQueryPlan(sql);
+        queryPlan = new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes, functionManager).createQueryPlan(sql);
         set = queryPlan.getSetName();
+        this.functionManager = functionManager;
 
         discoverer = new GenericTypeDiscoverer<>(
                 keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema.get(), set),
-                keyRecord -> keyRecord.record.bins);
+                keyRecord -> keyRecord.record.bins, this.functionManager);
     }
 
     @Override
@@ -403,7 +406,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
 
     @Override
     protected AerospikeQueryFactory createQueryFactory() {
-        return new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes) {
+        return new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes, functionManager) {
             @Override  QueryContainer<ResultSet> createQueryPlan(String sql) throws SQLException {
                 QueryContainer<ResultSet> qc = Objects.equals(AerospikePreparedStatement.this.sql, sql) ? AerospikePreparedStatement.this.queryPlan : super.createQueryPlan(sql);
                 qc.setParameters(AerospikePreparedStatement.this, parameterValues);

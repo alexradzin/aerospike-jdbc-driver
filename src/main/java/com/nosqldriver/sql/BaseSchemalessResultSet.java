@@ -36,6 +36,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypes;
 import static com.nosqldriver.sql.TypeTransformer.cast;
@@ -73,7 +75,9 @@ public abstract class BaseSchemalessResultSet<R> extends WarningsHolder implemen
         this.columns = Collections.unmodifiableList(columns);
         this.typeDiscoverer = typeDiscoverer;
 
-        columnsForMetadata = columns.stream().anyMatch(c -> DataColumn.DataColumnRole.DATA.equals(c.getRole())) ? columns : singletonList(DataColumn.DataColumnRole.DATA.create(schema, table, "*", "*"));
+        columnsForMetadata = columns.stream().anyMatch(c -> DATA.equals(c.getRole()) || (EXPRESSION.equals(c.getRole()))) ?
+                columns :
+                singletonList(DATA.create(schema, table, "*", "*"));
     }
 
 
