@@ -12,6 +12,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.NotSerializableException;
 import java.io.Serializable;
@@ -467,7 +471,7 @@ class PreparedStatementWithComplexTypesTest {
     void setNotSerializableObject() throws SQLException {
         PreparedStatement insert = testConn.prepareStatement("insert into data (PK, data) values (?, ?)");
         insert.setObject(1, 1);
-        insert.setObject(2, new MyNotSerializableClass());
+        insert.setObject(2, new MyNotSerializableClass(123, "text"));
         SQLException sqlException = assertThrows(SQLException.class, insert::execute);
         NotSerializableException nse = null;
         for(Throwable t = sqlException; t != null && t != t.getCause(); t = t.getCause()) {
@@ -614,6 +618,95 @@ class PreparedStatementWithComplexTypesTest {
         assertThrows(SQLException.class, rs::next);
     }
 
+//    @Test
+//    void test() throws SQLException {
+//        testConn.createStatement().execute("insert into data (PK, text) values (1, 'hello')");
+//        PreparedStatement ps = testConn.prepareStatement("select length(text) as textlength from data where PK=?");
+//        ps.setInt(1, 1);
+//        ResultSet rs = ps.executeQuery();
+//        ResultSetMetaData md = rs.getMetaData();
+//        assertEquals(1, md.getColumnCount());
+//        assertEquals(Types.INTEGER, md.getColumnType(1));
+//        assertEquals("textlength", md.getColumnLabel(1));
+//        assertTrue(rs.next());
+//        assertEquals(5, rs.getInt(1));
+//        assertFalse(rs.next());
+//    }
+//
+//    @Test
+//    void test2() throws SQLException {
+//        testConn.createStatement().execute("insert into data (PK, text) values (1, 'hello')");
+//        ResultSet rs = testConn.createStatement().executeQuery("select textlength from (select length(text) as textlength from data)");
+//        ResultSetMetaData md = rs.getMetaData();
+//        assertEquals(1, md.getColumnCount());
+//        assertEquals(Types.INTEGER, md.getColumnType(1));
+//        assertEquals("textlength", md.getColumnLabel(1));
+//        assertTrue(rs.next());
+//        assertEquals(5, rs.getInt(1));
+//        assertFalse(rs.next());
+//    }
+
+    @Test
+    void setNotSerializableObjectWithCustomSerialization() throws SQLException, IOException {
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, custom) values (?, ?)");
+        insert.setObject(1, 1);
+        MyNotSerializableClass obj1 = new MyNotSerializableClass(123, "something");
+        insert.setObject(2, MyNotSerializableClass.serialize(obj1));
+        assertTrue(insert.execute());
+
+        PreparedStatement select = testConn.prepareStatement("select deserialize(custom) as object from data where PK=?");
+        select.setObject(1, 1);
+        ResultSet rs = select.executeQuery();
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(1, md.getColumnCount());
+        assertEquals("deserialize(custom)", md.getColumnName(1));
+        assertEquals("object", md.getColumnLabel(1));
+
+        assertTrue(rs.next());
+
+        MyNotSerializableClass obj2 = (MyNotSerializableClass)rs.getObject(1);
+        assertNotNull(obj2);
+        assertNotSame(obj1, obj2);
+        assertEquals(obj1.number, obj2.number);
+        assertEquals(obj1.text, obj2.text);
+
+        assertFalse(rs.next());
+    }
+
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data)",
+    })
+    void writeAndReadObjectUsingCustomSerialization(String query) throws SQLException, IOException {
+        int n = 321;
+        String text = "my text";
+        MyNotSerializableClass obj = new MyNotSerializableClass(n, text);
+
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, blob) values (?, ?)");
+        insert.setInt(1, 1);
+        insert.setBytes(2, MyNotSerializableClass.serialize(obj));
+        assertEquals(1, insert.executeUpdate());
+
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(2, md.getColumnCount());
+        assertEquals("custom[number]", md.getColumnName(1));
+        assertEquals("custom[text]", md.getColumnName(2));
+        assertEquals(Types.INTEGER, md.getColumnType(1));
+        assertEquals(Types.VARCHAR, md.getColumnType(2));
+        assertTrue(rs.next());
+
+        assertEquals(n, rs.getInt(1));
+        assertEquals(n, rs.getInt("custom[number]"));
+        assertEquals(text, rs.getString(2));
+        assertEquals(text, rs.getString("custom[text]"));
+
+        assertFalse(rs.next());
+
+    }
+
 
     private void insertOneRowCustomClass(String text, int n) throws SQLException {
         MySerializableClass obj = new MySerializableClass(n, text);
@@ -668,7 +761,36 @@ class PreparedStatementWithComplexTypesTest {
     }
 
     public static class MyNotSerializableClass {
-        // nothing
+        private final int number;
+        private final String text;
+
+        public MyNotSerializableClass(int number, String text) {
+            this.number = number;
+            this.text = text;
+        }
+
+        public int getNumber() {
+            return number;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public static byte[] serialize(MyNotSerializableClass obj) throws IOException {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream dos = new DataOutputStream(baos);
+            dos.writeInt(obj.number);
+            dos.writeUTF(obj.text);
+            dos.flush();
+            dos.close();
+            return baos.toByteArray();
+        }
+
+        public static MyNotSerializableClass deserialize(byte[] bytes) throws IOException {
+            DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
+            return new MyNotSerializableClass(dis.readInt(), dis.readUTF());
+        }
     }
 
     public static class MySerializableClass implements Serializable {

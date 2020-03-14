@@ -40,6 +40,7 @@ public class SqlLiterals {
         sqlTypes.put(java.sql.Timestamp.class, Types.TIMESTAMP);
         sqlTypes.put(ArrayList.class, Types.ARRAY);
         sqlTypes.put(null, NULL);
+        sqlTypes.put(Object.class, OTHER);
     }
 
     public static final Map<Integer, String> sqlTypeNames = new HashMap<>();

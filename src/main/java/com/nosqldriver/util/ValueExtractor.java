@@ -2,18 +2,24 @@ package com.nosqldriver.util;
 
 import java.lang.reflect.Method;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.toList;
 
 public class ValueExtractor {
     private static final String[] getterPrefixes = {"get", "is"};
 
     public Object getValue(Object obj, String key) {
-        String[] path = key.replace("]", "").split("\\[");
+        Collection<String> path = stream(key.replace("]", "").split("\\[")).filter(p -> !"".equals(p)).collect(toList());
 
         Object value = obj;
         for (String p : path) {
+            if (value == null) {
+                return null;
+            }
             if (value instanceof Map) {
                 value = ((Map) value).get(p);
                 continue;

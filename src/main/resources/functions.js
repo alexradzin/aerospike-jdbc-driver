@@ -184,3 +184,11 @@ function list(str) {
 function array(str) {
     return com.nosqldriver.util.DataUtil.toArray(map(str));
 }
+
+function foo() {
+    return 5
+}
+
+function deserialize(bytes) {
+    return com.nosqldriver.util.IOUtils.deserialize(bytes);
+}

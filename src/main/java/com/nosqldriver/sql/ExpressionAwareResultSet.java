@@ -4,6 +4,7 @@ import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.util.SneakyThrower;
 import com.nosqldriver.util.ThrowingFunction;
 import com.nosqldriver.util.ThrowingSupplier;
+import com.nosqldriver.util.ValueExtractor;
 
 import javax.script.Bindings;
 import javax.script.ScriptContext;
@@ -25,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.System.currentTimeMillis;
@@ -283,8 +285,15 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
                             break;
                         case Types.VARCHAR:
                         case Types.LONGNVARCHAR:
+                        case Types.CLOB:
                             value = "";
                             break;
+                        case Types.OTHER:
+                        case Types.JAVA_OBJECT:
+                            value = new Object();
+                            break;
+                        case Types.BLOB:
+                            value = new byte[0];
                         default:
                             break; // do nothing
                     }
@@ -357,7 +366,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
 
     private <T> T getValue(int columnIndex, Class<T> type, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
-        return getValueUsingExpression(getEval(columnIndex), type, transformer, superGetter);
+        return getValueUsingExpression(getEval(columnIndex), type, v -> v, transformer, superGetter);
     }
 
     private <T> T getValue(String columnLabel, Class<T> type, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
@@ -365,19 +374,20 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     }
 
     private <T> T getValue(String columnLabel, Class<T> type, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
-        return getValueUsingExpression(aliasToEval.get(columnLabel), type, transformer, superGetter);
+        String alias = columnLabel.replaceFirst("\\[.*", "");
+        Function<Object, Object> transformer1 = alias.equals(columnLabel) ? v -> v : t -> new ValueExtractor().getValue(t, columnLabel.substring(alias.length()));
+        return getValueUsingExpression(aliasToEval.get(alias), type, transformer1, transformer, superGetter);
     }
 
-    private <T> T getValueUsingExpression(String expr, Class<T> type, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
+    private <T> T getValueUsingExpression(String expr, Class<T> type, Function<Object, Object> transformer1, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
         try {
-            T value = expr != null ? transformer.apply(cast(eval(expr), type)) : null;
+            T value = expr != null ? transformer.apply(cast(transformer1.apply(eval(expr)), type)) : null;
             return getValue(Optional.ofNullable(value), superGetter);
         } catch (ClassCastException e) {
             throw new SQLException(e);
         }
 
     }
-
 
     private <T> T getValue(Optional<T> value, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
         return wasNull(value.isPresent() ? value.get() : superGetter.get());

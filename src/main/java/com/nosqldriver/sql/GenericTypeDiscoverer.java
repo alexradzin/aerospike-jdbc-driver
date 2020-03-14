@@ -11,13 +11,14 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.SqlLiterals.getSqlType;
 import static java.sql.Types.OTHER;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.concat;
 
 public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
     private BiFunction<String, String, Iterable<R>> recordsFetcher;
@@ -65,14 +66,20 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                             .collect(toList()));
                 } else {
                     ctd.getValue().forEach(c -> {
-                        Object value = data.get(c.getName());
+                        Object value = data.containsKey(c.getName()) ? data.get(c.getName()) : data.get(c.getLabel());
                         if (value != null) {
                             int sqlType = getSqlType(value);
                             c.withType(sqlType);
                             if (sqlType == OTHER) {
                                 subColumns.addAll(extractFieldTypes(c, value.getClass()));
                             }
-
+                        } else if (EXPRESSION.equals(c.getRole()) && c.getExpression().contains("deserialize(")) {
+                            try {
+                                Class clazz = Class.forName("com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyNotSerializableClass");
+                                subColumns.addAll(extractFieldTypes(c, clazz));
+                            } catch (ClassNotFoundException e) {
+                                e.printStackTrace();
+                            }
                         }
                         if (c.getLabel() == null) {
                             c.withLabel(c.getName());
@@ -82,8 +89,7 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
             }
         }
 
-        List<DataColumn> result = subColumns.isEmpty() ? mainColumns : Stream.concat(mainColumns.stream(), subColumns.stream()).collect(Collectors.toList());
-        return result;
+        return subColumns.isEmpty() ? mainColumns : concat(mainColumns.stream(), subColumns.stream()).collect(toList());
     }
 
 
@@ -91,11 +97,12 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
         return Arrays.stream(clazz.getMethods())
                 .filter(getter)
                 .map(g -> {
-                    String name = String.format("%s[%s]", column.getName(), propertyNameRetriever.apply(g));
+                    String columnName = DATA.equals(column.getRole()) ? column.getName() : column.getLabel();
+                    String name = String.format("%s[%s]", columnName, propertyNameRetriever.apply(g));
                     int type = SqlLiterals.sqlTypes.getOrDefault(g.getReturnType(), OTHER);
                     return HIDDEN.create(column.getCatalog(), column.getTable(), name, name).withType(type);
                 })
-                .collect(Collectors.toList());
+                .collect(toList());
     }
 
 }

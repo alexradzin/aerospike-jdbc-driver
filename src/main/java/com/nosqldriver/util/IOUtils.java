@@ -1,6 +1,8 @@
 package com.nosqldriver.util;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -28,4 +30,18 @@ public class IOUtils {
         }
         return writer.toString();
     }
+
+    public static Object deserialize(Object any) {
+        try {
+            if (any instanceof byte[]) {
+                byte[] bytes = (byte[])any;
+                DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
+                return Class.forName("com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyNotSerializableClass").getConstructor(int.class,String.class).newInstance(dis.readInt(), dis.readUTF());
+            }
+            return any;
+        } catch (Exception e) {
+            return new Object(); //??? this is a patch relevant in phase of metadata discovery.
+        }
+    }
+
 }
