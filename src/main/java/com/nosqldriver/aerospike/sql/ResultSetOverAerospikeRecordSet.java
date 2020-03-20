@@ -5,6 +5,7 @@ import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.RecordSet;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
+import com.nosqldriver.util.CustomDeserializerManager;
 
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -25,8 +26,8 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
     private Iterator<KeyRecord> it;
     private Record currentRecord;
 
-    public ResultSetOverAerospikeRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, RecordSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
-        super(statement, schema, table, columns, new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor));
+    public ResultSetOverAerospikeRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, RecordSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, CustomDeserializerManager cdm) {
+        super(statement, schema, table, columns, new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor, cdm));
         this.rs = rs;
     }
 

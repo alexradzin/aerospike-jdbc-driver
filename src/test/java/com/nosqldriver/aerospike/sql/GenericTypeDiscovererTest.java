@@ -7,6 +7,7 @@ import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.DataColumn.DataColumnRole;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.sql.TypeDiscoverer;
+import com.nosqldriver.util.CustomDeserializerManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,6 +44,7 @@ class GenericTypeDiscovererTest {
         return client.query(new QueryPolicy(), statement);
     };
     private static final Function<KeyRecord, Map<String, Object>> recordDataExtractor = keyRecord -> keyRecord.record.bins;
+    private CustomDeserializerManager cdm = new CustomDeserializerManager();
 
 
     @AfterEach
@@ -111,10 +113,10 @@ class GenericTypeDiscovererTest {
 
 
     private TypeDiscoverer createTypeDiscoverer(int limit) {
-        return new GenericTypeDiscoverer<>(recordsFetcher, recordDataExtractor, limit);
+        return new GenericTypeDiscoverer<>(recordsFetcher, recordDataExtractor, cdm, limit);
     }
 
     private TypeDiscoverer createTypeDiscoverer() {
-        return new GenericTypeDiscoverer<>(recordsFetcher, keyRecord -> keyRecord.record.bins);
+        return new GenericTypeDiscoverer<>(recordsFetcher, keyRecord -> keyRecord.record.bins, cdm);
     }
 }

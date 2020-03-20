@@ -21,6 +21,8 @@ import java.io.NotSerializableException;
 import java.io.Serializable;
 import java.sql.Blob;
 import java.sql.Clob;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -37,6 +39,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Function;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -618,48 +621,21 @@ class PreparedStatementWithComplexTypesTest {
         assertThrows(SQLException.class, rs::next);
     }
 
-//    @Test
-//    void test() throws SQLException {
-//        testConn.createStatement().execute("insert into data (PK, text) values (1, 'hello')");
-//        PreparedStatement ps = testConn.prepareStatement("select length(text) as textlength from data where PK=?");
-//        ps.setInt(1, 1);
-//        ResultSet rs = ps.executeQuery();
-//        ResultSetMetaData md = rs.getMetaData();
-//        assertEquals(1, md.getColumnCount());
-//        assertEquals(Types.INTEGER, md.getColumnType(1));
-//        assertEquals("textlength", md.getColumnLabel(1));
-//        assertTrue(rs.next());
-//        assertEquals(5, rs.getInt(1));
-//        assertFalse(rs.next());
-//    }
-//
-//    @Test
-//    void test2() throws SQLException {
-//        testConn.createStatement().execute("insert into data (PK, text) values (1, 'hello')");
-//        ResultSet rs = testConn.createStatement().executeQuery("select textlength from (select length(text) as textlength from data)");
-//        ResultSetMetaData md = rs.getMetaData();
-//        assertEquals(1, md.getColumnCount());
-//        assertEquals(Types.INTEGER, md.getColumnType(1));
-//        assertEquals("textlength", md.getColumnLabel(1));
-//        assertTrue(rs.next());
-//        assertEquals(5, rs.getInt(1));
-//        assertFalse(rs.next());
-//    }
-
     @Test
     void setNotSerializableObjectWithCustomSerialization() throws SQLException, IOException {
-        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, custom) values (?, ?)");
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, blob) values (?, ?)");
         insert.setObject(1, 1);
         MyNotSerializableClass obj1 = new MyNotSerializableClass(123, "something");
         insert.setObject(2, MyNotSerializableClass.serialize(obj1));
         assertTrue(insert.execute());
 
-        PreparedStatement select = testConn.prepareStatement("select deserialize(custom) as object from data where PK=?");
+        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.deserializer.test:data:blob=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        PreparedStatement select = conn.prepareStatement("select deserialize(blob) as object from data where PK=?");
         select.setObject(1, 1);
         ResultSet rs = select.executeQuery();
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(1, md.getColumnCount());
-        assertEquals("deserialize(custom)", md.getColumnName(1));
+        assertEquals("deserialize(blob)", md.getColumnName(1));
         assertEquals("object", md.getColumnLabel(1));
 
         assertTrue(rs.next());
@@ -684,12 +660,13 @@ class PreparedStatementWithComplexTypesTest {
         String text = "my text";
         MyNotSerializableClass obj = new MyNotSerializableClass(n, text);
 
-        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, blob) values (?, ?)");
+        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.deserializer.test:data:blob=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        PreparedStatement insert = conn.prepareStatement("insert into data (PK, blob) values (?, ?)");
         insert.setInt(1, 1);
         insert.setBytes(2, MyNotSerializableClass.serialize(obj));
         assertEquals(1, insert.executeUpdate());
 
-        ResultSet rs = testConn.createStatement().executeQuery(query);
+        ResultSet rs = conn.createStatement().executeQuery(query);
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(2, md.getColumnCount());
         assertEquals("custom[number]", md.getColumnName(1));
@@ -792,6 +769,20 @@ class PreparedStatementWithComplexTypesTest {
             return new MyNotSerializableClass(dis.readInt(), dis.readUTF());
         }
     }
+
+
+    public static class MyCustomDeserializer implements Function<byte[], MyNotSerializableClass> {
+        @Override
+        public MyNotSerializableClass apply(byte[] bytes) {
+            DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
+            try {
+                return new MyNotSerializableClass(dis.readInt(), dis.readUTF());
+            } catch (IOException e) {
+                throw new IllegalArgumentException(e);
+            }
+        }
+    }
+
 
     public static class MySerializableClass implements Serializable {
         private final int number;

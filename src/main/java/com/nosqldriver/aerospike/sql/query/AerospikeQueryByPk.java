@@ -6,17 +6,18 @@ import com.aerospike.client.Record;
 import com.aerospike.client.policy.Policy;
 import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeRecords;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.util.CustomDeserializerManager;
 
 import java.sql.ResultSet;
 import java.util.List;
 
 public class AerospikeQueryByPk extends AerospikeQuery<Key, Policy, Record> {
-    public AerospikeQueryByPk(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Key key, Policy policy) {
-        super(sqlStatement, schema, key.setName, columns, key, policy);
+    public AerospikeQueryByPk(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Key key, Policy policy, CustomDeserializerManager cdm) {
+        super(sqlStatement, schema, key.setName, columns, key, policy, cdm);
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, new Record[] {client.get(policy, criteria)}, keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set));
+        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, new Record[] {client.get(policy, criteria)}, keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set), customDeserializerManager);
     }
 }

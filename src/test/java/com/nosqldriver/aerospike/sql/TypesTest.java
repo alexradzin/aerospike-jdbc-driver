@@ -365,7 +365,6 @@ class TypesTest {
     void functionBase64() throws SQLException {
         String str = "Hello";
         String base64 = Base64.getEncoder().encodeToString(str.getBytes());
-        Base64.getDecoder().decode("");
         ResultSet rs = testConn.createStatement().executeQuery(format("select to_base64('%s'), from_base64('%s')", str, base64));
         assertTrue(rs.next());
         assertEquals(base64, rs.getString(1));

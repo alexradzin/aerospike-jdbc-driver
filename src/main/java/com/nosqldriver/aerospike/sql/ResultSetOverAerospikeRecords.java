@@ -4,6 +4,7 @@ import com.aerospike.client.Record;
 import com.aerospike.client.query.KeyRecord;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
+import com.nosqldriver.util.CustomDeserializerManager;
 
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -23,8 +24,8 @@ public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
     private final Record[] records;
     private int currentIndex = -1;
 
-    public ResultSetOverAerospikeRecords(Statement statement, String schema, String table, List<DataColumn> columns, Record[] records, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher) {
-        super(statement, schema, table, columns, Arrays.stream(records).anyMatch(Objects::nonNull) ? new GenericTypeDiscoverer<>((c, t) -> asList(records), recordDataExtractor) : new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor));
+    public ResultSetOverAerospikeRecords(Statement statement, String schema, String table, List<DataColumn> columns, Record[] records, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, CustomDeserializerManager cdm) {
+        super(statement, schema, table, columns, Arrays.stream(records).anyMatch(Objects::nonNull) ? new GenericTypeDiscoverer<>((c, t) -> asList(records), recordDataExtractor, cdm) : new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor, cdm));
         this.records = Arrays.stream(records).filter(Objects::nonNull).toArray(Record[]::new);
     }
 

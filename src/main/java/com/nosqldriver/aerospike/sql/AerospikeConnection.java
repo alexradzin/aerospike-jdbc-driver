@@ -11,6 +11,7 @@ import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.SimpleWrapper;
 import com.nosqldriver.sql.StringClob;
 import com.nosqldriver.sql.WarningsHolder;
+import com.nosqldriver.util.CustomDeserializerManager;
 import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.Array;
@@ -56,18 +57,24 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     private final AtomicReference<String> schema = new AtomicReference<>(null); // schema can be updated by use statement
     private final AerospikePolicyProvider policyProvider;
     private volatile AtomicBoolean autoCommit = new AtomicBoolean(true);
+    private final CustomDeserializerManager deserializerManager;
+    private static final String CUSTOM_DESERIALIZER_PREFIX = "custom.deserializer.";
+    private static final int CUSTOM_DESERIALIZER_PREFIX_LENGTH = CUSTOM_DESERIALIZER_PREFIX.length();
 
     @VisibleForPackage
     AerospikeConnection(String url, Properties props) {
         this.url = url;
         this.props = props;
         Host[] hosts = parser.hosts(url);
+        Properties info = parser.clientInfo(url, props);
         client = new AerospikeSqlClient(() -> new AerospikeClient(parser.policy(url, props), hosts));
         schema.set(parser.schema(url));
-        policyProvider = new AerospikePolicyProvider(client, parser.clientInfo(url, props));
+        policyProvider = new AerospikePolicyProvider(client, info);
 
         registerScript("stats", "distinct", "groupby");
         getMetaData();
+
+        deserializerManager = init(new CustomDeserializerManager(), info);
     }
 
     private void registerScript(String ... names) {
@@ -238,13 +245,13 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     @Override
     public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
         validateResultSetParameters(resultSetType, resultSetConcurrency, resultSetHoldability);
-        return new AerospikeStatement(client, this, schema, policyProvider);
+        return new AerospikeStatement(client, this, schema, policyProvider, deserializerManager);
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
         validateResultSetParameters(resultSetType, resultSetConcurrency, resultSetHoldability);
-        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql);
+        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql, deserializerManager);
     }
 
     @Override
@@ -378,5 +385,12 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
         if (!(resultSetHoldability == HOLD_CURSORS_OVER_COMMIT || resultSetHoldability == CLOSE_CURSORS_AT_COMMIT)) {
             throw new SQLException(format("Wrong value of resultSetHoldability (%d). Supported values are: HOLD_CURSORS_OVER_COMMIT=%d or CLOSE_CURSORS_AT_COMMIT=%d", resultSetHoldability, HOLD_CURSORS_OVER_COMMIT, CLOSE_CURSORS_AT_COMMIT));
         }
+    }
+
+    private CustomDeserializerManager init(CustomDeserializerManager deserializerManager, Properties props) {
+        props.entrySet().stream()
+                .filter(e -> ((String)e.getKey()).startsWith(CUSTOM_DESERIALIZER_PREFIX))
+                .forEach(e -> deserializerManager.addDeserializer(((String)e.getKey()).substring(CUSTOM_DESERIALIZER_PREFIX_LENGTH), (String)e.getValue()));
+        return deserializerManager;
     }
 }

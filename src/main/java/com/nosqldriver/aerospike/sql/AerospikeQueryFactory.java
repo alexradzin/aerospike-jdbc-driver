@@ -22,6 +22,7 @@ import com.nosqldriver.sql.JavascriptEngineFactory;
 import com.nosqldriver.sql.JoinType;
 import com.nosqldriver.sql.OrderItem;
 import com.nosqldriver.sql.RecordExpressionEvaluator;
+import com.nosqldriver.util.CustomDeserializerManager;
 import com.nosqldriver.util.SneakyThrower;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
@@ -114,20 +115,22 @@ public class AerospikeQueryFactory {
     private String set;
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
+    private final CustomDeserializerManager cdm;
     private final ScriptEngine engine = new JavascriptEngineFactory().getEngine();
 
     @VisibleForPackage
-    AerospikeQueryFactory(Statement statement, String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes) {
+    AerospikeQueryFactory(Statement statement, String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes, CustomDeserializerManager cdm) {
         this.statement = statement;
         this.schema = schema;
         this.policyProvider = policyProvider;
         this.indexes = indexes;
+        this.cdm = cdm;
     }
 
     @VisibleForPackage
     QueryContainer<ResultSet> createQueryPlan(String sql) throws SQLException {
         try {
-            QueryHolder queries = new QueryHolder(schema, indexes, policyProvider);
+            QueryHolder queries = new QueryHolder(schema, indexes, policyProvider, cdm);
             parserManager.parse(new StringReader(sql)).accept(new StatementVisitorAdapter() {
                 @Override
                 public void visit(Select select) {
@@ -417,7 +420,7 @@ public class AerospikeQueryFactory {
                                 @Override
                                 public void visit(SubSelect subSelect) {
                                     System.out.println("visit(SubSelect subSelect) " + subSelect);
-                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider);
+                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider, cdm);
                                     SelectBody selectBody = subSelect.getSelectBody();
                                     createSelect(selectBody, subHolder);
                                     operation.addValue(subHolder);
@@ -446,7 +449,7 @@ public class AerospikeQueryFactory {
 
                             expr.getRightExpression().accept(new ExpressionVisitorAdapter() {
                                 public void visit(SubSelect subSelect) {
-                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider);
+                                    QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider, cdm);
                                     SelectBody selectBody = subSelect.getSelectBody();
                                     createSelect(selectBody, subHolder);
                                     operation.addValue(subHolder);

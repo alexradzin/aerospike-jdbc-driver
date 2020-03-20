@@ -1,5 +1,6 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.CustomDeserializerManager;
 import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.ResultSet;
@@ -29,8 +30,8 @@ public class ExpressionAwareResultSetFactory {
     }
 
 
-    public ResultSet wrap(ResultSet rs, List<DataColumn> columns, boolean indexByName) {
-        return new ExpressionAwareResultSet(rs, columns, indexByName);
+    public ResultSet wrap(ResultSet rs, CustomDeserializerManager cdm, List<DataColumn> columns, boolean indexByName) {
+        return new ExpressionAwareResultSet(rs, cdm, columns, indexByName);
     }
 
     public Collection<String> getVariableNames(String expr) {

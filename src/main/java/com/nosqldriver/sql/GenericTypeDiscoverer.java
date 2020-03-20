@@ -1,5 +1,8 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.CustomDeserializerManager;
+import com.nosqldriver.util.Deserializer;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,6 +19,7 @@ import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.SqlLiterals.getSqlType;
+import static java.lang.String.format;
 import static java.sql.Types.OTHER;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
@@ -23,6 +27,9 @@ import static java.util.stream.Stream.concat;
 public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
     private BiFunction<String, String, Iterable<R>> recordsFetcher;
     private Function<R, Map<String, Object>> toMap;
+    private final CustomDeserializerManager cdm;
+    private final Deserializer deserializer = new Deserializer();
+
     private static final Predicate<Method> getter = method -> {
         String name = method.getName();
         return (name.startsWith("get") || name.startsWith("is")) && !void.class.equals(method.getReturnType()) && method.getParameterCount() == 0;
@@ -34,13 +41,14 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
     private final int limit;
 
 
-    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap) {
-        this(recordsFetcher, toMap, 1);
+    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap, CustomDeserializerManager cdm) {
+        this(recordsFetcher, toMap, cdm, 1);
     }
 
-    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap, int limit) {
+    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap, CustomDeserializerManager cdm, int limit) {
         this.recordsFetcher = recordsFetcher;
         this.toMap = toMap;
+        this.cdm = cdm;
         this.limit = limit;
     }
 
@@ -74,12 +82,9 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                                 subColumns.addAll(extractFieldTypes(c, value.getClass()));
                             }
                         } else if (EXPRESSION.equals(c.getRole()) && c.getExpression().contains("deserialize(")) {
-                            try {
-                                Class clazz = Class.forName("com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyNotSerializableClass");
-                                subColumns.addAll(extractFieldTypes(c, clazz));
-                            } catch (ClassNotFoundException e) {
-                                e.printStackTrace();
-                            }
+                            deserializer.getDeserializer(data.get(deserializer.getFunctionArgument(c.getExpression())), cdm, c)
+                                    .flatMap(d -> cdm.getDeserializerType((Class<? extends Function<?, ?>>)d.getClass(), 1))
+                                    .map(clazz -> subColumns.addAll(extractFieldTypes(c, clazz)));
                         }
                         if (c.getLabel() == null) {
                             c.withLabel(c.getName());
@@ -98,7 +103,7 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                 .filter(getter)
                 .map(g -> {
                     String columnName = DATA.equals(column.getRole()) ? column.getName() : column.getLabel();
-                    String name = String.format("%s[%s]", columnName, propertyNameRetriever.apply(g));
+                    String name = format("%s[%s]", columnName, propertyNameRetriever.apply(g));
                     int type = SqlLiterals.sqlTypes.getOrDefault(g.getReturnType(), OTHER);
                     return HIDDEN.create(column.getCatalog(), column.getTable(), name, name).withType(type);
                 })

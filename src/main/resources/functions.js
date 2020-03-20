@@ -178,17 +178,13 @@ function map(str) {
 }
 
 function list(str) {
-    return com.nosqldriver.util.DataUtil.toList(map(str));
+    return dataUtil.toList(map(str));
 }
 
 function array(str) {
-    return com.nosqldriver.util.DataUtil.toArray(map(str));
-}
-
-function foo() {
-    return 5
+    return dataUtil.toArray(map(str));
 }
 
 function deserialize(bytes) {
-    return com.nosqldriver.util.IOUtils.deserialize(bytes);
+    return deserializer.deserialize(bytes, deserializers, currentColumn);
 }

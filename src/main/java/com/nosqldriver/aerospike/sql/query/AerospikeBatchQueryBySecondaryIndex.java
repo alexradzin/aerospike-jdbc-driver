@@ -8,6 +8,7 @@ import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeRecordSet;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ResultSetWrapper;
+import com.nosqldriver.util.CustomDeserializerManager;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -15,8 +16,8 @@ import java.util.List;
 
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy, Record> {
     @VisibleForPackage
-    AerospikeBatchQueryBySecondaryIndex(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy) {
-        super(sqlStatement, schema, statement.getSetName(), columns, statement, policy);
+    AerospikeBatchQueryBySecondaryIndex(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, CustomDeserializerManager cdm) {
+        super(sqlStatement, schema, statement.getSetName(), columns, statement, policy, cdm);
     }
 
     @Override
@@ -46,6 +47,6 @@ public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statemen
                 }
             };
         }
-        return new ResultSetOverAerospikeRecordSet(statement, schema, set, columns, client.query(policy, criteria), keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set));
+        return new ResultSetOverAerospikeRecordSet(statement, schema, set, columns, client.query(policy, criteria), keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set), customDeserializerManager);
     }
 }

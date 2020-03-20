@@ -1,6 +1,7 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.util.CustomDeserializerManager;
 import com.nosqldriver.util.SneakyThrower;
 import com.nosqldriver.util.ThrowingFunction;
 import com.nosqldriver.util.ThrowingSupplier;
@@ -22,6 +23,7 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -39,13 +41,17 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     private final ScriptEngine engine;
     private final ResultSet rs;
     private final Map<String, String> aliasToEval;
+    private final Map<String, DataColumn> aliasToExpr;
     private boolean wasNull = false;
+    private volatile ResultSetMetaData metaData;
 
     @VisibleForPackage
-    ExpressionAwareResultSet(ResultSet rs, List<DataColumn> columns, boolean indexByName) {
+    ExpressionAwareResultSet(ResultSet rs, CustomDeserializerManager cdm, List<DataColumn> columns, boolean indexByName) {
         super(rs, columns, indexByName);
+        //TODO: store DataColumn in aliasToEval, call it alias to Expression
         aliasToEval = columns.stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getLabel() != null).collect(toMap(DataColumn::getLabel, DataColumn::getExpression));
-        engine = new JavascriptEngineFactory().getEngine();
+        aliasToExpr = columns.stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getLabel() != null).collect(toMap(DataColumn::getLabel, c -> c));
+        engine = new JavascriptEngineFactory(Collections.singletonMap("deserializers", cdm)).getEngine();
         this.rs = rs;
     }
 
@@ -261,6 +267,9 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
+        if (metaData != null) {
+            return metaData;
+        }
         DataColumnBasedResultSetMetaData md = (DataColumnBasedResultSetMetaData)rs.getMetaData();
         List<DataColumn> dataColumns = md.getColumns().stream().filter(c -> !DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).collect(toList());
         List<DataColumn> expressions = md.getColumns().stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getType() == 0).collect(toList());
@@ -305,16 +314,20 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
 
             for (DataColumn ec : expressions) {
-                String e = ec.getExpression();
-                Object result = eval(e);
-                if (result != null) {
-                    Integer sqlType = SqlLiterals.sqlTypes.get(result.getClass());
-                    if (sqlType != null) {
-                        ec.withType(sqlType);
+                try {
+                    Object result = eval(ec, ec.getExpression());
+                    if (result != null) {
+                        Integer sqlType = SqlLiterals.sqlTypes.get(result.getClass());
+                        if (sqlType != null) {
+                            ec.withType(sqlType);
+                        }
                     }
+                } catch (Exception e) {
+                    // ignore when discovering metadata
                 }
             }
         }
+        metaData = md;
         return md;
     }
 
@@ -334,11 +347,14 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     }
 
 
-    private Object eval(String eval) {
+    private synchronized Object eval(DataColumn column, String expr) {
+        //String eval = column.getExpression();
+
         Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+        bindings.put("currentColumn", column);
         Collection<String> bound = bind(rs, columns, bindings);
         try {
-            return engine.eval(eval);
+            return engine.eval(expr);
         } catch (ScriptException | RuntimeException e) {
             return SneakyThrower.sneakyThrow(e instanceof RuntimeException && e.getCause() instanceof SQLException ? e.getCause() : new SQLException(e));
         } finally {
@@ -366,7 +382,9 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
 
     private <T> T getValue(int columnIndex, Class<T> type, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
-        return getValueUsingExpression(getEval(columnIndex), type, v -> v, transformer, superGetter);
+        DataColumnBasedResultSetMetaData md = (DataColumnBasedResultSetMetaData)getMetaData();
+        DataColumn column = md.getColumns().get(columnIndex - 1);
+        return getValueUsingExpression(column, getEval(columnIndex), type, v -> v, transformer, superGetter);
     }
 
     private <T> T getValue(String columnLabel, Class<T> type, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
@@ -376,17 +394,24 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     private <T> T getValue(String columnLabel, Class<T> type, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
         String alias = columnLabel.replaceFirst("\\[.*", "");
         Function<Object, Object> transformer1 = alias.equals(columnLabel) ? v -> v : t -> new ValueExtractor().getValue(t, columnLabel.substring(alias.length()));
-        return getValueUsingExpression(aliasToEval.get(alias), type, transformer1, transformer, superGetter);
+
+        DataColumnBasedResultSetMetaData md = (DataColumnBasedResultSetMetaData)getMetaData();
+        DataColumn column = null; //md.getColumn(alias); // TODO label or name?
+        // TODO: if column is null, get column from value of aliasToEval.get(alias) -> deserialize(blob)
+        if (column == null) {
+            column = aliasToExpr.get(alias);
+        }
+
+        return getValueUsingExpression(column, aliasToEval.get(alias), type, transformer1, transformer, superGetter);
     }
 
-    private <T> T getValueUsingExpression(String expr, Class<T> type, Function<Object, Object> transformer1, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
+    private <T> T getValueUsingExpression(DataColumn column, String expr, Class<T> type, Function<Object, Object> transformer1, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
         try {
-            T value = expr != null ? transformer.apply(cast(transformer1.apply(eval(expr)), type)) : null;
+            T value = expr != null ? transformer.apply(cast(transformer1.apply(eval(column, expr)), type)) : null;
             return getValue(Optional.ofNullable(value), superGetter);
         } catch (ClassCastException e) {
             throw new SQLException(e);
         }
-
     }
 
     private <T> T getValue(Optional<T> value, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
