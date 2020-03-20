@@ -116,7 +116,7 @@ public class AerospikeQueryFactory {
     private final AerospikePolicyProvider policyProvider;
     private final Collection<String> indexes;
     private final CustomDeserializerManager cdm;
-    private final ScriptEngine engine = new JavascriptEngineFactory().getEngine();
+    private final ScriptEngine engine;
 
     @VisibleForPackage
     AerospikeQueryFactory(Statement statement, String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes, CustomDeserializerManager cdm) {
@@ -125,6 +125,7 @@ public class AerospikeQueryFactory {
         this.policyProvider = policyProvider;
         this.indexes = indexes;
         this.cdm = cdm;
+        engine = new JavascriptEngineFactory(cdm).getEngine();
     }
 
     @VisibleForPackage

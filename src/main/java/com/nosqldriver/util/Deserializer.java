@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 import static java.lang.String.format;
 
 public class Deserializer {
-    private static final Pattern DESERIALIZE_ARG = Pattern.compile("deserialize\\s*\\(\\s*(.*?)\\s*\\)");
+    private static final Pattern DESERIALIZE_ARG = Pattern.compile("\\w+\\s*\\(\\s*(.*?)\\s*\\)");
 
     /**
      * Invoked from Javascript funtion {@code deserialize()} implemented in {@code functions.js}

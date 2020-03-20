@@ -81,10 +81,12 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                             if (sqlType == OTHER) {
                                 subColumns.addAll(extractFieldTypes(c, value.getClass()));
                             }
-                        } else if (EXPRESSION.equals(c.getRole()) && c.getExpression().contains("deserialize(")) {
-                            deserializer.getDeserializer(data.get(deserializer.getFunctionArgument(c.getExpression())), cdm, c)
-                                    .flatMap(d -> cdm.getDeserializerType((Class<? extends Function<?, ?>>)d.getClass(), 1))
-                                    .map(clazz -> subColumns.addAll(extractFieldTypes(c, clazz)));
+                        } else if (EXPRESSION.equals(c.getRole())) {
+                            String functionName = c.getExpression().replaceFirst("\\(.*", "");
+                            Class<Function<?, ?>> f = cdm.getCustomFunction(functionName);
+                            if (f != null) {
+                                cdm.getDeserializerType(f, 1).map(clazz -> subColumns.addAll(extractFieldTypes(c, clazz)));
+                            }
                         }
                         if (c.getLabel() == null) {
                             c.withLabel(c.getName());

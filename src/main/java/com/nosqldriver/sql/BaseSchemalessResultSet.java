@@ -75,7 +75,7 @@ public abstract class BaseSchemalessResultSet<R> extends WarningsHolder implemen
         this.columns = Collections.unmodifiableList(columns);
         this.typeDiscoverer = typeDiscoverer;
 
-        columnsForMetadata = columns.stream().anyMatch(c -> DATA.equals(c.getRole()) || (EXPRESSION.equals(c.getRole()) && c.getExpression().startsWith("deserialize") )) ?
+        columnsForMetadata = columns.stream().anyMatch(c -> DATA.equals(c.getRole()) || (EXPRESSION.equals(c.getRole()))) ?
                 columns :
                 singletonList(DATA.create(schema, table, "*", "*"));
     }

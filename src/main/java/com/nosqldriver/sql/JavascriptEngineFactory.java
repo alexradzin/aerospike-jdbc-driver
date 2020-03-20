@@ -1,8 +1,7 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.CustomDeserializerManager;
 import com.nosqldriver.util.DataUtil;
-import com.nosqldriver.util.Deserializer;
-import com.nosqldriver.util.IOUtils;
 import com.nosqldriver.util.SneakyThrower;
 
 import javax.script.ScriptContext;
@@ -24,11 +23,11 @@ public class JavascriptEngineFactory {
     private static final ThreadLocal<ScriptEngine> threadEngine = new ThreadLocal<>();
     private final ScriptEngine engine;
 
-    public JavascriptEngineFactory() {
-        this(Collections.emptyMap());
+    public JavascriptEngineFactory(CustomDeserializerManager cdm) {
+        this(Collections.emptyMap(), cdm);
     }
 
-    public JavascriptEngineFactory(Map<String, Object> bindings) {
+    public JavascriptEngineFactory(Map<String, Object> bindings, CustomDeserializerManager cdm) {
         synchronized (threadEngine) {
             ScriptEngine tmp = threadEngine.get();
             if (tmp == null) {
@@ -39,8 +38,17 @@ public class JavascriptEngineFactory {
                 engine.getBindings(ScriptContext.ENGINE_SCOPE).clear();
             }
             engine.getBindings(ScriptContext.ENGINE_SCOPE).putAll(bindings);
-            engine.getBindings(ScriptContext.ENGINE_SCOPE).put("deserializer", new Deserializer());
             engine.getBindings(ScriptContext.ENGINE_SCOPE).put("dataUtil", new DataUtil());
+
+            if (cdm != null) {
+                cdm.getCustomFunctionNames().forEach(name -> {
+                    try {
+                        engine.put(name, cdm.getCustomFunction(name).getConstructor().newInstance());
+                    } catch (ReflectiveOperationException e) {
+                        throw new IllegalStateException(e);
+                    }
+                });
+            }
         }
         SneakyThrower.call(() -> {
             Reader functions = new InputStreamReader(getClass().getResourceAsStream("/functions.js"));

@@ -58,8 +58,8 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     private final AerospikePolicyProvider policyProvider;
     private volatile AtomicBoolean autoCommit = new AtomicBoolean(true);
     private final CustomDeserializerManager deserializerManager;
-    private static final String CUSTOM_DESERIALIZER_PREFIX = "custom.deserializer.";
-    private static final int CUSTOM_DESERIALIZER_PREFIX_LENGTH = CUSTOM_DESERIALIZER_PREFIX.length();
+    private static final String CUSTOM_FUNCTION_PREFIX = "custom.function.";
+    private static final int CUSTOM_FUNCTION_PREFIX_LENGTH = CUSTOM_FUNCTION_PREFIX.length();
 
     @VisibleForPackage
     AerospikeConnection(String url, Properties props) {
@@ -70,11 +70,9 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
         client = new AerospikeSqlClient(() -> new AerospikeClient(parser.policy(url, props), hosts));
         schema.set(parser.schema(url));
         policyProvider = new AerospikePolicyProvider(client, info);
-
+        deserializerManager = init(new CustomDeserializerManager(), info);
         registerScript("stats", "distinct", "groupby");
         getMetaData();
-
-        deserializerManager = init(new CustomDeserializerManager(), info);
     }
 
     private void registerScript(String ... names) {
@@ -138,7 +136,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
 
     @Override
     public DatabaseMetaData getMetaData() {
-        return new AerospikeDatabaseMetadata(url, props, client, this, policyProvider);
+        return new AerospikeDatabaseMetadata(url, props, client, this, policyProvider, deserializerManager.getCustomFunctionNames());
     }
 
     @Override
@@ -380,7 +378,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
             throw new SQLFeatureNotSupportedException("ResultSet type other than TYPE_FORWARD_ONLY is not supported");
         }
         if (resultSetConcurrency != CONCUR_READ_ONLY) {
-            throw new SQLFeatureNotSupportedException("Updateable ResultSet is not supported yet");
+            throw new SQLFeatureNotSupportedException("Updatable ResultSet is not supported yet");
         }
         if (!(resultSetHoldability == HOLD_CURSORS_OVER_COMMIT || resultSetHoldability == CLOSE_CURSORS_AT_COMMIT)) {
             throw new SQLException(format("Wrong value of resultSetHoldability (%d). Supported values are: HOLD_CURSORS_OVER_COMMIT=%d or CLOSE_CURSORS_AT_COMMIT=%d", resultSetHoldability, HOLD_CURSORS_OVER_COMMIT, CLOSE_CURSORS_AT_COMMIT));
@@ -389,8 +387,8 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
 
     private CustomDeserializerManager init(CustomDeserializerManager deserializerManager, Properties props) {
         props.entrySet().stream()
-                .filter(e -> ((String)e.getKey()).startsWith(CUSTOM_DESERIALIZER_PREFIX))
-                .forEach(e -> deserializerManager.addDeserializer(((String)e.getKey()).substring(CUSTOM_DESERIALIZER_PREFIX_LENGTH), (String)e.getValue()));
+                .filter(e -> ((String)e.getKey()).startsWith(CUSTOM_FUNCTION_PREFIX))
+                .forEach(e -> deserializerManager.addCustomFunction(((String)e.getKey()).substring(CUSTOM_FUNCTION_PREFIX_LENGTH), (String)e.getValue()));
         return deserializerManager;
     }
 }

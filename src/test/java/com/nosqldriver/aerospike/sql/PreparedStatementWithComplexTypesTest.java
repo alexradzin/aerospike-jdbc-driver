@@ -629,7 +629,7 @@ class PreparedStatementWithComplexTypesTest {
         insert.setObject(2, MyNotSerializableClass.serialize(obj1));
         assertTrue(insert.execute());
 
-        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.deserializer.test:data:blob=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
         PreparedStatement select = conn.prepareStatement("select deserialize(blob) as object from data where PK=?");
         select.setObject(1, 1);
         ResultSet rs = select.executeQuery();
@@ -660,7 +660,7 @@ class PreparedStatementWithComplexTypesTest {
         String text = "my text";
         MyNotSerializableClass obj = new MyNotSerializableClass(n, text);
 
-        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.deserializer.test:data:blob=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
         PreparedStatement insert = conn.prepareStatement("insert into data (PK, blob) values (?, ?)");
         insert.setInt(1, 1);
         insert.setBytes(2, MyNotSerializableClass.serialize(obj));

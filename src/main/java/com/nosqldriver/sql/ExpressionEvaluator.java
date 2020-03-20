@@ -29,7 +29,7 @@ public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T
 
     public ExpressionEvaluator(String expr, Map<String, Object> initialBindings) {
         this.expr = expr;
-        engine = new JavascriptEngineFactory().getEngine();
+        engine = new JavascriptEngineFactory(null).getEngine();
         Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
         bindings.putAll(initialBindings);
         // TODO: this replacement is pretty naive. It might corrupt strings that contain equal sign and words "and" and "or"

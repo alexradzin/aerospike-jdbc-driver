@@ -24,11 +24,14 @@ public class ExpressionAwareResultSetFactory {
     public ExpressionAwareResultSetFactory() {
         SneakyThrower.call(() -> {
             @SuppressWarnings("unchecked")
-            List<String> definedFunctions = (List<String>) new JavascriptEngineFactory().getEngine().eval("functions");
-            functionNames.addAll(definedFunctions.stream().filter(f -> !f.startsWith("_")).collect(Collectors.toList()));
+            List<Object> definedFunctions = (List<Object>) new JavascriptEngineFactory(null).getEngine().eval("functions");
+            this.functionNames.addAll(definedFunctions.stream().filter(f -> f instanceof String).map(f -> (String)f).filter(f -> !f.startsWith("_")).collect(Collectors.toList()));
         });
     }
 
+    public void addFunctionNames(Collection<String> functionNames) {
+        this.functionNames.addAll(functionNames);
+    }
 
     public ResultSet wrap(ResultSet rs, CustomDeserializerManager cdm, List<DataColumn> columns, boolean indexByName) {
         return new ExpressionAwareResultSet(rs, cdm, columns, indexByName);

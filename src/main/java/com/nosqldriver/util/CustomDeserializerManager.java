@@ -15,6 +15,21 @@ import static java.lang.String.format;
 
 public class CustomDeserializerManager {
     private final Map<String, Map<Class, Function<?, ?>>> deserializers = new HashMap<>();
+    private final Map<String, Class<Function<?, ?>>> customFunctions = new HashMap<>();
+
+    public void addCustomFunction(String name, String className) {
+        try {
+            @SuppressWarnings("unchecked")
+            Class<Function<?, ?>> clazz = (Class<Function<?, ?>>) Class.forName(className);
+            addCustomFunction(name, clazz);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException(format("Class %s is not valid function", className));
+        }
+    }
+
+    public void addCustomFunction(String name, Class<Function<?, ?>> clazz) {
+        customFunctions.put(name, clazz);
+    }
 
     private void addDeserializer(String selector, Class t, Function<?, ?> deserializer) {
         deserializers.computeIfAbsent(selector, s -> new HashMap<>()).put(t, deserializer);
@@ -82,5 +97,13 @@ public class CustomDeserializerManager {
 
     private String join(String namespace, String set, String bin) {
         return format("%s:%s:%s", namespace, set, bin);
+    }
+
+    public Collection<String> getCustomFunctionNames() {
+        return customFunctions.keySet();
+    }
+
+    public Class<Function<?, ?>> getCustomFunction(String name) {
+        return customFunctions.get(name);
     }
 }

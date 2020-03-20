@@ -185,6 +185,3 @@ function array(str) {
     return dataUtil.toArray(map(str));
 }
 
-function deserialize(bytes) {
-    return deserializer.deserialize(bytes, deserializers, currentColumn);
-}

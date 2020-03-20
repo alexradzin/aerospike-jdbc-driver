@@ -124,10 +124,11 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         this.indexes = indexes;
         this.policyProvider = policyProvider;
         this.cdm = cdm;
-         statement = new Statement();
-         if (schema != null) {
-             statement.setNamespace(schema);
-         }
+        statement = new Statement();
+        expressionResultSetWrappingFactory.addFunctionNames(cdm.getCustomFunctionNames());
+        if (schema != null) {
+            statement.setNamespace(schema);
+        }
     }
 
     public Function<IAerospikeClient, ResultSet> getQuery(java.sql.Statement sqlStatement) {

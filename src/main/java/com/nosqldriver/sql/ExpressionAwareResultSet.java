@@ -51,7 +51,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
         //TODO: store DataColumn in aliasToEval, call it alias to Expression
         aliasToEval = columns.stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getLabel() != null).collect(toMap(DataColumn::getLabel, DataColumn::getExpression));
         aliasToExpr = columns.stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getLabel() != null).collect(toMap(DataColumn::getLabel, c -> c));
-        engine = new JavascriptEngineFactory(Collections.singletonMap("deserializers", cdm)).getEngine();
+        engine = new JavascriptEngineFactory(cdm).getEngine();
         this.rs = rs;
     }
 
