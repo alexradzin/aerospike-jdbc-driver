@@ -2,6 +2,7 @@ package com.nosqldriver.sql;
 
 import com.nosqldriver.util.CompositeComparator;
 import com.nosqldriver.util.ExpressionAwareMapComparator;
+import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.PagedCollection;
 
 import java.sql.ResultSet;
@@ -12,13 +13,13 @@ import static java.lang.String.format;
 import static java.util.Comparator.comparingInt;
 
 public class SortedResultSet extends BufferedResultSet {
-    public SortedResultSet(ResultSet rs, List<OrderItem> orderItems) {
-        this(rs, orderItems, Integer.MAX_VALUE);
+    public SortedResultSet(ResultSet rs, List<OrderItem> orderItems, FunctionManager functionManager) {
+        this(rs, orderItems, Integer.MAX_VALUE, functionManager);
     }
 
-    public SortedResultSet(ResultSet rs, List<OrderItem> orderItems, long limit) {
+    public SortedResultSet(ResultSet rs, List<OrderItem> orderItems, long limit, FunctionManager functionManager) {
         //limit is long here because limit and offset returned by SQL parser are long. However fetchSize of JDBC is int, so we have to cast limit to int.
-        super(rs, new PagedCollection<>(new TreeSet<>(new CompositeComparator<>(new ExpressionAwareMapComparator(orderItems), comparingInt(System::identityHashCode))), limit, false, TreeSet::pollLast), safeCast(limit));
+        super(rs, new PagedCollection<>(new TreeSet<>(new CompositeComparator<>(new ExpressionAwareMapComparator(orderItems, functionManager), comparingInt(System::identityHashCode))), limit, false, TreeSet::pollLast), safeCast(limit));
     }
 
     private static int safeCast(long l) {

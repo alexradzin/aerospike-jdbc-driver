@@ -1,15 +1,17 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class ResultSetRowFilter extends ExpressionEvaluator<ResultSet> {
-    public ResultSetRowFilter(String expr) {
-        super(expr);
+    public ResultSetRowFilter(String expr, FunctionManager functionManager) {
+        super(expr, Collections.emptyMap(), functionManager);
     }
 
     @Override

@@ -654,6 +654,8 @@ class PreparedStatementWithComplexTypesTest {
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select custom[number], custom[text] from (select deserialize(blob) as custom from data)",
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[number]=321",
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[text]='my text'",
     })
     void writeAndReadObjectUsingCustomSerialization(String query) throws SQLException, IOException {
         int n = 321;
@@ -683,6 +685,33 @@ class PreparedStatementWithComplexTypesTest {
         assertFalse(rs.next());
 
     }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[number]=567",
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[text]='other text'",
+    })
+    void writeAndReadObjectUsingCustomSerializationWithFalseFilter(String query) throws SQLException, IOException {
+        int n = 321;
+        String text = "my text";
+        MyNotSerializableClass obj = new MyNotSerializableClass(n, text);
+
+        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        PreparedStatement insert = conn.prepareStatement("insert into data (PK, blob) values (?, ?)");
+        insert.setInt(1, 1);
+        insert.setBytes(2, MyNotSerializableClass.serialize(obj));
+        assertEquals(1, insert.executeUpdate());
+
+        ResultSet rs = conn.createStatement().executeQuery(query);
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(2, md.getColumnCount());
+        assertEquals("custom[number]", md.getColumnName(1));
+        assertEquals("custom[text]", md.getColumnName(2));
+        assertEquals(Types.INTEGER, md.getColumnType(1));
+        assertEquals(Types.VARCHAR, md.getColumnType(2));
+        assertFalse(rs.next());
+    }
+
 
 
     @Test

@@ -1,6 +1,7 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.SneakyThrower;
 
 import javax.script.Bindings;
@@ -8,7 +9,6 @@ import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -23,13 +23,9 @@ public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T
     private final ScriptEngine engine;
     private final String fixedExpr;
 
-    public ExpressionEvaluator(String expr) {
-        this(expr, Collections.emptyMap());
-    }
-
-    public ExpressionEvaluator(String expr, Map<String, Object> initialBindings) {
+    public ExpressionEvaluator(String expr, Map<String, Object> initialBindings, FunctionManager functionManager) {
         this.expr = expr;
-        engine = new JavascriptEngineFactory(null).getEngine();
+        engine = new JavascriptEngineFactory(functionManager).getEngine();
         Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
         bindings.putAll(initialBindings);
         // TODO: this replacement is pretty naive. It might corrupt strings that contain equal sign and words "and" and "or"
@@ -55,25 +51,24 @@ public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T
 
     private Object eval(T record, String expr) {
         try {
-            String trimmedExpr = expr.replace(" ", "");
             Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
             Map<String, Object> fields = toMap(record);
             Map<String, Object> ctx = new HashMap<>();
             int replacementCount = 0;
             for (Entry<String, Object> e : fields.entrySet()) {
                 String key = e.getKey();
-                String trimmedKey = key.replace(" ", "");
+                String trimmedKey = key.trim();
                 String varName = key;
-                if (!trimmedKey.matches("[a-zA-Z0-9_]+") && trimmedExpr.contains(trimmedKey)) { //TODO use better pattern instead of contains to be sure that subset of expression is not replaced by mistake
+                if (!trimmedKey.matches("[a-zA-Z0-9_]+") && expr.contains(trimmedKey)) { //TODO use better pattern instead of contains to be sure that subset of expression is not replaced by mistake
                     String newVarName = "var" + replacementCount;
-                    trimmedExpr = trimmedExpr.replace(varName, newVarName);
+                    expr = expr.replace(varName, newVarName);
                     varName = newVarName;
                     replacementCount++;
                 }
                 ctx.put(varName, e.getValue());
             }
             bindings.putAll(ctx);
-            return engine.eval(trimmedExpr);
+            return engine.eval(expr);
         } catch (ScriptException e) {
             return SneakyThrower.sneakyThrow(new SQLException(e.getMessage(), e));
         }

@@ -78,6 +78,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -674,7 +675,7 @@ public class AerospikeQueryFactory {
                     for (Expression expression : update.getExpressions()) {
                         // If set statement uses any element of expression ()+-*/ or function call - treat it as expression.
                         // Otherwise treat it either as column reference or simple value.
-                        Function<Record, Object> evaluator = new RecordExpressionEvaluator(expression.toString());
+                        Function<Record, Object> evaluator = new RecordExpressionEvaluator(expression.toString(), Collections.emptyMap(), functionManager);
                         AtomicReference<Function<Record, Object>> extractorRef = new AtomicReference<>();
 
                         expression.accept(new ExpressionVisitorAdapter() {
@@ -782,7 +783,7 @@ public class AerospikeQueryFactory {
                 int whereParamCount = parseParameters(whereExpr.get(), 0).getValue();
                 int paramOffset = totalParamCount - whereParamCount;
                 Map<String, Object> psValues = IntStream.range(0, parameterValues.length).boxed().filter(i -> parameterValues[i] != null).collect(Collectors.toMap(i -> "$" + (i + 1), i -> parameterValues[i]));
-                recordPredicate.set(new RecordExpressionEvaluator(parseParameters(whereExpr.get(), paramOffset).getKey(), psValues));
+                recordPredicate.set(new RecordExpressionEvaluator(parseParameters(whereExpr.get(), paramOffset).getKey(), psValues, functionManager));
             } else if (filterByPk.get()) {
                 recordPredicate.set(r -> false);
             }

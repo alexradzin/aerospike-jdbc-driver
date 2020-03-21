@@ -377,7 +377,6 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     private <T> T getValue(int columnIndex, Class<T> type, ThrowingFunction<T, T, SQLException> transformer, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
         DataColumnBasedResultSetMetaData md = (DataColumnBasedResultSetMetaData)getMetaData();
-        DataColumn column = md.getColumns().get(columnIndex - 1);
         return getValueUsingExpression(getEval(columnIndex), type, v -> v, transformer, superGetter);
     }
 

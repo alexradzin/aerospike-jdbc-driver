@@ -420,7 +420,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                     columns.stream().filter(c -> DATA.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
-            return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having), functionManager);
+            return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having, functionManager), functionManager);
         }
 
         if (aggregatedFields != null) {
@@ -547,9 +547,9 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         }
 
 
-        Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), columns, new ResultSetRowFilter(whereExpression), indexByName) : expressioned;
+        Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), columns, new ResultSetRowFilter(whereExpression, functionManager), indexByName) : expressioned;
         Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? filtered : client -> new JoinedResultSet(filtered.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(sqlStatement, client, join, functionManager), new ResultSetMetadataSupplier(sqlStatement, client, join, functionManager), join.skipIfMissing)).collect(toList()));
-        Function<IAerospikeClient, ResultSet> ordered = !ordering.isEmpty() ? client -> new SortedResultSet(joined.apply(client), ordering, min(max(offset, 0) + (limit >=0 ? limit : Integer.MAX_VALUE), Integer.MAX_VALUE)) : joined;
+        Function<IAerospikeClient, ResultSet> ordered = !ordering.isEmpty() ? client -> new SortedResultSet(joined.apply(client), ordering, min(max(offset, 0) + (limit >=0 ? limit : Integer.MAX_VALUE), Integer.MAX_VALUE), functionManager) : joined;
         Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(ordered.apply(client), columns, new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit), indexByName) : ordered;
         return client -> new NameCheckResultSetWrapper(limited.apply(client), columns, indexByName);
 
