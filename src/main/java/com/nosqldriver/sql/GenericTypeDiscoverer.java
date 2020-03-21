@@ -1,6 +1,6 @@
 package com.nosqldriver.sql;
 
-import com.nosqldriver.util.CustomDeserializerManager;
+import com.nosqldriver.util.FunctionManager;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -26,7 +26,7 @@ import static java.util.stream.Stream.concat;
 public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
     private BiFunction<String, String, Iterable<R>> recordsFetcher;
     private Function<R, Map<String, Object>> toMap;
-    private final CustomDeserializerManager cdm;
+    private final FunctionManager functionManager;
 
     private static final Predicate<Method> getter = method -> {
         String name = method.getName();
@@ -39,14 +39,14 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
     private final int limit;
 
 
-    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap, CustomDeserializerManager cdm) {
-        this(recordsFetcher, toMap, cdm, 1);
+    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap, FunctionManager functionManager) {
+        this(recordsFetcher, toMap, functionManager, 1);
     }
 
-    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap, CustomDeserializerManager cdm, int limit) {
+    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap, FunctionManager functionManager, int limit) {
         this.recordsFetcher = recordsFetcher;
         this.toMap = toMap;
-        this.cdm = cdm;
+        this.functionManager = functionManager;
         this.limit = limit;
     }
 
@@ -81,9 +81,9 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                             }
                         } else if (EXPRESSION.equals(c.getRole())) {
                             String functionName = c.getExpression().replaceFirst("\\(.*", "");
-                            Class<Function<?, ?>> f = cdm.getCustomFunction(functionName);
+                            Class<Function<?, ?>> f = functionManager.getCustomFunction(functionName);
                             if (f != null) {
-                                cdm.getDeserializerType(f, 1).map(clazz -> subColumns.addAll(extractFieldTypes(c, clazz)));
+                                functionManager.getFunctionReturnType(f).map(clazz -> subColumns.addAll(extractFieldTypes(c, clazz)));
                             }
                         }
                         if (c.getLabel() == null) {

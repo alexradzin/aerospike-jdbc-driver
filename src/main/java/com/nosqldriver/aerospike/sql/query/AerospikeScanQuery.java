@@ -6,21 +6,21 @@ import com.aerospike.client.policy.ScanPolicy;
 import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeScan;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.FilteredResultSet;
-import com.nosqldriver.util.CustomDeserializerManager;
+import com.nosqldriver.util.FunctionManager;
 
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.function.Predicate;
 
 public class AerospikeScanQuery extends AerospikeQuery<Predicate<ResultSet>, ScanPolicy, Record> {
-    public AerospikeScanQuery(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Predicate<ResultSet> predicate, ScanPolicy policy, CustomDeserializerManager cdm) {
-        super(sqlStatement, schema, set, columns, predicate, policy, cdm);
+    public AerospikeScanQuery(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Predicate<ResultSet> predicate, ScanPolicy policy, FunctionManager functionManager) {
+        super(sqlStatement, schema, set, columns, predicate, policy, functionManager);
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
         return new FilteredResultSet(
-                new ResultSetOverAerospikeScan(client, statement, schema, set, columns, keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set), customDeserializerManager),
+                new ResultSetOverAerospikeScan(client, statement, schema, set, columns, keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set), functionManager),
                 columns,
                 criteria,
                 true);

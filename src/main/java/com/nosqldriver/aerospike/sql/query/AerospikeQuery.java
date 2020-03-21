@@ -4,7 +4,7 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.policy.Policy;
 import com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory;
 import com.nosqldriver.sql.DataColumn;
-import com.nosqldriver.util.CustomDeserializerManager;
+import com.nosqldriver.util.FunctionManager;
 
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -20,16 +20,16 @@ abstract class AerospikeQuery<C, P extends Policy, R> implements Function<IAeros
     protected final List<DataColumn> columns;
     protected final C criteria;
     protected final P policy;
-    protected final CustomDeserializerManager customDeserializerManager;
+    protected final FunctionManager functionManager;
 
-    protected AerospikeQuery(Statement statement, String schema, String set, List<DataColumn> columns, C criteria, P policy, CustomDeserializerManager cdm) {
+    protected AerospikeQuery(Statement statement, String schema, String set, List<DataColumn> columns, C criteria, P policy, FunctionManager functionManager) {
         this.statement = statement;
         this.schema = schema;
         this.set = set;
         this.columns = Collections.unmodifiableList(columns);
         this.criteria = criteria;
         this.policy = policy;
-        this.customDeserializerManager = cdm;
+        this.functionManager = functionManager;
     }
 
     @Override

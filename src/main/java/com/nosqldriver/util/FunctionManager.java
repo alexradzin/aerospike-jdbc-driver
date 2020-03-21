@@ -10,14 +10,16 @@ import java.util.function.Function;
 
 import static java.lang.String.format;
 
-public class CustomDeserializerManager {
-    private final Map<String, Map<Class, Function<?, ?>>> deserializers = new HashMap<>();
+public class FunctionManager {
     private final Map<String, Class<Function<?, ?>>> customFunctions = new HashMap<>();
 
     public void addCustomFunction(String name, String className) {
         try {
             @SuppressWarnings("unchecked")
             Class<Function<?, ?>> clazz = (Class<Function<?, ?>>) Class.forName(className);
+            if (!Function.class.isAssignableFrom(clazz)) {
+                throw new IllegalArgumentException(format("Class %s is not valid function because it does not implement interface %s", className, Function.class));
+            }
             addCustomFunction(name, clazz);
         } catch (ClassNotFoundException e) {
             throw new IllegalArgumentException(format("Class %s is not valid function", className));
@@ -28,7 +30,12 @@ public class CustomDeserializerManager {
         customFunctions.put(name, clazz);
     }
 
-    public Optional<Class> getDeserializerType(Class<? extends Function<?, ?>> deserializerClass, int index) {
+    public Optional<Class> getFunctionReturnType(Class<? extends Function<?, ?>> deserializerClass) {
+        return getFunctionType(deserializerClass, 1);
+    }
+
+
+    private Optional<Class> getFunctionType(Class<? extends Function<?, ?>> deserializerClass, int index) {
         return Arrays.stream(deserializerClass.getGenericInterfaces())
                 .filter(t -> t instanceof ParameterizedType)
                 .map(t -> (ParameterizedType)t)

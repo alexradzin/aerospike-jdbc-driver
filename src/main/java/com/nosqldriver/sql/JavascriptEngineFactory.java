@@ -1,6 +1,6 @@
 package com.nosqldriver.sql;
 
-import com.nosqldriver.util.CustomDeserializerManager;
+import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.DataUtil;
 import com.nosqldriver.util.SneakyThrower;
 
@@ -23,11 +23,11 @@ public class JavascriptEngineFactory {
     private static final ThreadLocal<ScriptEngine> threadEngine = new ThreadLocal<>();
     private final ScriptEngine engine;
 
-    public JavascriptEngineFactory(CustomDeserializerManager cdm) {
-        this(Collections.emptyMap(), cdm);
+    public JavascriptEngineFactory(FunctionManager functionManager) {
+        this(Collections.emptyMap(), functionManager);
     }
 
-    public JavascriptEngineFactory(Map<String, Object> bindings, CustomDeserializerManager cdm) {
+    public JavascriptEngineFactory(Map<String, Object> bindings, FunctionManager functionManager) {
         synchronized (threadEngine) {
             ScriptEngine tmp = threadEngine.get();
             if (tmp == null) {
@@ -40,10 +40,10 @@ public class JavascriptEngineFactory {
             engine.getBindings(ScriptContext.ENGINE_SCOPE).putAll(bindings);
             engine.getBindings(ScriptContext.ENGINE_SCOPE).put("dataUtil", new DataUtil());
 
-            if (cdm != null) {
-                cdm.getCustomFunctionNames().forEach(name -> {
+            if (functionManager != null) {
+                functionManager.getCustomFunctionNames().forEach(name -> {
                     try {
-                        engine.put(name, cdm.getCustomFunction(name).getConstructor().newInstance());
+                        engine.put(name, functionManager.getCustomFunction(name).getConstructor().newInstance());
                     } catch (ReflectiveOperationException e) {
                         throw new IllegalStateException(e);
                     }

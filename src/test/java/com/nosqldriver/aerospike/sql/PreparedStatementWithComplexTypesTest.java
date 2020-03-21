@@ -141,7 +141,7 @@ class PreparedStatementWithComplexTypesTest {
         expectedData.put("id", 1L);
         expectedData.put("first_name", "John");
         expectedData.put("last_name", "Lennon");
-        expectedData.put("kids", Arrays.<String>asList("Sean", "Julian"));
+        expectedData.put("kids", Arrays.asList("Sean", "Julian"));
         assertEquals(expectedData, record.bins);
 
 
@@ -682,6 +682,17 @@ class PreparedStatementWithComplexTypesTest {
 
         assertFalse(rs.next());
 
+    }
+
+
+    @Test
+    void notExistingCustomFunction() {
+        assertThrows(IllegalArgumentException.class, () -> DriverManager.getConnection("jdbc:aerospike:localhost?custom.function.deserialize=DoesNotExist"));
+    }
+
+    @Test
+    void wrongCustomFunction() {
+        assertThrows(IllegalArgumentException.class, () -> DriverManager.getConnection("jdbc:aerospike:localhost?custom.function.deserialize=" + getClass().getName()));
     }
 
 
