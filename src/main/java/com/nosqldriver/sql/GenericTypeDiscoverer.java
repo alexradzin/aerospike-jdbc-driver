@@ -1,7 +1,6 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.util.CustomDeserializerManager;
-import com.nosqldriver.util.Deserializer;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -28,7 +27,6 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
     private BiFunction<String, String, Iterable<R>> recordsFetcher;
     private Function<R, Map<String, Object>> toMap;
     private final CustomDeserializerManager cdm;
-    private final Deserializer deserializer = new Deserializer();
 
     private static final Predicate<Method> getter = method -> {
         String name = method.getName();
