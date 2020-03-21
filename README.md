@@ -103,7 +103,7 @@ Typical Aerospike installation consists of several instances, so several IP addr
 *   create table. This operation is meaningless applicable to Aerospike that creates set once somebody writes to this set. 
 *   create/drop schema just cannot be implemented for Aerospike that requires static definition of namespaces using `aerospike.conf`.
 
-### Functions
+### Built-in Functions
 
 | Function                         | Description                                                              |
 | -------------------------------- | ------------------------------------------------------------------------ |
@@ -133,17 +133,89 @@ Typical Aerospike installation consists of several instances, so several IP addr
 
 (*) `[date]` is optional argument. If omitted current date is used. Otherwise can be either Date object or epoch or string representation of date parsed using one of the following formats: yyyy-MM-dd HH:mm:ss.SSS z, yyyy-MM-dd HH:mm:ss z, yyyy-MM-dd HH:mm:ss.SSS, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd HH:mm, yyyy-MM-dd
 
+## Working with serializable classes
+Let's take an example. We have class `Person`:
+
+```java
+public class Person implements Serializable {
+    private String firstName;
+    private String lastName;
+    private int yearOfBirth;
+    // getters, setters etc.
+}
+```
+The first way to store objects of  this class in Aerospike is creating bins corresponding to the fields of the class, i.e. `firstName`, `lastName`, `yearOfBirth`. However one can prefer to store the information in single bin. If class `Person` is serializable it can be easily done using `PreparedStatement`:
+
+```java
+PreparedStatement insert = conn.prepareStatement("insert into people (PK, data) values (?, ?)");
+insert.setInt(1, 1);
+insert.setObject(2, new Person("John", "Lennon", 1940));
+```
+
+Onece this is done you can retrieve the information using select statement like:
+
+```sql
+select * data from people;
+```
+
+Unfortunately table `people` has onlyy one column `data` that holds binary information. Fortunately serializable objects can be deserialized automatically using the following query:
+
+```sql
+select data[firstName], data[lastName], data[yearOfBirth] from (select data from people)
+```
+Where statement can be applied on both selects for example
+
+```sql
+select data[firstName], data[lastName], data[yearOfBirth] from (select data from people) where data[firstName]='John'
+```
+
+## Working with not serializable classes
+Not serializable classes cannot be supported out-of-the-box. However this problem can be solved using custom functions. 
+Custom function is a public class that has public default constructor and implements `java.util.function.Function<T, R>` where `T` is a type of input parameter and `R` is a type of output parameter.
+
+Let's take a look on example from the previous chapter but this time the class `Person` is not `Serializable`. Let's assume that data has been already written to the database and we want to have a convenient way to retrieve it:
+
+```sql
+select data[firstName], data[lastName], data[yearOfBirth] from (select deserialize(data) from people)
+```
+
+The statement calls function `deserialize()` that converts data stored in database to object of class `Person`. But how is it possible? Indeed driver does not know anything about either class custom `Person` or its serialization format. The answer is that `deserialize()` is a custom function. 
+
+## Custom functions
+The functionality of the driver can be extended by providing custom functions. Custom function is a public class that has public default constructor and implements `java.util.function.Function<T, R>` where `T` is a type of input parameter and `R` is a type of output parameter.
+
+Here is an example of custom function that deserializes custom binary representation of `Persoon` to instance of class `Person`:
+
+```java
+public class PersonDeserializer implements Function<byte[], Person> {
+    @Override
+    public Person apply(byte[] bytes) {
+        try (DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes))) {
+            return new Person(dis.readUTF(), dis.readUTF(), dis.readInt());
+        } catch (IOException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+}
+```
+Customizations must be added to classpath of the application that uses driver. The custom function must be configured using configuration parameter supplied in JDBC URL:
+
+```
+jdbc:aerospike:localhost/test?custom.function.deserialize=com.company.PersonDeserializer
+```
+
+
 ## Download
 You can download binaries here:
 
-* [aerospike-jdbc-driver-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ap9wRa5qdFHn_1UH8oyI3CAkGJ_tUOPd/view?usp=sharing)
-* [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ap9wRa5qdFHn_1UH8oyI3CAkGJ_tUOPd/view?usp=sharing)
+* [aerospike-jdbc-driver-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1BNpN_gA3E4C7CEZSLSuw1jOo2iNHtMBF/view?usp=sharing)
+* [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ti9pQzJArutGnDnGCHMN1EFTMAG-rXyE/view?usp=sharing)
 
 If you are running under Java 11 and highier you need nashorn - java script engine that should be added to the classpath together with the driver. Take the nashorn jar file [here](https://drive.google.com/file/d/1pb_5sxJbw-afxvJWNHuLf0ownvmM0Fjf/view?usp=sharing).
 
 
 ## Configuration of UI clients
-Download [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ap9wRa5qdFHn_1UH8oyI3CAkGJ_tUOPd/view?usp=sharing) to your computer. This jar file contains the driver's binaris together with all dependenciees. 
+Download [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ti9pQzJArutGnDnGCHMN1EFTMAG-rXyE/view?usp=sharing) to your computer. This jar file contains the driver's binaris together with all dependenciees. 
 
 ### Squirel SQL
 #### Define driver
