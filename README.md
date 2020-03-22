@@ -176,13 +176,50 @@ Custom function is a public class that has public default constructor and implem
 Let's take a look on example from the previous chapter but this time the class `Person` is not `Serializable`. Let's assume that data has been already written to the database and we want to have a convenient way to retrieve it:
 
 ```sql
-select data[firstName], data[lastName], data[yearOfBirth] from (select deserialize(data) from people)
+select data[firstName], data[lastName], data[yearOfBirth] from (select person(data) from people)
 ```
 
-The statement calls function `deserialize()` that converts data stored in database to object of class `Person`. But how is it possible? Indeed driver does not know anything about either class custom `Person` or its serialization format. The answer is that `deserialize()` is a custom function. 
+The statement calls function `person()` that converts data stored in database to object of class `Person`. But how is it possible? Indeed driver does not know anything about either class custom `Person` or its serialization format. The answer is that `person()` is a custom function.
 
 ## Custom functions
 The functionality of the driver can be extended by providing custom functions. Custom function is a public class that has public default constructor and implements `java.util.function.Function<T, R>` where `T` is a type of input parameter and `R` is a type of output parameter.
+Here is an example of function that calculates squre root of given numeric  parameter:
+
+```java
+public class Sqrt implements Function<Double, Double> {
+    @Override
+    public Double apply(Double d) {
+        return Math.sqrt(d);
+    }
+}
+```
+
+This once implemented, compile and added to classpath this function must be registered as following:
+
+```
+jdbc:aerospike:localhost/test?custom.function.sqrt=com.company.Sqrt
+```
+
+Generally the parameter that registers custom function looks like:
+
+```
+custom.function.FUNCTION_NAME=FULLY_QUALIFIED_CLASS_NAME
+```
+Where
+`FUNCTION_NAME` - the name that can be then used to call this function from SQL statement
+`FULLY_QUALIFIED_CLASS_NAME` - the fully qualified class name of class that implements the function. One can define as many functions as he wants, e.g.:
+
+
+```
+jdbc:aerospike:localhost?custom.function.strlen=com.company.StrlengthCalculator&custom.function.sqrt=com.company.Sqrt
+```
+
+These functions can be used in SQL query as following:
+
+```sql
+select sqrt(4), strlen('abc'); -- returns 2, 3
+select sqrt(strlen('abcd')); -- returns 2
+```
 
 Here is an example of custom function that deserializes custom binary representation of `Persoon` to instance of class `Person`:
 
@@ -201,8 +238,10 @@ public class PersonDeserializer implements Function<byte[], Person> {
 Customizations must be added to classpath of the application that uses driver. The custom function must be configured using configuration parameter supplied in JDBC URL:
 
 ```
-jdbc:aerospike:localhost/test?custom.function.deserialize=com.company.PersonDeserializer
+jdbc:aerospike:localhost/test?custom.function.person=com.company.PersonDeserializer
 ```
+
+This configuration makes function `person()` available for SQL queries.
 
 
 ## Download
