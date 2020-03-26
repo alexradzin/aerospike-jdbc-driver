@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.function.Function;
 
 abstract class AerospikeQuery<C, P extends Policy, R> implements Function<IAerospikeClient, ResultSet> {
-    protected static final KeyRecordFetcherFactory keyRecordFetcherFactory = new KeyRecordFetcherFactory();
+    protected final KeyRecordFetcherFactory keyRecordFetcherFactory;// = new KeyRecordFetcherFactory();
     protected final Statement statement;
     protected final String schema;
     protected final String set;
@@ -23,13 +23,14 @@ abstract class AerospikeQuery<C, P extends Policy, R> implements Function<IAeros
     protected final FunctionManager functionManager;
     protected final boolean pk;
 
-    protected AerospikeQuery(Statement statement, String schema, String set, List<DataColumn> columns, C criteria, P policy, FunctionManager functionManager, boolean pk) {
+    protected AerospikeQuery(Statement statement, String schema, String set, List<DataColumn> columns, C criteria, P policy, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, boolean pk) {
         this.statement = statement;
         this.schema = schema;
         this.set = set;
         this.columns = Collections.unmodifiableList(columns);
         this.criteria = criteria;
         this.policy = policy;
+        this.keyRecordFetcherFactory = keyRecordFetcherFactory;
         this.functionManager = functionManager;
         this.pk = pk;
     }

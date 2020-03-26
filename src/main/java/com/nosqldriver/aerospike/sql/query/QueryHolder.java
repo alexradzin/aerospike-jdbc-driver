@@ -10,6 +10,7 @@ import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
 import com.nosqldriver.aerospike.sql.AerospikeStatement;
+import com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation.Operator;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation.PrimaryKeyEqualityPredicate;
 import com.nosqldriver.sql.ChainedResultSetWrapper;
@@ -86,6 +87,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     private String schema;
     private final Collection<String> indexes;
     private final AerospikePolicyProvider policyProvider;
+    private final KeyRecordFetcherFactory keyRecordFetcherFactory;
     private String set;
     private String setAlias;
     private Collection<String> aggregatedFields = null;
@@ -125,6 +127,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         this.schema = schema;
         this.indexes = indexes;
         this.policyProvider = policyProvider;
+        keyRecordFetcherFactory = new KeyRecordFetcherFactory(policyProvider.getQueryPolicy());
         this.functionManager = functionManager;
         statement = new Statement();
         expressionResultSetWrappingFactory.addFunctionNames(functionManager.getCustomFunctionNames());
@@ -156,7 +159,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             return wrap(sqlStatement, secondayIndexQuery);
         }
         if (!data.isEmpty()) {
-            return new AerospikeInsertQuery(sqlStatement, schema, set, columns, data, policyProvider.getWritePolicy(), skipDuplicates, functionManager, getPk);
+            return new AerospikeInsertQuery(sqlStatement, schema, set, columns, data, policyProvider.getWritePolicy(), skipDuplicates, keyRecordFetcherFactory, functionManager, getPk);
         }
 
         return wrap(sqlStatement, createSecondaryIndexQuery(sqlStatement));
@@ -407,7 +410,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             Optional<Object> value = predExps.stream().filter(e -> isValue(extractType(e))).map(PredExpUtil::getValue).findFirst();
             if (value.isPresent()) {
                 Key key = createKey(schema, set, value.get());
-                return new AerospikeQueryByPk(sqlStatement, schema, columns, key, policyProvider.getQueryPolicy(), functionManager, getPk);
+                return new AerospikeQueryByPk(sqlStatement, schema, columns, key, policyProvider.getQueryPolicy(), keyRecordFetcherFactory, functionManager, getPk);
             }
         }
         if (predExps.size() >= 3) {
@@ -423,7 +426,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                     columns.stream().filter(c -> DATA.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
-            return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having, functionManager), functionManager, getPk);
+            return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having, functionManager), keyRecordFetcherFactory, functionManager, getPk);
         }
 
         if (aggregatedFields != null) {
@@ -444,21 +447,21 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                 }
                 String groupField = m.group(1);
                 statement.setAggregateFunction(getClass().getClassLoader(), "distinct.lua", "distinct", "distinct", new StringValue(groupField));
-                return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), functionManager, getPk);
+                return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), keyRecordFetcherFactory, functionManager, getPk);
             }
 
 
             statement.setAggregateFunction(getClass().getClassLoader(), "stats.lua", "stats", "single_bin_stats", fieldsForAggregation);
-            return new AerospikeAggregationQuery(sqlStatement, schema, set, columns, statement, policyProvider.getQueryPolicy(), functionManager, getPk);
+            return new AerospikeAggregationQuery(sqlStatement, schema, set, columns, statement, policyProvider.getQueryPolicy(), keyRecordFetcherFactory, functionManager, getPk);
         }
 
 
-        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), functionManager, getPk);
+        return secondayIndexQuery = new AerospikeBatchQueryBySecondaryIndex(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), keyRecordFetcherFactory, functionManager, getPk);
     }
 
     @VisibleForPackage
     void createPkQuery(java.sql.Statement statement, Key key) {
-        pkQuery = new AerospikeQueryByPk(statement, schema, columns, key, policyProvider.getQueryPolicy(), functionManager, getPk);
+        pkQuery = new AerospikeQueryByPk(statement, schema, columns, key, policyProvider.getQueryPolicy(), keyRecordFetcherFactory, functionManager, getPk);
     }
 
     @VisibleForPackage
@@ -471,12 +474,12 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             System.arraycopy(keys, 0, allKeys, existingKesys.length, keys.length);
         }
 
-        pkBatchQuery = new AerospikeBatchQueryByPk(statement, schema, set, columns, allKeys, policyProvider.getBatchPolicy(), functionManager, getPk);
+        pkBatchQuery = new AerospikeBatchQueryByPk(statement, schema, set, columns, allKeys, policyProvider.getBatchPolicy(), keyRecordFetcherFactory, functionManager, getPk);
     }
 
     @VisibleForPackage
     void createScanQuery(java.sql.Statement statement, Predicate<ResultSet> predicate) {
-        scanQuery = new AerospikeScanQuery(statement, schema, set, columns, predicate, policyProvider.getScanPolicy(), functionManager, getPk);
+        scanQuery = new AerospikeScanQuery(statement, schema, set, columns, predicate, policyProvider.getScanPolicy(), keyRecordFetcherFactory, functionManager, getPk);
     }
 
 

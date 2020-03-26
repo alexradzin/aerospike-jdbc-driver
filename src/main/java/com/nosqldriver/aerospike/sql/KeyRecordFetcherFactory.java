@@ -21,14 +21,18 @@ public class KeyRecordFetcherFactory {
     @VisibleForPackage static final Function<KeyRecord, Map<String, Object>> keyRecordKeyExtractor = keyRecord -> keyRecord != null ? keyExtractor.apply(keyRecord.key) : emptyMap();
     @VisibleForPackage static final Function<KeyRecord, Map<String, Object>> emptyKeyRecordExtractor = keyRecord -> emptyMap();
 
+    private final QueryPolicy queryPolicy;
 
+    public KeyRecordFetcherFactory(QueryPolicy queryPolicy) {
+        this.queryPolicy = queryPolicy;
+    }
 
     public BiFunction<String, String, Iterable<KeyRecord>> createKeyRecordsFetcher(IAerospikeClient client, String catalog, String table) {
         return (s, s2) -> {
             com.aerospike.client.query.Statement statement = new com.aerospike.client.query.Statement();
             statement.setNamespace(catalog);
             statement.setSetName(table);
-            return client.query(new QueryPolicy(), statement);
+            return client.query(queryPolicy, statement);
         };
     }
 }

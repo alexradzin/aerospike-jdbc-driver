@@ -5,6 +5,7 @@ import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.query.KeyRecord;
+import com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory;
 import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeRecords;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.util.FunctionManager;
@@ -15,8 +16,8 @@ import java.util.stream.IntStream;
 
 public class AerospikeBatchQueryByPk extends AerospikeQuery<Key[], BatchPolicy, KeyRecord> {
 
-    public AerospikeBatchQueryByPk(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Key[] keys, BatchPolicy policy, FunctionManager functionManager, boolean pk) {
-        super(sqlStatement, schema, set, columns, keys, policy, functionManager, pk);
+    public AerospikeBatchQueryByPk(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Key[] keys, BatchPolicy policy, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, boolean pk) {
+        super(sqlStatement, schema, set, columns, keys, policy, keyRecordFetcherFactory, functionManager, pk);
     }
 
     @Override

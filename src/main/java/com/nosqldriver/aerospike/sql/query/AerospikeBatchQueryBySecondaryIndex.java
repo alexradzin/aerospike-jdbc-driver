@@ -5,6 +5,7 @@ import com.aerospike.client.Record;
 import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory;
 import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeRecordSet;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ResultSetWrapper;
@@ -16,8 +17,8 @@ import java.util.List;
 
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy, Record> {
     @VisibleForPackage
-    AerospikeBatchQueryBySecondaryIndex(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, FunctionManager functionManager, boolean pk) {
-        super(sqlStatement, schema, statement.getSetName(), columns, statement, policy, functionManager, pk);
+    AerospikeBatchQueryBySecondaryIndex(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, boolean pk) {
+        super(sqlStatement, schema, statement.getSetName(), columns, statement, policy, keyRecordFetcherFactory, functionManager, pk);
     }
 
     @Override

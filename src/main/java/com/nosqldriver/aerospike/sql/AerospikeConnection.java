@@ -57,6 +57,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     private final Properties clientInfo = new Properties();
     private final AtomicReference<String> schema = new AtomicReference<>(null); // schema can be updated by use statement
     private final AerospikePolicyProvider policyProvider;
+    private final KeyRecordFetcherFactory keyRecordFetcherFactory;
     private volatile AtomicBoolean autoCommit = new AtomicBoolean(true);
     private final FunctionManager functionManager;
     private static final String CUSTOM_FUNCTION_PREFIX = "custom.function.";
@@ -72,6 +73,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
         client = new AerospikeSqlClient(() -> new AerospikeClient(parser.policy(url, props), hosts));
         schema.set(parser.schema(url));
         policyProvider = new AerospikePolicyProvider(client, info);
+        keyRecordFetcherFactory = new KeyRecordFetcherFactory(policyProvider.getQueryPolicy());
         functionManager = init(new FunctionManager(), info);
         registerScript("stats", "distinct", "groupby");
         getMetaData();
@@ -252,7 +254,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
         validateResultSetParameters(resultSetType, resultSetConcurrency, resultSetHoldability);
-        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql, functionManager, getPk);
+        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql, keyRecordFetcherFactory, functionManager, getPk);
     }
 
     @Override

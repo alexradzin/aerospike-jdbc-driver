@@ -5,6 +5,7 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.policy.WritePolicy;
+import com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.util.FunctionManager;
@@ -83,8 +84,8 @@ public class AerospikeInsertQuery extends AerospikeQuery<Iterable<List<Object>>,
     }
 
 
-    public AerospikeInsertQuery(Statement statement, String schema, String set, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates, FunctionManager functionManager, boolean pk) {
-        super(statement, schema, set, columns, data, policy, functionManager, pk);
+    public AerospikeInsertQuery(Statement statement, String schema, String set, List<DataColumn> columns, Iterable<List<Object>> data, WritePolicy policy, boolean skipDuplicates, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, boolean pk) {
+        super(statement, schema, set, columns, data, policy, keyRecordFetcherFactory, functionManager, pk);
         this.skipDuplicates = skipDuplicates;
         columns.stream().map(DataColumn::getName).filter("PK"::equals).findFirst().orElseThrow(() -> new IllegalArgumentException("PK is not specified"));
 
