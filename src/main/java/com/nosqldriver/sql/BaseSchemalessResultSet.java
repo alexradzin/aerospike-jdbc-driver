@@ -60,6 +60,7 @@ public abstract class BaseSchemalessResultSet<R> extends WarningsHolder implemen
     private final TypeDiscoverer typeDiscoverer;
     private volatile ResultSetMetaData metadata = null;
     private final List<DataColumn> columnsForMetadata;
+    protected final boolean pk;
 
     private static final Map<Class, Function<Object[], Object[]>> collectionTransformers = new HashMap<>();
     static {
@@ -68,12 +69,13 @@ public abstract class BaseSchemalessResultSet<R> extends WarningsHolder implemen
 
 
 
-    protected BaseSchemalessResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer) {
+    protected BaseSchemalessResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer, boolean pk) {
         this.statement = statement;
         this.schema = schema;
         this.table = table;
         this.columns = Collections.unmodifiableList(columns);
         this.typeDiscoverer = typeDiscoverer;
+        this.pk = pk;
 
         columnsForMetadata = columns.stream().anyMatch(c -> DATA.equals(c.getRole()) || (EXPRESSION.equals(c.getRole()))) ?
                 columns :

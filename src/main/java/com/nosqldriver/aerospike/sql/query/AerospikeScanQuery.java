@@ -13,14 +13,14 @@ import java.util.List;
 import java.util.function.Predicate;
 
 public class AerospikeScanQuery extends AerospikeQuery<Predicate<ResultSet>, ScanPolicy, Record> {
-    public AerospikeScanQuery(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Predicate<ResultSet> predicate, ScanPolicy policy, FunctionManager functionManager) {
-        super(sqlStatement, schema, set, columns, predicate, policy, functionManager);
+    public AerospikeScanQuery(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Predicate<ResultSet> predicate, ScanPolicy policy, FunctionManager functionManager, boolean pk) {
+        super(sqlStatement, schema, set, columns, predicate, policy, functionManager, pk);
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
         return new FilteredResultSet(
-                new ResultSetOverAerospikeScan(client, statement, schema, set, columns, keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set), functionManager),
+                new ResultSetOverAerospikeScan(client, statement, schema, set, columns, keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set), functionManager, pk),
                 columns,
                 criteria,
                 true);

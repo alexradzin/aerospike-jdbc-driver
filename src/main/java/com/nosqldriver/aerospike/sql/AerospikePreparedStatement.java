@@ -1,6 +1,9 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
+import com.aerospike.client.Key;
+import com.aerospike.client.Record;
+import com.aerospike.client.query.KeyRecord;
 import com.nosqldriver.aerospike.sql.query.QueryContainer;
 import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.DataColumn;
@@ -39,16 +42,22 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
+import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.emptyKeyRecordExtractor;
+import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordDataExtractor;
+import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordKeyExtractor;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.PreparedStatementUtil.parseParameters;
 import static java.lang.String.format;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -62,7 +71,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
     private final TypeDiscoverer discoverer;
     private final FunctionManager functionManager;
 
-    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql, FunctionManager functionManager) throws SQLException {
+    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql, FunctionManager functionManager, boolean pk) throws SQLException {
         super(client, connection, schema, policyProvider, functionManager);
         this.sql = sql;
         int n = parseParameters(sql, 0).getValue();
@@ -71,10 +80,11 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
         queryPlan = new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes, functionManager).createQueryPlan(sql);
         set = queryPlan.getSetName();
         this.functionManager = functionManager;
-
         discoverer = new GenericTypeDiscoverer<>(
                 keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema.get(), set),
-                keyRecord -> keyRecord.record.bins, this.functionManager);
+                new CompositeKeyRecordExtractor(pk ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor),
+                this.functionManager,
+                pk);
     }
 
     @Override

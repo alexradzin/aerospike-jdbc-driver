@@ -18,13 +18,13 @@ public class AerospikeDistinctQuery extends AerospikeQuery<Statement, QueryPolic
     private final Predicate<ResultSet> having;
 
     @VisibleForPackage
-    AerospikeDistinctQuery(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, FunctionManager functionManager) {
-        this(sqlStatement, schema, columns, statement, policy, rs -> true, functionManager);
+    AerospikeDistinctQuery(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, FunctionManager functionManager, boolean pk) {
+        this(sqlStatement, schema, columns, statement, policy, rs -> true, functionManager, pk);
     }
 
     @VisibleForPackage
-    AerospikeDistinctQuery(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, Predicate<ResultSet> having, FunctionManager functionManager) {
-        super(sqlStatement, schema, statement.getSetName(), columns, statement, policy, functionManager);
+    AerospikeDistinctQuery(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, Predicate<ResultSet> having, FunctionManager functionManager, boolean pk) {
+        super(sqlStatement, schema, statement.getSetName(), columns, statement, policy, functionManager, pk);
         this.having = having;
     }
 
@@ -38,7 +38,8 @@ public class AerospikeDistinctQuery extends AerospikeQuery<Statement, QueryPolic
                         columns,
                         client.queryAggregate(policy, criteria),
                         keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set),
-                        functionManager),
+                        functionManager,
+                        pk),
                 columns,
                 having,
                 false);

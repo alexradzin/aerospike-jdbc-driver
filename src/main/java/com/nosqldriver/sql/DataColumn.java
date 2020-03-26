@@ -13,7 +13,7 @@ public class DataColumn {
     private DataColumnRole role;
 
     public enum DataColumnRole {
-        DATA, HIDDEN, AGGREGATED, GROUP, EXPRESSION {
+        PK, DATA, HIDDEN, AGGREGATED, GROUP, EXPRESSION {
             @Override
             public DataColumn create(String catalog, String table, String expression, String label) {
                 return new DataColumn(catalog, table, null, label, expression, this);
@@ -23,6 +23,10 @@ public class DataColumn {
 
         public DataColumn create(String catalog, String table, String name, String label) {
             return new DataColumn(catalog, table, name, label, null, this);
+        }
+
+        public static DataColumnRole role(String name) {
+            return PK.name().equals(name) ? PK : DATA;
         }
     }
 

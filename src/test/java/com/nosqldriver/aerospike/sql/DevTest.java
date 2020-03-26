@@ -1,18 +1,28 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.aerospike.client.AerospikeException;
 import com.aerospike.client.Info;
 import com.aerospike.client.Key;
 import com.aerospike.client.Language;
+import com.aerospike.client.Record;
+import com.aerospike.client.ScanCallback;
 import com.aerospike.client.Value;
 import com.aerospike.client.cluster.Node;
 import com.aerospike.client.policy.InfoPolicy;
 import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.QueryPolicy;
+import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
+import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
+import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SUBJECT_SELECTION;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeAllPersonalInstruments;
@@ -24,6 +34,12 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.writeSubjectSelection;
  * This class will be removed once driver becomes stable.
  */
 public class DevTest {
+    @BeforeAll
+    @AfterAll
+    static void dropAll() {
+        TestDataUtils.deleteAllRecords(NAMESPACE, PEOPLE);
+    }
+
     //@Test
     @VisibleForPackage
     void testFunction() {
@@ -66,6 +82,35 @@ public class DevTest {
         }
     }
 
+
+    //@Test
+    void pk() {
+        WritePolicy wp = new WritePolicy();
+        wp.sendKey = true;
+        writeBeatles(wp);
+        ScanPolicy sp = new ScanPolicy();
+        //sp.sendKey = true;
+        client.scanAll(null, "test", "people", new ScanCallback() {
+            @Override
+            public void scanCallback(Key key, Record record) throws AerospikeException {
+               System.out.printf("key=%s: record=%s\n", key, record);
+            }
+        });
+
+        Record rec1 = client.get(null, new Key("test", "people", 1));
+        System.out.println("rec: " + rec1);
+        Record[] recs = client.get(null, new Key[] {new Key("test", "people", 1), new Key("test", "people", 2)});
+        for (Record r : recs) {
+            System.out.println("rec: " + rec1);
+        }
+
+        Statement s = new Statement();
+        s.setSetName("people");
+        s.setNamespace("test");
+        for (KeyRecord kr : client.query(null, s)) {
+            System.out.printf("key= %s, rec=%s\n", kr.key, kr.record);
+        }
+    }
 
     //@Test
     @VisibleForPackage

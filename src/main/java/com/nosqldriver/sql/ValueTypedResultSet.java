@@ -8,7 +8,7 @@ import static com.nosqldriver.sql.TypeTransformer.cast;
 
 abstract class ValueTypedResultSet<R> extends BaseSchemalessResultSet<R> {
     protected ValueTypedResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer) {
-        super(statement, schema, table, columns, typeDiscoverer);
+        super(statement, schema, table, columns, typeDiscoverer, false);
     }
 
     @Override

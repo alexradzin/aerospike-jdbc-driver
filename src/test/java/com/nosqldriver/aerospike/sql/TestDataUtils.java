@@ -12,8 +12,6 @@ import com.aerospike.client.query.IndexType;
 import com.nosqldriver.Person;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.sql.DataColumn;
-import com.nosqldriver.util.SneakyThrower;
-import com.nosqldriver.util.ThrowingBiFunction;
 import com.nosqldriver.util.ThrowingFunction;
 
 import java.sql.Connection;
@@ -24,7 +22,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -168,9 +165,11 @@ public class TestDataUtils {
         return data;
     }
 
-
     @VisibleForPackage static void writeBeatles() {
-        WritePolicy writePolicy = new WritePolicy();
+        writeBeatles(new WritePolicy());
+    }
+
+    @VisibleForPackage static void writeBeatles(WritePolicy writePolicy) {
         write(PEOPLE, writePolicy, 1, person(1, "John", "Lennon", 1940, 2));
         write(PEOPLE, writePolicy, 2, person(2, "Paul", "McCartney", 1942, 5));
         write(PEOPLE, writePolicy, 3, person(3, "George", "Harrison", 1943, 1));
@@ -207,9 +206,11 @@ public class TestDataUtils {
         write(SUBJECT_SELECTION, writePolicy, id, subjectSelection("MKB114", 1, "Erica"));
     }
 
-
     @VisibleForPackage static void writeMainPersonalInstruments() {
-        WritePolicy writePolicy = new WritePolicy();
+        writeMainPersonalInstruments(new WritePolicy());
+    }
+
+    @VisibleForPackage static void writeMainPersonalInstruments(WritePolicy writePolicy) {
         write(INSTRUMENTS, writePolicy, 1, personalInstrument(1, 1, "guitar"));
         write(INSTRUMENTS, writePolicy, 2, personalInstrument(2, 2, "bass guitar"));
         write(INSTRUMENTS, writePolicy, 3, personalInstrument(3, 3, "guitar"));
@@ -321,7 +322,12 @@ public class TestDataUtils {
 
     @VisibleForPackage
     static ResultSet executeQuery(String sql, DataColumn... expectedColumns) throws SQLException {
-        Statement statement = testConn.createStatement();
+        return executeQuery(testConn, sql, expectedColumns);
+    }
+
+    @VisibleForPackage
+    static ResultSet executeQuery(Connection connection, String sql, DataColumn... expectedColumns) throws SQLException {
+        Statement statement = connection.createStatement();
         ResultSet rs = statement.executeQuery(sql);
         assertSame(statement, rs.getStatement());
 

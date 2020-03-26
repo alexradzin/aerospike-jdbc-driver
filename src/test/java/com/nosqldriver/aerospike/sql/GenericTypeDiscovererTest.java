@@ -113,10 +113,10 @@ class GenericTypeDiscovererTest {
 
 
     private TypeDiscoverer createTypeDiscoverer(int limit) {
-        return new GenericTypeDiscoverer<>(recordsFetcher, recordDataExtractor, functionManager, limit);
+        return new GenericTypeDiscoverer<>(recordsFetcher, recordDataExtractor, functionManager, limit, false);
     }
 
     private TypeDiscoverer createTypeDiscoverer() {
-        return new GenericTypeDiscoverer<>(recordsFetcher, keyRecord -> keyRecord.record.bins, functionManager);
+        return new GenericTypeDiscoverer<>(recordsFetcher, keyRecord -> keyRecord.record.bins, functionManager, false);
     }
 }

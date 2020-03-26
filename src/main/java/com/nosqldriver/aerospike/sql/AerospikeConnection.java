@@ -34,6 +34,7 @@ import java.util.Properties;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.sql.ResultSet.CLOSE_CURSORS_AT_COMMIT;
@@ -60,6 +61,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     private final FunctionManager functionManager;
     private static final String CUSTOM_FUNCTION_PREFIX = "custom.function.";
     private static final int CUSTOM_FUNCTION_PREFIX_LENGTH = CUSTOM_FUNCTION_PREFIX.length();
+    private final boolean getPk;
 
     @VisibleForPackage
     AerospikeConnection(String url, Properties props) {
@@ -73,6 +75,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
         functionManager = init(new FunctionManager(), info);
         registerScript("stats", "distinct", "groupby");
         getMetaData();
+        getPk = Stream.of(policyProvider.getQueryPolicy(), policyProvider.getBatchPolicy(), policyProvider.getScanPolicy()).anyMatch(p -> p.sendKey);
     }
 
     private void registerScript(String ... names) {
@@ -249,7 +252,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
         validateResultSetParameters(resultSetType, resultSetConcurrency, resultSetHoldability);
-        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql, functionManager);
+        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql, functionManager, getPk);
     }
 
     @Override

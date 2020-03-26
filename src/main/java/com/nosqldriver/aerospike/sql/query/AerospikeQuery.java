@@ -21,8 +21,9 @@ abstract class AerospikeQuery<C, P extends Policy, R> implements Function<IAeros
     protected final C criteria;
     protected final P policy;
     protected final FunctionManager functionManager;
+    protected final boolean pk;
 
-    protected AerospikeQuery(Statement statement, String schema, String set, List<DataColumn> columns, C criteria, P policy, FunctionManager functionManager) {
+    protected AerospikeQuery(Statement statement, String schema, String set, List<DataColumn> columns, C criteria, P policy, FunctionManager functionManager, boolean pk) {
         this.statement = statement;
         this.schema = schema;
         this.set = set;
@@ -30,6 +31,7 @@ abstract class AerospikeQuery<C, P extends Policy, R> implements Function<IAeros
         this.criteria = criteria;
         this.policy = policy;
         this.functionManager = functionManager;
+        this.pk = pk;
     }
 
     @Override

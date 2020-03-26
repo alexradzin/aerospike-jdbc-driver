@@ -1,6 +1,5 @@
 package com.nosqldriver.aerospike.sql;
 
-import com.aerospike.client.Record;
 import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.ResultSet;
 import com.nosqldriver.sql.CompositeTypeDiscoverer;
@@ -20,9 +19,9 @@ import java.util.Map.Entry;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordDataExtractor;
 import static java.lang.Double.parseDouble;
 import static java.lang.Long.parseLong;
-import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
 
 public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
@@ -46,25 +45,22 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
         // TODO: add support of the rest of types: bytes, list, map, GeoJson.
     }
 
-
     private Map<Object, Object> row = null;
     private List<Entry<Object, Object>> entries = null;
     private int currentIndex = -1;
     private boolean nextWasCalled = false;
     private boolean nextResult = false;
 
-    private static final Function<Record, Map<String, Object>> recordDataExtractor = record -> record != null ? record.bins : emptyMap();
-    private static final Function<KeyRecord, Map<String, Object>> keyRecordDataExtractor = keyRecord -> keyRecord != null ? recordDataExtractor.apply(keyRecord.record) : emptyMap();
 
-
-    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager) {
+    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, boolean pk) {
         super(statement, schema, table, columns, rs, new CompositeTypeDiscoverer(
-                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor, functionManager),
+                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor, functionManager, pk),
                 columns1 -> {
                     columns1.stream().filter(c -> c.getName().startsWith("count(")).forEach(c -> c.withType(Types.BIGINT));
                     columns1.stream().filter(c -> !c.getName().contains("count(") && c.getName().contains("(")).forEach(c -> c.withType(Types.DOUBLE));
                     return columns1;
-                }));
+                }),
+                pk);
     }
 
     @Override
