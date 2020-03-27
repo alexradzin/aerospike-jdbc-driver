@@ -8,11 +8,12 @@ import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
 
+import java.util.Arrays;
 import java.util.Properties;
 
 
 public class AerospikePolicyProvider {
-    private final Policy policy;
+    private final Policy readPolicy;
     private final QueryPolicy queryPolicy;
     private final BatchPolicy batchPolicy;
     private final ScanPolicy scanPolicy;
@@ -23,16 +24,23 @@ public class AerospikePolicyProvider {
 
 
     AerospikePolicyProvider(IAerospikeClient client, Properties props) {
-        policy = parser.initProperties(client.getReadPolicyDefault(), parser.subProperties(props, "policy"));
-        queryPolicy = parser.initProperties(client.getQueryPolicyDefault(), parser.subProperties(props, "policy.query"));
-        batchPolicy = parser.initProperties(client.getBatchPolicyDefault(), parser.subProperties(props, "policy.batch"));
-        scanPolicy = parser.initProperties(client.getScanPolicyDefault(), parser.subProperties(props, "policy.scan"));
-        writePolicy = parser.initProperties(client.getWritePolicyDefault(), parser.subProperties(props, "policy.write"));
-        infoPolicy = parser.initProperties(client.getInfoPolicyDefault(), parser.subProperties(props, "policy.info"));
+        Properties common = parser.subProperties(props, "policy.*");
+        readPolicy = parser.initProperties(client.getReadPolicyDefault(), merge(common, parser.subProperties(props, "policy.read")));
+        queryPolicy = parser.initProperties(client.getQueryPolicyDefault(), merge(common, parser.subProperties(props, "policy.query")));
+        batchPolicy = parser.initProperties(client.getBatchPolicyDefault(), merge(common, parser.subProperties(props, "policy.batch")));
+        scanPolicy = parser.initProperties(client.getScanPolicyDefault(), merge(common, parser.subProperties(props, "policy.scan")));
+        writePolicy = parser.initProperties(client.getWritePolicyDefault(), merge(common, parser.subProperties(props, "policy.write")));
+        infoPolicy = parser.initProperties(client.getInfoPolicyDefault(), merge(common, parser.subProperties(props, "policy.info")));
     }
 
-    public Policy getPolicy() {
-        return policy;
+    private Properties merge(Properties ... properties) {
+        Properties result = new Properties();
+        Arrays.stream(properties).forEach(result::putAll);
+        return result;
+    }
+
+    public Policy getReadPolicy() {
+        return readPolicy;
     }
 
     public QueryPolicy getQueryPolicy() {

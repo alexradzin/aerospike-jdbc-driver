@@ -81,7 +81,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     }
 
     private void registerScript(String ... names) {
-        Policy regPolicy = policyProvider.getPolicy();
+        Policy regPolicy = policyProvider.getReadPolicy();
         ClassLoader cl = getClass().getClassLoader();
         stream(names).map(name -> name + ".lua").forEach(script -> client.register(regPolicy, cl, script, script, Language.LUA).waitTillComplete());
     }
