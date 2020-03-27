@@ -77,7 +77,6 @@ public class SelectWithPkTest {
                 DATA.create(NAMESPACE, PEOPLE, "kids_count", "kids_count").withType(BIGINT)
         )) {
             while (rs.next()) {
-                System.out.println(rs.getString("first_name"));
                 assertEquals(rs.getInt("PK"), rs.getInt("id"));
             }
         }
@@ -157,7 +156,6 @@ public class SelectWithPkTest {
                 DATA.create(NAMESPACE, INSTRUMENTS, "name", "instrument").withType(VARCHAR)
         )) {
             while(rs.next()) {
-                System.out.println(rs.getInt(1));
                 assertEquals(rs.getInt(1), rs.getInt(2));
             }
         }
