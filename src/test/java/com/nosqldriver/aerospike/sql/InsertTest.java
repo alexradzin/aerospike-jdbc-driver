@@ -38,8 +38,11 @@ import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -199,6 +202,25 @@ class InsertTest {
         expectedData.put("year_of_birth", 1940L);
         expectedData.put("kids_count", 2L);
         assertEquals(expectedData, record.bins);
+    }
+
+    @Test
+    void insertTwoRowsReusingPreparedStatement() throws SQLException {
+        PreparedStatement ps = testConn.prepareStatement("insert into data (PK, text) values (?, ?)");
+        ps.setInt(1, 1);
+        ps.setString(2, "hello");
+        ps.execute();
+
+        ps.setInt(1, 2);
+        ps.setString(2, "bye");
+        ps.execute();
+
+        Collection<String> actual = new HashSet<>();
+        ResultSet rs = testConn.createStatement().executeQuery("select text from data");
+        while (rs.next()) {
+            actual.add(rs.getString("text"));
+        }
+        assertEquals(new HashSet<>(Arrays.asList("hello", "bye")), actual);
     }
 
     @Test

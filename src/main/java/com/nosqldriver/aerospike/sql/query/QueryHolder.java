@@ -218,6 +218,12 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             }
         }
 
+        // Re-use prepared statement after execution
+        if (dataIndex == 0 && !data.isEmpty() && data.get(0).size() == parameters.length && predExps.isEmpty()) {
+            data.clear();
+            data.add(Arrays.asList(parameters));
+        }
+
         NavigableSet<Integer> indexesToRemove = new TreeSet<>();
         Class paramType = null;
         Class type = null;
@@ -283,7 +289,6 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             predExps.remove(0);
         }
     }
-
 
     private Object retrieveParameterValueFromInnerQuery(java.sql.Statement sqlStatement, int i, PredExp predExp, String columnName, Collection<Integer> indexesToRemove) {
         Object parameter = null;
