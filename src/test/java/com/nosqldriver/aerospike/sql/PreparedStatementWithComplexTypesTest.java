@@ -43,9 +43,10 @@ import java.util.function.Function;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeTestUrl;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.asList;
@@ -63,6 +64,7 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 class PreparedStatementWithComplexTypesTest {
     private static final String DATA = "data";
+    private Connection testConn = getTestConnection();
 
     @BeforeEach
     @AfterEach
@@ -135,7 +137,7 @@ class PreparedStatementWithComplexTypesTest {
         insert.setArray(5, testConn.createArrayOf("varchar", new String[] {"Sean", "Julian"}));
         int rowCount = insert.executeUpdate();
         assertEquals(1, rowCount);
-        Record record = client.get(null, key);
+        Record record = getClient().get(null, key);
         assertNotNull(record);
         Map<String, Object> expectedData = new HashMap<>();
         expectedData.put("id", 1L);
@@ -193,7 +195,7 @@ class PreparedStatementWithComplexTypesTest {
     @Test
     void insertOneRowUsingPreparedStatementVariousArrayTypes() throws SQLException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
-        assertNull(client.get(null, key1));
+        assertNull(getClient().get(null, key1));
         PreparedStatement ps = testConn.prepareStatement(
                 "insert into data (PK, byte, short, int, long, boolean, string, nstring, blob, clob, nclob, t, ts, d, fval, dval) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
@@ -230,7 +232,7 @@ class PreparedStatementWithComplexTypesTest {
 
         assertEquals(1, ps.executeUpdate());
 
-        Record record1 = client.get(null, key1);
+        Record record1 = getClient().get(null, key1);
         assertNotNull(record1);
         assertArrayEquals(new byte[]{8}, (byte[])record1.getValue("byte")); // byte array is special case since it is stored as byte array
         // int primitives (short, int, long) are stored as longs in Aerospike
@@ -356,7 +358,7 @@ class PreparedStatementWithComplexTypesTest {
     })
     void insertOneRowUsingPreparedStatementVariousCompositeTypes(String sql) throws SQLException, IOException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
-        assertNull(client.get(null, key1));
+        assertNull(getClient().get(null, key1));
         PreparedStatement ps = testConn.prepareStatement(
                 "insert into data (PK, id, bytes, blob, clob) values (?, ?, ?, ?, ?)"
         );
@@ -629,7 +631,8 @@ class PreparedStatementWithComplexTypesTest {
         insert.setObject(2, MyNotSerializableClass.serialize(obj1));
         assertTrue(insert.execute());
 
-        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+
+        Connection conn = DriverManager.getConnection(aerospikeTestUrl + "?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
         PreparedStatement select = conn.prepareStatement("select deserialize(blob) as object from data where PK=?");
         select.setObject(1, 1);
         ResultSet rs = select.executeQuery();
@@ -662,7 +665,7 @@ class PreparedStatementWithComplexTypesTest {
         String text = "my text";
         MyNotSerializableClass obj = new MyNotSerializableClass(n, text);
 
-        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        Connection conn = DriverManager.getConnection(aerospikeTestUrl + "?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
         PreparedStatement insert = conn.prepareStatement("insert into data (PK, blob) values (?, ?)");
         insert.setInt(1, 1);
         insert.setBytes(2, MyNotSerializableClass.serialize(obj));
@@ -696,7 +699,7 @@ class PreparedStatementWithComplexTypesTest {
         String text = "my text";
         MyNotSerializableClass obj = new MyNotSerializableClass(n, text);
 
-        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost/test?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        Connection conn = DriverManager.getConnection(aerospikeTestUrl + "?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
         PreparedStatement insert = conn.prepareStatement("insert into data (PK, blob) values (?, ?)");
         insert.setInt(1, 1);
         insert.setBytes(2, MyNotSerializableClass.serialize(obj));
@@ -716,12 +719,12 @@ class PreparedStatementWithComplexTypesTest {
 
     @Test
     void notExistingCustomFunction() {
-        assertThrows(IllegalArgumentException.class, () -> DriverManager.getConnection("jdbc:aerospike:localhost?custom.function.deserialize=DoesNotExist"));
+        assertThrows(IllegalArgumentException.class, () -> DriverManager.getConnection(TestDataUtils.aerospikeRootUrl + "?custom.function.deserialize=DoesNotExist"));
     }
 
     @Test
     void wrongCustomFunction() {
-        assertThrows(IllegalArgumentException.class, () -> DriverManager.getConnection("jdbc:aerospike:localhost?custom.function.deserialize=" + getClass().getName()));
+        assertThrows(IllegalArgumentException.class, () -> DriverManager.getConnection(TestDataUtils.aerospikeRootUrl + "?custom.function.deserialize=" + getClass().getName()));
     }
 
 
@@ -742,7 +745,7 @@ class PreparedStatementWithComplexTypesTest {
         insert.setString(4, "Lennon");
         int rowCount = insert.executeUpdate();
         assertEquals(1, rowCount);
-        Record record = client.get(null, key);
+        Record record = getClient().get(null, key);
         assertNotNull(record);
         Map<String, Object> expectedData = new HashMap<>();
         expectedData.put("id", 1L);
@@ -758,7 +761,7 @@ class PreparedStatementWithComplexTypesTest {
 
     private <K, V> Map<K, V> insertAndSelectMap(Map<K, V> inMap) throws SQLException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
-        assertNull(client.get(null, key1));
+        assertNull(getClient().get(null, key1));
 
         PreparedStatement insert = testConn.prepareStatement("insert into data (PK, map) values (?, ?)");
         insert.setInt(1, 1);

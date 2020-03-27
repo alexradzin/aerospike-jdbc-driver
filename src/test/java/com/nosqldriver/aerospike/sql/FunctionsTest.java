@@ -7,9 +7,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeRootUrl;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -42,7 +42,7 @@ class FunctionsTest {
 
 
     private <T> void test(String params, String query, ThrowingConsumer<ResultSet, SQLException> f) throws SQLException {
-        Connection conn = DriverManager.getConnection("jdbc:aerospike:localhost?" + params);
+        Connection conn = DriverManager.getConnection(format("%s?%s", aerospikeRootUrl, params));
         ResultSet rs = conn.createStatement().executeQuery(query);
         assertTrue(rs.next());
         f.accept(rs);

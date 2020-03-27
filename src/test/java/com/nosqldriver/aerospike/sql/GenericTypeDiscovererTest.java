@@ -11,6 +11,7 @@ import com.nosqldriver.util.FunctionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.HashSet;
@@ -22,9 +23,9 @@ import java.util.function.Function;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.DATA;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
@@ -41,11 +42,11 @@ class GenericTypeDiscovererTest {
         Statement statement = new Statement();
         statement.setNamespace(catalog);
         statement.setSetName(table);
-        return client.query(new QueryPolicy(), statement);
+        return getClient().query(new QueryPolicy(), statement);
     };
     private static final Function<KeyRecord, Map<String, Object>> recordDataExtractor = keyRecord -> keyRecord.record.bins;
     private FunctionManager functionManager = new FunctionManager();
-
+    private Connection testConn = getTestConnection();
 
     @AfterEach
     void dropAll() {

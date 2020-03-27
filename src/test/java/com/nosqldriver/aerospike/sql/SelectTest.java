@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.sql.Array;
+import java.sql.Connection;
 import java.sql.ParameterMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -57,7 +58,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.createIndex;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.dropIndexSafely;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQueryPreparedStatement;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.toListOfMaps;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.lang.String.format;
@@ -92,6 +93,8 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
  * For performance reasons the data is filled in the beginning of the test case.
  */
 class SelectTest {
+    private Connection testConn = getTestConnection();
+
     @AfterEach
     void clean() {
         dropIndexSafely("first_name");

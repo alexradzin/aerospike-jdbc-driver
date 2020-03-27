@@ -61,6 +61,13 @@ jar {
 
 
 test {
+    ["aerospike.host", "aerospike.port"].each {
+        String value = System.getProperty(it)
+        if (value != null) {
+            systemProperty it, value
+        }
+    }
+    
     testLogging {
         events 'PASSED', 'FAILED', 'SKIPPED'
     }

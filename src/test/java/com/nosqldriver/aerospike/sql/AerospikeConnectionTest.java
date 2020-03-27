@@ -9,7 +9,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikePort;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static java.lang.String.format;
 import static java.sql.Connection.TRANSACTION_NONE;
 import static java.sql.Connection.TRANSACTION_READ_UNCOMMITTED;
@@ -29,8 +30,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AerospikeConnectionTest {
-    private final String JDBC_LOCAL = "jdbc:aerospike:localhost";
+    private final String JDBC_LOCAL = format("jdbc:aerospike:%s", TestDataUtils.aerospikeHost);
     private final String JDBC_LOCAL_TEST = format("%s/%s", JDBC_LOCAL, "test");
+    private Connection testConn = getTestConnection();
+
     @Test
     void createValidConnectionWithoutNamespace() throws SQLException {
         Connection conn = new AerospikeConnection(JDBC_LOCAL, new Properties());
@@ -54,7 +57,7 @@ class AerospikeConnectionTest {
 
     @Test
     void createValidConnectionWithPort() throws SQLException {
-        assertConnectionIsClosed(format("%s:%d", JDBC_LOCAL, 3000), new Properties());
+        assertConnectionIsClosed(format("%s:%d", JDBC_LOCAL, aerospikePort), new Properties());
     }
 
 

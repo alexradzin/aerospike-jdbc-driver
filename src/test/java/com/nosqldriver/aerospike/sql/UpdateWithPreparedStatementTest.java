@@ -1,5 +1,6 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.aerospike.client.IAerospikeClient;
 import com.nosqldriver.Person;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,15 +16,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.beatles;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class UpdateWithPreparedStatementTest {
+    private IAerospikeClient client = getClient();
+
     @BeforeEach
     void init() {
         deleteAllRecords(NAMESPACE, PEOPLE);
@@ -111,7 +114,7 @@ public class UpdateWithPreparedStatementTest {
 
 
     private void executeUpdate(String sql, Object[] params, int expectedRowCount) throws SQLException {
-        PreparedStatement ps = testConn.prepareStatement(sql);
+        PreparedStatement ps = getTestConnection().prepareStatement(sql);
         for (int i = 0; i < params.length; i++) {
             ps.setObject(i + 1, params[i]);
         }

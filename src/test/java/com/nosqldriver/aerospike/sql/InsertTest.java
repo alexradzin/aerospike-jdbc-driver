@@ -1,5 +1,6 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import com.nosqldriver.VisibleForPackage;
@@ -25,6 +26,7 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.Blob;
 import java.sql.Clob;
+import java.sql.Connection;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -43,9 +45,9 @@ import java.util.stream.Stream;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.sql.ResultSet.CLOSE_CURSORS_AT_COMMIT;
@@ -71,6 +73,8 @@ import static org.mockito.Mockito.when;
  */
 class InsertTest {
     private static final String DATA = "data";
+    private IAerospikeClient client = getClient();
+    private Connection testConn = getTestConnection();
 
     @BeforeEach
     @AfterEach

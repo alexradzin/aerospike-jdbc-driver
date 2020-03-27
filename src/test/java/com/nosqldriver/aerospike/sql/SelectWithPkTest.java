@@ -15,8 +15,9 @@ import java.sql.SQLException;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.INSTRUMENTS;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeTestUrl;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.PK;
 import static java.lang.String.format;
@@ -36,7 +37,7 @@ public class SelectWithPkTest {
         p.sendKey = true;
         TestDataUtils.writeBeatles(p);
         TestDataUtils.writeMainPersonalInstruments(p);
-        queryKeyConn = DriverManager.getConnection("jdbc:aerospike:localhost/test?policy.query.sendKey=true");
+        queryKeyConn = DriverManager.getConnection(aerospikeTestUrl + "?policy.query.sendKey=true");
     }
 
     static void dropAll() {
@@ -99,7 +100,7 @@ public class SelectWithPkTest {
             "select PK, id, first_name, last_name, year_of_birth, kids_count from people limit 0",
     })
     void metadataOneTableWithUnknownPk(String sql) throws SQLException {
-        executeQuery(testConn, sql,
+        executeQuery(getTestConnection(), sql,
                 PK.create(NAMESPACE, PEOPLE, "PK", "PK"),
                 DATA.create(NAMESPACE, PEOPLE, "id", "id").withType(BIGINT),
                 DATA.create(NAMESPACE, PEOPLE, "first_name", "first_name").withType(VARCHAR),
@@ -138,7 +139,7 @@ public class SelectWithPkTest {
     })
     void metadataAllFieldsOneTableWithPkBulk(String policy) throws SQLException {
         metadataAllFieldsOneTableWithPk(
-                DriverManager.getConnection(format("jdbc:aerospike:localhost/test?policy.%s.sendKey=true", policy)),
+                DriverManager.getConnection(format("%s?policy.%s.sendKey=true", aerospikeTestUrl, policy)),
                 "select * from people");
     }
 
@@ -164,7 +165,7 @@ public class SelectWithPkTest {
 
     @Test
     void insertAndSelect() throws SQLException {
-        Connection writeConn = DriverManager.getConnection("jdbc:aerospike:localhost/test?policy.write.sendKey=true");
+        Connection writeConn = DriverManager.getConnection(aerospikeTestUrl + "?policy.write.sendKey=true");
         assertTrue(writeConn.createStatement().execute("insert into data (PK, val) values ('hello', 'bye')"));
         queryKeyConn.createStatement().executeQuery("select * from data where PK='hello'");
 

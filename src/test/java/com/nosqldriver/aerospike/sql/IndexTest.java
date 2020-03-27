@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
@@ -20,7 +21,8 @@ import java.util.Properties;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
@@ -50,14 +52,14 @@ class IndexTest {
     @AfterEach
     void clean() {
         try {
-            TestDataUtils.client.dropIndex(null, NAMESPACE, PEOPLE, STRING_INDEX_NAME).waitTillComplete();
+            getClient().dropIndex(null, NAMESPACE, PEOPLE, STRING_INDEX_NAME).waitTillComplete();
         } catch (AerospikeException e) {
             if (e.getResultCode() != 201) {
                 throw e;
             }
         }
         try {
-            TestDataUtils.client.dropIndex(null, NAMESPACE, PEOPLE, NUMERIC_INDEX_NAME).waitTillComplete();
+            getClient().dropIndex(null, NAMESPACE, PEOPLE, NUMERIC_INDEX_NAME).waitTillComplete();
         } catch (AerospikeException e) {
             if (e.getResultCode() != 201) {
                 throw e;
@@ -120,11 +122,12 @@ class IndexTest {
 
     private <R> void assertCreateAndDropIndex(String table, String column, String indexName, String indexType, ThrowingBiFunction<Statement, String, R, SQLException> executor, ThrowingConsumer<R, SQLException> validator) throws SQLException, IOException {
         TestDataUtils.writeBeatles();
-        await().atMost(5, SECONDS).until(() -> !Info.request(TestDataUtils.client.getNodes()[0], "sindex").contains(indexName));
+        Connection testConn = getTestConnection();
+        await().atMost(5, SECONDS).until(() -> !Info.request(getClient().getNodes()[0], "sindex").contains(indexName));
         validator.accept(executor.apply(testConn.createStatement(), format("CREATE %s INDEX %s ON %s (%s)", indexType, indexName, table, column)));
 
         Properties indexProps = new Properties();
-        indexProps.load(new StringReader(Info.request(TestDataUtils.client.getNodes()[0], "sindex").replace(':', '\n')));
+        indexProps.load(new StringReader(Info.request(getClient().getNodes()[0], "sindex").replace(':', '\n')));
         assertEquals(indexName, indexProps.getProperty("indexname"));
 
         validator.accept(executor.apply(testConn.createStatement(), format("DROP INDEX %s.%s", table, indexName)));

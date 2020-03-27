@@ -40,14 +40,15 @@ import com.aerospike.client.task.RegisterTask;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 
-import java.io.IOException;
 import java.sql.SQLException;
-import java.text.ParseException;
 import java.util.Calendar;
 import java.util.List;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeHost;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikePort;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
@@ -67,22 +68,22 @@ import static org.mockito.Mockito.when;
 class AerospikeSqlClientTest {
     @Test
     void successfulInit() {
-        assertTrue(new AerospikeSqlClient(() -> TestDataUtils.client).isConnected());
+        assertTrue(new AerospikeSqlClient(TestDataUtils::getClient).isConnected());
     }
 
     @Test
     void unsuccessfulInitWrongHost() {
-        assertThrows(SQLException.class, () -> new AerospikeSqlClient(() -> new AerospikeClient("wronghost", 3000)));
+        assertThrows(SQLException.class, () -> new AerospikeSqlClient(() -> new AerospikeClient("wronghost", aerospikePort)));
     }
 
     @Test
     void unsuccessfulInitWrongPort() {
-        assertThrows(SQLException.class, () -> new AerospikeSqlClient(() -> new AerospikeClient("localhost", 3456)));
+        assertThrows(SQLException.class, () -> new AerospikeSqlClient(() -> new AerospikeClient(aerospikeHost, 3456)));
     }
 
     @Test
     void simpleGetters() {
-        IAerospikeClient realClient = TestDataUtils.client;
+        IAerospikeClient realClient = getClient();
         IAerospikeClient wrapperClient = new AerospikeSqlClient(() -> realClient);
         assertEquals(realClient.getReadPolicyDefault(), wrapperClient.getReadPolicyDefault());
         assertEquals(realClient.getWritePolicyDefault(), wrapperClient.getWritePolicyDefault());
@@ -196,7 +197,7 @@ class AerospikeSqlClientTest {
 
     @Test
     void callOnClosedClient() {
-        IAerospikeClient realClient = new AerospikeClient("localhost", 3000); // This test closes client, so it needs its own instance to avoid failures of other tests
+        IAerospikeClient realClient = new AerospikeClient(aerospikeHost, aerospikePort); // This test closes client, so it needs its own instance to avoid failures of other tests
         IAerospikeClient wrapperClient = new AerospikeSqlClient(() -> realClient);
         assertCallOnClosedClient(realClient, AerospikeException.class);
         assertCallOnClosedClient(wrapperClient, SQLException.class);

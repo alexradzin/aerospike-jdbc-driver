@@ -1,6 +1,7 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.AerospikeException;
+import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
 import com.aerospike.client.Key;
 import com.aerospike.client.Language;
@@ -24,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SUBJECT_SELECTION;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeAllPersonalInstruments;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeSubjectSelection;
@@ -34,6 +35,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.writeSubjectSelection;
  * This class will be removed once driver becomes stable.
  */
 public class DevTest {
+    private IAerospikeClient client = getClient();
     @BeforeAll
     @AfterAll
     static void dropAll() {

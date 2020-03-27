@@ -12,6 +12,7 @@ import java.sql.SQLException;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeRootUrl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -23,7 +24,7 @@ class UseTest {
 
     @BeforeEach
     void setUp() throws SQLException {
-        rootConn = DriverManager.getConnection("jdbc:aerospike:localhost");
+        rootConn = DriverManager.getConnection(aerospikeRootUrl);
         TestDataUtils.deleteAllRecords(NAMESPACE, PEOPLE);
     }
 

@@ -55,7 +55,13 @@ If  you  want to run unit test you want to run unit tests please [install and ru
 ```sh
 ./gradlew build
 ```
-This command will compile the code, run all unit and integration tests and create jar file. 
+This command will compile the code, run all unit and integration tests and create jar file.
+By default tests are being executed against aerospike instance running on `localhost` and listening to default port 3000.
+To change this behaviour use system propertiees `aerospike.host` and `aerospike.port` respectively, e.g.:
+
+```sh
+./gradlew build -Daerospike.host=10.10.1.1 -Daerospike.port=3333
+```
 
 Aerospike JDBC driver depends on SQL parser and [Aerospke Java client](https://www.aerospike.com/docs/client/java/). If you want to use the driver with 3rd party tool it is very convenient to build single fat jar that contains all dependencies. To get it run the following command:
 

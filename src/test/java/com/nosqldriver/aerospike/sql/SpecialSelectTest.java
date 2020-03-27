@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -27,7 +28,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SELECT_ALL;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SUBJECT_SELECTION;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.write;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeData;
@@ -46,6 +47,8 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
  * test must clean all data.
   */
 class SpecialSelectTest {
+    private Connection testConn = getTestConnection();
+
     @AfterEach
     void dropAll() {
         deleteAllRecords(NAMESPACE, PEOPLE);

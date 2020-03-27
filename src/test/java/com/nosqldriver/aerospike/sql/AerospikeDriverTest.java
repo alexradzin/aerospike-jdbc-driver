@@ -6,6 +6,8 @@ import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.util.Properties;
 
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeHost;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeRootUrl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -20,17 +22,17 @@ class AerospikeDriverTest {
 
     @Test
     void acceptsRightUrl() throws SQLException {
-        assertTrue(new AerospikeDriver().acceptsURL("jdbc:aerospike:loclhost"));
+        assertTrue(new AerospikeDriver().acceptsURL(aerospikeRootUrl));
     }
 
     @Test
-    void acceptsWrongUrl() throws SQLException {
+    void rejectsWrongUrl() throws SQLException {
         assertFalse(new AerospikeDriver().acceptsURL("jdbc:mysql:loclhost"));
     }
 
     @Test
     void successfulConnect() throws SQLException {
-        assertNotNull(new AerospikeDriver().connect("jdbc:aerospike:localhost", new Properties()));
+        assertNotNull(new AerospikeDriver().connect(aerospikeRootUrl, new Properties()));
     }
 
     @Test
@@ -40,12 +42,12 @@ class AerospikeDriverTest {
 
     @Test
     void propertyInfoNoParameters() throws SQLException {
-        assertEquals(0, new AerospikeDriver().getPropertyInfo("jdbc:aerospike:localhost", new Properties()).length);
+        assertEquals(0, new AerospikeDriver().getPropertyInfo("jdbc:aerospike:" + aerospikeHost, new Properties()).length);
     }
 
     @Test
     void propertyInfoUrlParameters() throws SQLException {
-        DriverPropertyInfo[] info = new AerospikeDriver().getPropertyInfo("jdbc:aerospike:localhost?timeout=12345", new Properties());
+        DriverPropertyInfo[] info = new AerospikeDriver().getPropertyInfo(aerospikeRootUrl + "?timeout=12345", new Properties());
         assertEquals(1, info.length);
         assertEquals("timeout", info[0].name);
         assertEquals("12345", info[0].value);
@@ -55,7 +57,7 @@ class AerospikeDriverTest {
     void propertyInfoProperties() throws SQLException {
         Properties props = new Properties();
         props.setProperty("timeout", "54321");
-        DriverPropertyInfo[] info = new AerospikeDriver().getPropertyInfo("jdbc:aerospike:localhost", props);
+        DriverPropertyInfo[] info = new AerospikeDriver().getPropertyInfo(aerospikeRootUrl, props);
         assertEquals(1, info.length);
         assertEquals("timeout", info[0].name);
         assertEquals("54321", info[0].value);
@@ -65,7 +67,7 @@ class AerospikeDriverTest {
     void propertyInfoUrlAndProperties() throws SQLException {
         Properties props = new Properties();
         props.setProperty("fetchSize", "1000");
-        DriverPropertyInfo[] info = new AerospikeDriver().getPropertyInfo("jdbc:aerospike:localhost?timeout=12345", props);
+        DriverPropertyInfo[] info = new AerospikeDriver().getPropertyInfo(aerospikeRootUrl + "?timeout=12345", props);
         assertEquals(2, info.length);
         assertEquals("timeout", info[0].name);
         assertEquals("12345", info[0].value);

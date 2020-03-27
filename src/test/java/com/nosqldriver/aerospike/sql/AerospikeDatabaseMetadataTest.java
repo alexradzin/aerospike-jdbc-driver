@@ -2,6 +2,7 @@ package com.nosqldriver.aerospike.sql;
 
 import org.junit.jupiter.api.Test;
 
+import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.RowIdLifetime;
@@ -9,8 +10,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeTestUrl;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.getColumnValues;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static java.sql.Connection.TRANSACTION_NONE;
 import static java.sql.Connection.TRANSACTION_READ_UNCOMMITTED;
 import static java.sql.DatabaseMetaData.sqlStateSQL;
@@ -25,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AerospikeDatabaseMetadataTest {
+    private Connection testConn = getTestConnection();
     @Test
     void trivialFlags() throws SQLException {
         DatabaseMetaData md = testConn.getMetaData();
@@ -157,7 +160,7 @@ class AerospikeDatabaseMetadataTest {
     @Test
     void trivialString() throws SQLException {
         DatabaseMetaData md = testConn.getMetaData();
-        assertEquals("jdbc:aerospike:localhost/test", md.getURL());
+        assertEquals(aerospikeTestUrl, md.getURL());
         assertNull(md.getUserName());
         assertEquals("Aerospike Community Edition", md.getDatabaseProductName());
         assertTrue(Integer.parseInt(md.getDatabaseProductVersion().split("\\.")[0]) >= 4);

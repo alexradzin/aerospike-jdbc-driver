@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.AerospikeClient;
 import com.aerospike.client.AerospikeException;
 import com.aerospike.client.Bin;
+import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
 import com.aerospike.client.Key;
 import com.aerospike.client.Log;
@@ -55,29 +56,57 @@ public class TestDataUtils {
         setCallback((level, message) -> System.out.println(message));
         setLevel(Log.Level.DEBUG);
     }
-    @VisibleForPackage static final AerospikeClient client = new AerospikeClient("localhost", 3000);
-    @VisibleForPackage static Connection testConn;
+    static final String aerospikeHost = System.getProperty("aerospike.host", "localhost");
+    static final int aerospikePort = Integer.parseInt(System.getProperty("aerospike.port", "3000"));
+    static final String aerospikeRootUrl = format("jdbc:aerospike:%s:%d", aerospikeHost, aerospikePort);
+    static final String aerospikeTestUrl = format("jdbc:aerospike:%s:%d/test", aerospikeHost, aerospikePort);
 
-    static {
-        try {
-            testConn = DriverManager.getConnection("jdbc:aerospike:localhost/test");
-            assertNotNull(testConn);
+    private static AerospikeClient client;
+    private static Connection testConn = null;
 
-            // Just to be polite. Open connected should be closed. The testConn however is static and shared among all tests,
-            // so we cannot close it in "@After" or "@AfterAll" of any test case. So, we do our best and close it at least here.
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-                @Override
-                public void run() {
+
+    @VisibleForPackage
+    static IAerospikeClient getClient() {
+        if (client == null) {
+            synchronized (TestDataUtils.class) {
+                if (client == null) {
+                    client = new AerospikeClient(aerospikeHost, aerospikePort);
+                    closeOnShutdown(client);
+                }
+            }
+        }
+        return client;
+    }
+
+    @VisibleForPackage
+    static Connection getTestConnection() {
+        if (testConn == null) {
+            synchronized (TestDataUtils.class) {
+                if (testConn == null) {
                     try {
-                        testConn.close();
+                        testConn = DriverManager.getConnection(aerospikeTestUrl);
                     } catch (SQLException e) {
-                        e.printStackTrace();
+                        throw new IllegalStateException("Cannot create connection to DB", e);
                     }
                 }
-            });
-        } catch (SQLException e) {
-            throw new IllegalStateException("Cannot create connection to DB", e);
+            }
         }
+        return testConn;
+    }
+
+    private static void closeOnShutdown(AutoCloseable c) {
+        // Just to be polite. Open connection should be closed. The connection and client however are static and shared among all tests,
+        // so we cannot close it in "@After" or "@AfterAll" of any test case. So, we do our best and close it at least here.
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                try {
+                    c.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     public static final Person[] beatles = new Person[] {
@@ -92,7 +121,7 @@ public class TestDataUtils {
         @Override
         public Integer apply(String sql) {
             try {
-                return testConn.createStatement().executeUpdate(sql);
+                return getTestConnection().createStatement().executeUpdate(sql);
             } catch (SQLException e) {
                 return sneakyThrow(e);
             }
@@ -103,7 +132,7 @@ public class TestDataUtils {
         @Override
         public Boolean apply(String sql) {
             try {
-                return testConn.createStatement().execute(sql);
+                return getTestConnection().createStatement().execute(sql);
             } catch (SQLException e) {
                 return sneakyThrow(e);
             }
@@ -114,7 +143,7 @@ public class TestDataUtils {
         @Override
         public ResultSet apply(String sql) {
             try {
-                return testConn.createStatement().executeQuery(sql);
+                return getTestConnection().createStatement().executeQuery(sql);
             } catch (SQLException e) {
                 return sneakyThrow(e);
             }
@@ -125,7 +154,7 @@ public class TestDataUtils {
         @Override
         public ResultSet apply(String sql) {
             try {
-                return testConn.prepareStatement(sql).executeQuery();
+                return getTestConnection().prepareStatement(sql).executeQuery();
             } catch (SQLException e) {
                 return sneakyThrow(e);
             }
@@ -136,7 +165,7 @@ public class TestDataUtils {
         @Override
         public ResultSet apply(String sql, Object[] params) {
             try {
-                PreparedStatement ps = testConn.prepareStatement(sql);
+                PreparedStatement ps = getTestConnection().prepareStatement(sql);
                 for (int i = 0; i < params.length; i++) {
                     ps.setObject(i + 1, params[i]);
                 }
@@ -157,7 +186,7 @@ public class TestDataUtils {
     }
 
     @VisibleForPackage static Collection<String> retrieveColumn(String sql, String column) throws SQLException {
-        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        ResultSet rs = getTestConnection().createStatement().executeQuery(sql);
         Collection<String> data = new HashSet<>();
         while (rs.next()) {
             data.add(rs.getString(column));
@@ -256,7 +285,7 @@ public class TestDataUtils {
     }
 
     @VisibleForPackage static void write(WritePolicy writePolicy, Key key, Bin... bins) {
-        client.put(writePolicy, key, bins);
+        getClient().put(writePolicy, key, bins);
     }
 
     private static void write(String table, WritePolicy writePolicy, int id, Bin ... bins) {
@@ -276,7 +305,7 @@ public class TestDataUtils {
     }
 
     @VisibleForPackage static void deleteAllRecords(String namespace, String table) {
-        client.scanAll(new ScanPolicy(), namespace, table, (key, record) -> client.delete(new WritePolicy(), key));
+        getClient().scanAll(new ScanPolicy(), namespace, table, (key, record) -> getClient().delete(new WritePolicy(), key));
     }
 
     @VisibleForPackage static void dropIndexSafely(String fieldName) {
@@ -290,15 +319,15 @@ public class TestDataUtils {
     }
 
     @VisibleForPackage static void createIndex(String fieldName, IndexType indexType) {
-        client.createIndex(null, NAMESPACE, PEOPLE, getIndexName(fieldName), fieldName, indexType).waitTillComplete();
+        getClient().createIndex(null, NAMESPACE, PEOPLE, getIndexName(fieldName), fieldName, indexType).waitTillComplete();
     }
 
     private static void dropIndex(String fieldName) {
-        client.dropIndex(null, NAMESPACE, PEOPLE, getIndexName(fieldName)).waitTillComplete();
+        getClient().dropIndex(null, NAMESPACE, PEOPLE, getIndexName(fieldName)).waitTillComplete();
     }
 
     @VisibleForPackage static Collection<String> getIndexes() {
-        return new ConnectionParametersParser().indexesParser(Info.request(client.getNodes()[0], "sindex"));
+        return new ConnectionParametersParser().indexesParser(Info.request(getClient().getNodes()[0], "sindex"));
     }
 
     private static String getIndexName(String fieldName) {
@@ -308,7 +337,7 @@ public class TestDataUtils {
 
     @VisibleForPackage
     static ResultSet executeQuery(String sql, String expectedSchema, boolean orderedValidation, Object ... expectedMetadataFields) throws SQLException {
-        Statement statement = testConn.createStatement();
+        Statement statement = getTestConnection().createStatement();
         ResultSet rs = statement.executeQuery(sql);
         assertSame(statement, rs.getStatement());
 
@@ -322,7 +351,7 @@ public class TestDataUtils {
 
     @VisibleForPackage
     static ResultSet executeQuery(String sql, DataColumn... expectedColumns) throws SQLException {
-        return executeQuery(testConn, sql, expectedColumns);
+        return executeQuery(getTestConnection(), sql, expectedColumns);
     }
 
     @VisibleForPackage

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -19,7 +20,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.assertFindColumn;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.testConn;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeAllPersonalInstruments;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
@@ -159,7 +160,8 @@ class SelectJoinTest {
             "select first_name, i.name as instrument from people as p join instruments as i on p.id<i.person_id",
             "select first_name, i.name as instrument from people as p join instruments as i on p.id<=i.person_id",
     })
-    void wrongJoin(String sql) throws SQLException {
+    void wrongJoin(String sql) {
+        Connection testConn = getTestConnection();
         assertTrue(assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage().startsWith("Join condition must use = only but was"));
     }
 

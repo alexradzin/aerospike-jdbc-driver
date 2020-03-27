@@ -1,5 +1,6 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.aerospike.client.IAerospikeClient;
 import com.nosqldriver.Person;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterAll;
@@ -19,16 +20,16 @@ import java.util.function.Function;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.beatles;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.client;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 abstract class UpdateTest {
+    private IAerospikeClient client = getClient();
 
     @BeforeEach
     void init() {
