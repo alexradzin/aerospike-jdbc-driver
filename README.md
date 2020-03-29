@@ -224,7 +224,7 @@ Custom function is a public class that has public default constructor and implem
 Let's take a look on example from the previous chapter but this time the class `Person` is not `Serializable`. Let's assume that data has been already written to the database and we want to have a convenient way to retrieve it:
 
 ```sql
-select data[firstName], data[lastName], data[yearOfBirth] from (select person(data) from people)
+select human[firstName], human[lastName], human[yearOfBirth] from (select person(data) as human from people)
 ```
 
 The statement calls function `person()` that converts data stored in database to object of class `Person`. But how is it possible? Indeed driver does not know anything about either class custom `Person` or its serialization format. The answer is that `person()` is a custom function.
@@ -269,7 +269,7 @@ select sqrt(4), strlen('abc'); -- returns 2, 3
 select sqrt(strlen('abcd')); -- returns 2
 ```
 
-Here is an example of custom function that deserializes custom binary representation of `Persoon` to instance of class `Person`:
+Here is an example of custom function that deserializes custom binary representation of `Person` to instance of class `Person`:
 
 ```java
 public class PersonDeserializer implements Function<byte[], Person> {
