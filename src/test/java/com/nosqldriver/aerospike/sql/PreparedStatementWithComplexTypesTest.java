@@ -653,16 +653,29 @@ class PreparedStatementWithComplexTypesTest {
     }
 
 
-
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
-            "select custom[number], custom[text] from (select deserialize(blob) as custom from data)",
-            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[number]=321",
-            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[text]='my text'",
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data);custom[number],custom[number],321;custom[text],custom[text],my text",
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[number]=321;custom[number],custom[number],321;custom[text],custom[text],my text",
+            "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[text]='my text';custom[number],custom[number],321;custom[text],custom[text],my text",
+            "select custom[number] as n, custom[text] as t from (select deserialize(blob) as custom from data);custom[number],n,321;custom[text],t,my text",
+            "select n+1 as number, upper(t) AS TEXT from (select custom[number] as n, custom[text] as t from (select deserialize(blob) as custom from data));n + 1,number,322;upper(t),TEXT,MY TEXT",
     })
-    void writeAndReadObjectUsingCustomSerialization(String query) throws SQLException, IOException {
+    void writeAndReadObjectUsingCustomSerializationWithAlias(String param) throws SQLException, IOException {
+        String[] parts = param.split(";");
+        String query = parts[0];
         int n = 321;
         String text = "my text";
+        String[] numberParam = parts[1].split(",");
+        String numberColumnName = numberParam[0];
+        String numberColumnAlias = numberParam[1];
+        int numberColumnValue = Integer.parseInt(numberParam[2]);
+
+        String[] textParam = parts[2].split(",");
+        String textColumnName = textParam[0];
+        String textColumnAlias = textParam[1];
+        String textColumnValue = textParam[2];
+
         MyNotSerializableClass obj = new MyNotSerializableClass(n, text);
 
         Connection conn = DriverManager.getConnection(aerospikeTestUrl + "?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
@@ -674,19 +687,20 @@ class PreparedStatementWithComplexTypesTest {
         ResultSet rs = conn.createStatement().executeQuery(query);
         ResultSetMetaData md = rs.getMetaData();
         assertEquals(2, md.getColumnCount());
-        assertEquals("custom[number]", md.getColumnName(1));
-        assertEquals("custom[text]", md.getColumnName(2));
+        assertEquals(numberColumnName, md.getColumnName(1));
+        assertEquals(numberColumnAlias, md.getColumnLabel(1));
         assertEquals(Types.INTEGER, md.getColumnType(1));
+        assertEquals(textColumnName, md.getColumnName(2));
+        assertEquals(textColumnAlias, md.getColumnLabel(2));
         assertEquals(Types.VARCHAR, md.getColumnType(2));
         assertTrue(rs.next());
 
-        assertEquals(n, rs.getInt(1));
-        assertEquals(n, rs.getInt("custom[number]"));
-        assertEquals(text, rs.getString(2));
-        assertEquals(text, rs.getString("custom[text]"));
+        assertEquals(numberColumnValue, rs.getInt(1));
+        assertEquals(numberColumnValue, rs.getInt(numberColumnAlias));
+        assertEquals(textColumnValue, rs.getString(2));
+        assertEquals(textColumnValue, rs.getString(textColumnAlias));
 
         assertFalse(rs.next());
-
     }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
