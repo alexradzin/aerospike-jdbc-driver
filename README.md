@@ -84,11 +84,53 @@ while (rs.next()) {
 ```
 
 ### JDBC URL
-
 The JDBC URL format is: `jdbc:aerospike:HOST[:PORT][/NAMESPACE][?PARAM1=VALUE1[&PARAM2=VALUE2]`.
 For example `jdbc:aerospike:localhost` connectts to aerospike running on local machine and listening to the default port (3000). If you want to customize port use URL like `jdbc:aerospike:localhost:4000`, to connecto to specific namespace add it to URL like: `jdbc:aerospike:localhost/test`. The following example shows how to connect to namespace `test` of aerospike running on remote machine and listening to port 4567: `jdbc:aerospike:10.1.1.1:4567/test`.
 
-Typical Aerospike installation consists of several instances, so several IP addresses of servers can be passed to driver as following: `jdbc:aerospike:first:3100,second:3200,third:3300`. If port is omitted, the default value of 3000 is used. 
+Typical Aerospike installation consists of several instances, so several IP addresses of servers can be passed to driver as following: `jdbc:aerospike:first:3100,second:3200,third:3300`. If port is omitted, the default value of 3000 is used.
+
+#### JDBC URL parameters
+The parameters can be supplied either as a part of the URL or as the separate properties. The parameters are translated into Aerospike client policies. Aerospike client has the following policy types:
+*   read
+*   query
+*   scan
+*   batch
+*   write
+*   info
+
+Policy related parameters look like: `policy.POLICY_TYPE.PROPERTY_NAME=PROPERTY_VALUE`, i.e.
+*   policy.read.socketTimeout=10000
+*   policy.write.generationPolicy=EXPECT_GEN_EQUAL
+
+Some policies have the same properties. For example `socketTimeout`, `totalTimeout`, `replica` etc. are relevant for most policies. If you want to set  the same value for specific property of all policies use `*` instead of policy type: `policy.*.socketTimeout=15000`
+
+## Primary Key (PK)
+Primary key in relational database is a constraint applied to "regular" data column or several columns. Primary key (or just a key) in no-sql databases like Aerospike is special entity that is treated separately from the data. Aerospike JDBC driver hides these differences as much as it is possible emulating behavior of a relational DB. However there are some limitations that should be taking into account. 
+
+Aerospike does not operate with key itself but with its digest that is always calculated. By default the key value is not stored in the DB at all and therefore cannot be retrieved later. If you want to store key in Aerospike set `sendKey` property of `WritePolicy` to `true` (it is `false` by default). The corresponding property of this driver is `policy.write.sendKey=true`. If you want to retrieve key from the DB you have to use the same property to one of `ReadPolicy`, `QueryPolicy`, `ScanPolicy` or `BatchPolicy` depending on the API you are using. This driver hides from you details of the API used under the hood, if you always want to read the keys set property `sendKey=true` to all policies used for reading (read, query, scan, batch). 
+
+If keys should be always available the easiest way is to supply property `policy.*.sendKey=true`. This statement will be applied to all relevant policies, so the key will be always stored to and retrieved from the DB. 
+
+## Database schema
+Relational databases hold meta-data that describe the database structure (catalogs, schemas, tables, columns etc). Aerospike is a schema-less DB. Its tables are called sets and columns are called bins. Set holds any nuber of rows. Each row can hold any number of bins of any name and type. However very often people just hold the DB schema in the application layer and in fact each row has the same bins.
+
+The Aerospike JDBC driver discovers schema dynamically using the first rows of the set. This means that if other rows have additional bins they could be ignored when reading data using `select` statement. 
+
+## Export/Import
+The driver does not implement import and export functionality. However various tools (e.g. [DBeaver](https://dbeaver.io/)) does this. Export is typically implemented using query like 
+
+```sql
+select * from THE_TABLE
+```
+The exported results can be stored using various formats (CSV, JSON, XML, SQL insert statements)
+If you want to use exported data for import you have to:
+*   store the key in the DB
+*   configure policy that makes driver to retrieve the key values
+(see chapter "Primary Key (PK)" for details).
+
+General recommendation: if you want to store and retrieve keys via driver always configure connection with property `policy.*.sendKey=true`.
+
+The next issue is the export format. CSV format does not hold any schema information. If CSV file contains column with value 123 we cannot know whether this is integer, double or string, so generic tools cannog generate correct SQL `insert` statement. So, you cannot import data from CSV file to empty table. If this is your scenario create one syntactically correct fake record using `insert` statement. This will help tool to discover the table structure and generate correct SQL `insert` statement. Then import data from the file. After that you can delete the fake record using SQL `delete` statement. If the data file fromat does not matter export data as SQL insert statements. This script can be executed agains empty table because schema discovery is not needed in the case. 
 
 ## SQL compliance
 
@@ -182,7 +224,7 @@ Custom function is a public class that has public default constructor and implem
 Let's take a look on example from the previous chapter but this time the class `Person` is not `Serializable`. Let's assume that data has been already written to the database and we want to have a convenient way to retrieve it:
 
 ```sql
-select data[firstName], data[lastName], data[yearOfBirth] from (select person(data) from people)
+select human[firstName], human[lastName], human[yearOfBirth] from (select person(data) as human from people)
 ```
 
 The statement calls function `person()` that converts data stored in database to object of class `Person`. But how is it possible? Indeed driver does not know anything about either class custom `Person` or its serialization format. The answer is that `person()` is a custom function.
@@ -227,7 +269,7 @@ select sqrt(4), strlen('abc'); -- returns 2, 3
 select sqrt(strlen('abcd')); -- returns 2
 ```
 
-Here is an example of custom function that deserializes custom binary representation of `Persoon` to instance of class `Person`:
+Here is an example of custom function that deserializes custom binary representation of `Person` to instance of class `Person`:
 
 ```java
 public class PersonDeserializer implements Function<byte[], Person> {
@@ -290,7 +332,3 @@ Fill the following data
 * Choose Database/New Database Connection
 * Find just defined Aerospike driver in list and choose it. 
 * Fill form: host, port (if it is not default), Database/Schema (namespace) (if needed); username and password (if needed)
-
-
-
-
