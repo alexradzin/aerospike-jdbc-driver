@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.System.currentTimeMillis;
@@ -37,6 +38,7 @@ import static java.util.stream.Collectors.toMap;
 
 @VisibleForPackage
 class ExpressionAwareResultSet extends ResultSetWrapper {
+    private static final Pattern ref = Pattern.compile("\\w+\\[\\w+\\]");
     private final ScriptEngine engine;
     private final ResultSet rs;
     private final Map<String, String> aliasToEval;
@@ -283,7 +285,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
                         case Types.BIGINT:
                         case Types.INTEGER:
                         case Types.SMALLINT:
-                            value = currentTimeMillis();
+                            value = currentTimeMillis() / 10000;
                             break;
                         case Types.DOUBLE:
                         case Types.FLOAT:
@@ -314,7 +316,8 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
                 try {
                     Object result = eval(ec.getExpression());
                     if (result != null) {
-                        Integer sqlType = SqlLiterals.sqlTypes.get(result.getClass());
+                        Class type = getType(result);
+                        Integer sqlType = SqlLiterals.sqlTypes.get(type);
                         if (sqlType != null) {
                             ec.withType(sqlType);
                         }
@@ -328,6 +331,23 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
         return md;
     }
 
+    private Class getType(Object value) {
+        Class type = value.getClass();
+        if (!(value instanceof Number)) {
+            return type;
+        }
+        Number n = (Number)value;
+        double d = n.doubleValue();
+        long l = n.longValue();
+        if (d != l) {
+            return Double.class;
+        }
+        int i = n.intValue();
+        if (l != i) {
+            return Long.class;
+        }
+        return Integer.class;
+    }
 
     private Collection<String> bind(ResultSet rs, Collection<DataColumn> columns, Bindings bindings) {
         Collection<String> bound = new HashSet<>();

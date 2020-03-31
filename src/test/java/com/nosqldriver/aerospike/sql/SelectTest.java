@@ -864,15 +864,17 @@ class SelectTest {
     void selectExpressionAndFieldFromPeople() throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
         assertTrue(rs.next());
-        assertEquals("three", rs.getMetaData().getColumnLabel(1));
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals("three",md.getColumnLabel(1));
         assertEquals(3, rs.getInt(1));
         assertEquals(3, rs.getInt("three"));
 
-        assertEquals("name", rs.getMetaData().getColumnLabel(2));
+        assertEquals("name", md.getColumnLabel(2));
         assertEquals("John", rs.getString(2));
         assertEquals("John", rs.getString("name"));
 
-        assertEquals("year", rs.getMetaData().getColumnLabel(3));
+        assertEquals("year", md.getColumnLabel(3));
+        assertEquals(INTEGER, md.getColumnType(3));
         assertEquals(40, rs.getInt(3));
         assertEquals(40, rs.getInt("year"));
 
