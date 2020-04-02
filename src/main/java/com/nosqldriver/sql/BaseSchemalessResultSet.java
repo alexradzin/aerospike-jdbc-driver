@@ -29,6 +29,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -36,6 +37,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.AGGREGATED;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
 import static com.nosqldriver.sql.SqlLiterals.sqlTypeNames;
@@ -66,6 +68,7 @@ public abstract class BaseSchemalessResultSet<R> extends WarningsHolder implemen
     static {
         collectionTransformers.put(byte[].class, values -> Arrays.stream(values).map(e -> new ByteArrayBlob((byte[])e)).toArray());
     }
+    private static final Collection<DataColumn.DataColumnRole> rolesForMetadata = new HashSet<>(Arrays.asList(DATA, EXPRESSION, AGGREGATED));
 
 
 
@@ -77,9 +80,9 @@ public abstract class BaseSchemalessResultSet<R> extends WarningsHolder implemen
         this.typeDiscoverer = typeDiscoverer;
         this.pk = pk;
 
-        columnsForMetadata = columns.stream().anyMatch(c -> DATA.equals(c.getRole()) || (EXPRESSION.equals(c.getRole()))) ?
-                columns :
-                singletonList(DATA.create(schema, table, "*", "*"));
+        columnsForMetadata = columns.stream().anyMatch(c -> rolesForMetadata.contains(c.getRole())) ?
+            columns :
+            singletonList(DATA.create(schema, table, "*", "*"));
     }
 
 

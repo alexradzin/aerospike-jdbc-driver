@@ -59,6 +59,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKey;
@@ -78,7 +79,6 @@ import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
@@ -90,7 +90,6 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     private final KeyRecordFetcherFactory keyRecordFetcherFactory;
     private String set;
     private String setAlias;
-    private Collection<String> aggregatedFields = null;
     private Collection<String> groupByFields = null;
     private String having = null;
     private List<DataColumn> columns = new ArrayList<>();
@@ -428,21 +427,32 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         if (groupByFields != null) {
             Value[] args = Stream.concat(
                     groupByFields.stream().map(f -> "groupby:" + f),
-                    columns.stream().filter(c -> DATA.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
+                    columns.stream().filter(c -> AGGREGATED.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
             return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having, functionManager), keyRecordFetcherFactory, functionManager, getPk);
         }
 
-        if (aggregatedFields != null) {
-            Value[] fieldsForAggregation = aggregatedFields.stream().map(StringValue::new).toArray(Value[]::new);
+        List<DataColumn> aggregationColumns = columns.stream().filter(c-> AGGREGATED.equals(c.getRole())).collect(Collectors.toList());
+        int aggregationColumnsCount = (int)aggregationColumns.size();
+        if (aggregationColumnsCount > 0) {
+            Pattern functionCall = Pattern.compile("\\w+\\((.*)\\)");
+            Value[] fieldsForAggregation = aggregationColumns.stream()
+                    .map(DataColumn::getName)
+                    .map(functionCall::matcher)
+                    .filter(Matcher::find)
+                    .map(m -> m.group(1))
+                    .filter(name -> !"*".equals(name))
+                    .distinct()
+                    .map(StringValue::new)
+                    .toArray(Value[]::new);
             if (statement.getBinNames() != null && statement.getBinNames().length > 0) {
                 SneakyThrower.sneakyThrow(new SQLException("Cannot perform aggregation operation with query that contains regular fields"));
             }
             Pattern p = Pattern.compile("distinct\\((\\w+)\\)");
-            Optional<String> distinctExpression = aggregatedFields.stream().filter(s -> p.matcher(s).find()).findAny();
+            Optional<String> distinctExpression = aggregationColumns.stream().map(DataColumn::getName).filter(s -> p.matcher(s).find()).findAny();
             if (distinctExpression.isPresent()) {
-                if (aggregatedFields.size() > 1) {
+                if (aggregationColumnsCount > 1) {
                     SneakyThrower.sneakyThrow(new SQLException("Wrong query syntax: distinct is used together with other fields"));
                 }
 
@@ -658,13 +668,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
 
                 @Override
                 public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
-                    if (aggregatedFields == null) { // && !addition.isEmpty()) {
-                        aggregatedFields = new HashSet<>();
-                    }
-                    List<String> addition = ofNullable(((net.sf.jsqlparser.expression.Function)expr).getParameters()).map(p -> p.getExpressions().stream().map(Object::toString).collect(toList())).orElse(emptyList());
-                    aggregatedFields.addAll(addition);
-                    // TODO should be AGGREGATED instead of DATA
-                    columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
+                    columns.add(AGGREGATED.create(getCatalog(expr), getTable(expr), getText(expr), alias));
                 }
             },
 
@@ -686,10 +690,6 @@ public class QueryHolder implements QueryContainer<ResultSet> {
 
                 @Override
                 public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
-                    if (aggregatedFields == null) {
-                        aggregatedFields = new HashSet<>();
-                    }
-                    aggregatedFields.add("distinct" + expr.toString());
                     columns.add(AGGREGATED.create(catalog, table, getText(expr), alias));
                 }
             },
