@@ -89,6 +89,11 @@ public class DataColumn {
         return role;
     }
 
+    public DataColumn updateRole(DataColumnRole role) {
+        this.role = role;
+        return this;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

@@ -70,6 +70,7 @@ import static com.nosqldriver.aerospike.sql.query.PredExpUtil.isValue;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.AGGREGATED;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.GROUP;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.PK;
 import static com.nosqldriver.sql.SqlLiterals.operatorKey;
@@ -90,7 +91,6 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     private final KeyRecordFetcherFactory keyRecordFetcherFactory;
     private String set;
     private String setAlias;
-    private Collection<String> groupByFields = null;
     private String having = null;
     private List<DataColumn> columns = new ArrayList<>();
     private List<List<Object>> data = new ArrayList<>();
@@ -424,9 +424,10 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             statement.setBinNames();
         }
 
-        if (groupByFields != null) {
+        List<String> groupColumnNames = columns.stream().filter(c-> GROUP.equals(c.getRole())).map(c -> "groupby:" + c.getName()).collect(Collectors.toList());
+        if (!groupColumnNames.isEmpty()) {
             Value[] args = Stream.concat(
-                    groupByFields.stream().map(f -> "groupby:" + f),
+                    groupColumnNames.stream(),
                     columns.stream().filter(c -> AGGREGATED.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
@@ -718,10 +719,16 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     };
 
     public void addGroupField(String field) {
-        if (groupByFields == null) {
-            groupByFields = new HashSet<>();
+        boolean updated = false;
+        for (DataColumn c : columns) {
+            if (c.getName().equals(field)) {
+                c.updateRole(GROUP);
+                updated = true;
+            }
         }
-        groupByFields.add(field);
+        if (!updated) {
+            columns.add(GROUP.create(schema, set, field, field));
+        }
     }
 
     public void setHaving(String having) {
