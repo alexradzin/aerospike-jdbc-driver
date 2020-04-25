@@ -31,7 +31,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
 
     @Override
     public boolean isLast() throws SQLException {
-        return !isBeforeFirst() && it.hasNext();
+        return !isBeforeFirst() && !it.hasNext();
     }
 
     @Override
@@ -74,7 +74,8 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
                     column.withType(type);
                     continue;
                 }
-                if (type != rowType) {
+
+                if (type != rowType && !TypeTransformer.isAssignableFrom(type, rowType)) {
                     sneakyThrow(new SQLException(format("Type of value [%d,%d] %s does not match already discovered type %s", rowIndex, i, rowType, type)));
                 }
             }

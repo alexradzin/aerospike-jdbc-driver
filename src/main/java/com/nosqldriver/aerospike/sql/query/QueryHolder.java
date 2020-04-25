@@ -13,11 +13,13 @@ import com.nosqldriver.aerospike.sql.AerospikeStatement;
 import com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation.Operator;
 import com.nosqldriver.aerospike.sql.query.BinaryOperation.PrimaryKeyEqualityPredicate;
+import com.nosqldriver.sql.AggregatedValues;
 import com.nosqldriver.sql.ChainedResultSetWrapper;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.FilteredResultSet;
 import com.nosqldriver.sql.JoinedResultSet;
+import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.NameCheckResultSetWrapper;
 import com.nosqldriver.sql.OffsetLimit;
 import com.nosqldriver.sql.OrderItem;
@@ -564,10 +566,11 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                     return distinctColumnExpression.equals(name) ? distinctField : name;
                 }
             };
+        } else if(set == null && columns.stream().map(DataColumn::getRole).anyMatch(r -> AGGREGATED.equals(r) || GROUP.equals(r))) {
+            expressioned = client -> new ListRecordSet(sqlStatement, schema, set, columns, new AggregatedValues(nakedQuery.apply(client), columns).read());
         } else {
             expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns, indexByName), functionManager, columns, indexByName);
         }
-
 
         Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), columns, new ResultSetRowFilter(whereExpression, functionManager), indexByName) : expressioned;
         Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? filtered : client -> new JoinedResultSet(filtered.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(sqlStatement, client, join, functionManager), new ResultSetMetadataSupplier(sqlStatement, client, join, functionManager), join.skipIfMissing)).collect(toList()));

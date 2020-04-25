@@ -16,16 +16,37 @@ import java.sql.NClob;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 
 public class TypeTransformer {
+    private static final Map<Class, Integer> numericTypesOrder;
+    private static final Map<Integer, Integer> sqlNumericTypesOrder;
+    static {
+        List<Class> numericTypesOrdering = Arrays.asList(Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class);
+        numericTypesOrder = IntStream.range(0, numericTypesOrdering.size()).boxed().collect(Collectors.toMap(numericTypesOrdering::get, i -> i));
+        List<Integer> sqlNumericTypesOrdering = Arrays.asList(Types.TINYINT, Types.SMALLINT, Types.INTEGER, Types.BIGINT, Types.FLOAT, Types.DOUBLE);
+        sqlNumericTypesOrder = IntStream.range(0, sqlNumericTypesOrdering.size()).boxed().collect(Collectors.toMap(sqlNumericTypesOrdering::get, i -> i));
+    }
+    private static final Comparator<Class> typesComparator = new Comparator<Class>() {
+        @Override
+        public int compare(Class o1, Class o2) {
+            return numericTypesOrder.getOrDefault(o1, -1) - numericTypesOrder.getOrDefault(o2, -1);
+        }
+    };
     private static final Map<Class<?>, Function<Object, Object>> typeTransformers = new HashMap<>();
     static {
         typeTransformers.put(Byte.class, n -> ((Number)n).byteValue());
@@ -117,14 +138,25 @@ public class TypeTransformer {
 
     public static <T> T cast(Object obj, Class<T> type) throws SQLException {
         try {
-            return castImpl(obj, type);
+            return safeCast(obj, type);
         } catch (RuntimeException e) {
             throw new SQLException(e.getMessage(), e);
         }
     }
 
+    public static <T> T safeCast(Object obj, Class<T> type) {
+        return castImpl(obj, type, () -> {
+            throw new ClassCastException(format("Class %s cannot be cast to class %s", obj.getClass(), type));
+        });
+    }
+
+
+    public static <T> T cast(Object obj, Class<T> type, T defaultValue) {
+        return castImpl(obj, type, () -> defaultValue);
+    }
+
     @SuppressWarnings("unchecked")
-    private static <T> T castImpl(Object obj, Class<T> type) {
+    private static <T> T castImpl(Object obj, Class<T> type, Supplier<T> defaultSupplier) {
         if (typeTransformers.containsKey(type)) {
             return (T) typeTransformers.get(type).apply(obj);
         }
@@ -136,9 +168,8 @@ public class TypeTransformer {
         if (obj == null || type.isAssignableFrom(obj.getClass())) {
             return (T)obj;
         }
-        throw new ClassCastException(format("lass %s cannot be cast to class %s", obj.getClass(), type));
+        return defaultSupplier.get();
     }
-
 
 
     public static Date getDate(long epoch, Calendar cal) {
@@ -157,5 +188,40 @@ public class TypeTransformer {
     public static <R> R getDateTime(long epoch, Calendar cal, Function<Long, R> factory) {
         cal.setTime(new java.util.Date(epoch));
         return factory.apply(cal.getTime().getTime());
+    }
+
+    public static Class getMinimalType(Object value) {
+        Class type = value.getClass();
+        if (!(value instanceof Number)) {
+            return type;
+        }
+        Number n = (Number)value;
+        double d = n.doubleValue();
+        long l = n.longValue();
+        if (d != l) {
+            return Double.class;
+        }
+        int i = n.intValue();
+        if (l != i) {
+            return Long.class;
+        }
+        return Integer.class;
+    }
+
+    public static Class commonType(Class c1, Class c2) {
+        int comp = typesComparator.compare(c1, c2);
+        return comp > 0 ? c1 : c2;
+    }
+
+    public static boolean isAssignableFrom(Class to, Class from) {
+        return isAssignableFromComparison(numericTypesOrder.get(to), numericTypesOrder.get(from));
+    }
+
+    public static boolean isAssignableFrom(int to, int from) {
+        return isAssignableFromComparison(sqlNumericTypesOrder.get(to), sqlNumericTypesOrder.get(from));
+    }
+
+    private static boolean isAssignableFromComparison(Integer toOrder, Integer fromOrder) {
+        return toOrder != null && fromOrder != null && toOrder > fromOrder;
     }
 }

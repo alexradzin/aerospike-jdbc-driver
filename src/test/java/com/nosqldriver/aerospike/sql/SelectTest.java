@@ -1581,13 +1581,22 @@ class SelectTest {
             "select year_of_birth, count(*) from people group by year_of_birth having count(*) > 0",
     })
     void groupByYearOfBirth(String sql) throws SQLException {
-        assertGroupByYearOfBirth(sql);
+        assertGroupByYearOfBirth(sql, BIGINT, BIGINT);
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year_of_birth, count(*) from (select * from people) group by year_of_birth",
+            "select year_of_birth, count(*) from (select year_of_birth from people) group by year_of_birth",
+    })
+    void groupByYearOfBirthNestedQuery(String sql) throws SQLException {
+        assertGroupByYearOfBirth(sql, INTEGER, INTEGER);
     }
 
     @Test
     @DisplayName("select year_of_birth as yob, count(*) as n from people group by year_of_birth")
     void groupByYearOfBirthWithAliases() throws SQLException {
-        ResultSetMetaData md = assertGroupByYearOfBirth(getDisplayName());
+        ResultSetMetaData md = assertGroupByYearOfBirth(getDisplayName(), BIGINT, BIGINT);
         assertEquals("yob", md.getColumnLabel(1));
         assertEquals("n", md.getColumnLabel(2));
     }
@@ -1611,15 +1620,15 @@ class SelectTest {
     }
 
 
-    private ResultSetMetaData assertGroupByYearOfBirth(String sql) throws SQLException {
+    private ResultSetMetaData assertGroupByYearOfBirth(String sql, int yearOfBirthType, int countType) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());
         assertEquals("year_of_birth", md.getColumnName(1));
-        assertEquals(BIGINT, md.getColumnType(1));
+        assertEquals(yearOfBirthType, md.getColumnType(1));
         assertEquals("count(*)", md.getColumnName(2));
-        assertEquals(BIGINT, md.getColumnType(2));
+        assertEquals(countType, md.getColumnType(2));
 
         assertEquals("Cursor is not positioned on any row", assertThrows(SQLException.class, () -> rs.getInt(1)).getMessage());
 
