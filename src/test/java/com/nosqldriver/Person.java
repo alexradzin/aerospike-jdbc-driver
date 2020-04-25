@@ -1,6 +1,8 @@
 package com.nosqldriver;
 
-public class Person {
+import java.io.Serializable;
+
+public class Person implements Serializable {
     private final int id;
     private final String firstName;
     private final String lastName;

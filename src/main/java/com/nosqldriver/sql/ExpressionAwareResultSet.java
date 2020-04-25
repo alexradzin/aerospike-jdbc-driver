@@ -316,7 +316,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
                 try {
                     Object result = eval(ec.getExpression());
                     if (result != null) {
-                        Class type = getType(result);
+                        Class type = TypeTransformer.getMinimalType(result, Integer.class);
                         Integer sqlType = SqlLiterals.sqlTypes.get(type);
                         if (sqlType != null) {
                             ec.withType(sqlType);
@@ -329,24 +329,6 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
         }
         metaData = md;
         return md;
-    }
-
-    private Class getType(Object value) {
-        Class type = value.getClass();
-        if (!(value instanceof Number)) {
-            return type;
-        }
-        Number n = (Number)value;
-        double d = n.doubleValue();
-        long l = n.longValue();
-        if (d != l) {
-            return Double.class;
-        }
-        int i = n.intValue();
-        if (l != i) {
-            return Long.class;
-        }
-        return Integer.class;
     }
 
     private Collection<String> bind(ResultSet rs, Collection<DataColumn> columns, Bindings bindings) {
