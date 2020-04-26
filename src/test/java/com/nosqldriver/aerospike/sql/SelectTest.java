@@ -1440,22 +1440,36 @@ class SelectTest {
         assertEquals(3, n);
     }
 
-    @Test
-    @DisplayName("select count(*) from people")
-    void countAll() throws SQLException {
-        assertAggregateOneField(getDisplayName(), "count(*)", "count(*)", 4);
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select count(*) from people",
+            "select count(*) from (select * from people)",
+            "select count(*) from (select first_name from people)"
+    })
+    void countAll(String sql) throws SQLException {
+        assertAggregateOneField(sql, "count(*)", "count(*)", 4);
     }
 
-    @Test
-    @DisplayName("select count(*) as number_of_people from people")
-    void countAllWithAlias() throws SQLException {
-        assertAggregateOneField(getDisplayName(), "count(*)", "number_of_people", 4);
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select count(*) as number_of_people from people",
+            "select count(*) as number_of_people from (select * from people)"
+    })
+    void countAllWithAlias(String sql) throws SQLException {
+        assertAggregateOneField(sql, "count(*)", "number_of_people", 4);
     }
 
-    @Test
-    @DisplayName("select count(year_of_birth) from people")
-    void countYearOfBirth() throws SQLException {
-        assertAggregateOneField(getDisplayName(), "count(year_of_birth)", "count(year_of_birth)", 4);
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select count(year_of_birth) from people",
+            "select count(year_of_birth) from (select * from people)",
+            "select count(year_of_birth) from (select year_of_birth from people)"
+    })
+    void countYearOfBirth(String sql) throws SQLException {
+        assertAggregateOneField(sql, "count(year_of_birth)", "count(year_of_birth)", 4);
     }
 
     @Test
@@ -1476,10 +1490,15 @@ class SelectTest {
         assertAggregateOneField(getDisplayName(), "min(year_of_birth)", "oldest", 1940);
     }
 
-    @Test
-    @DisplayName("select count(*) as n, min(year_of_birth) as min, max(year_of_birth) as max, avg(year_of_birth) as avg, sum(year_of_birth) as total from people")
-    void callAllAggregations() throws SQLException {
-        ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true,
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select count(*) as n, min(year_of_birth) as min, max(year_of_birth) as max, avg(year_of_birth) as avg, sum(year_of_birth) as total from people",
+            "select count(*) as n, min(year_of_birth) as min, max(year_of_birth) as max, avg(year_of_birth) as avg, sum(year_of_birth) as total from (select * from people)"
+    })
+    void callAllAggregations(String sql) throws SQLException {
+        ResultSet rs = executeQuery(sql, NAMESPACE, true,
                 "count(*)", "n", BIGINT,
                 "min(year_of_birth)", "min", BIGINT,
                 "max(year_of_birth)", "max", BIGINT,
@@ -1697,10 +1716,6 @@ class SelectTest {
         assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(toSet()), years);
     }
 
-
-
-
-
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select year_of_birth as year, sum(kids_count) as total_kids from people group by year_of_birth",
@@ -1723,22 +1738,35 @@ class SelectTest {
     }
 
 
-    @Test
-    @DisplayName("select year_of_birth, count(*) from people group by year_of_birth order by count(*) desc, year_of_birth")
-    void groupByOrderByCountDesc() throws SQLException {
-        assertGroupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1940L, 1942L, 1943L});
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year_of_birth, count(*) from people group by year_of_birth order by count(*) desc, year_of_birth",
+            "select year_of_birth, count(*) from (select * from people) group by year_of_birth order by count(*) desc, year_of_birth",
+            "select year_of_birth, count(*) from (select year_of_birth from people) group by year_of_birth order by count(*) desc, year_of_birth"
+    })
+    void groupByOrderByCountDesc(String sql) throws SQLException {
+        assertGroupByOrderBy(sql, "year_of_birth", new Object[] {1940L, 1942L, 1943L});
     }
 
-    @Test
-    @DisplayName("select year_of_birth, count(*) from people group by year_of_birth order by count(*) desc, year_of_birth")
-    void groupByOrderByCountDescCount() throws SQLException {
-        assertGroupByOrderBy(getDisplayName(), "count(*)", new Object[] {2L, 1L, 1L});
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year_of_birth, count(*) from people group by year_of_birth order by count(*) desc, year_of_birth",
+            "select year_of_birth, count(*) from (select * from people) group by year_of_birth order by count(*) desc, year_of_birth",
+            "select year_of_birth, count(*) from (select year_of_birth from people) group by year_of_birth order by count(*) desc, year_of_birth"
+    })
+    void groupByOrderByCountDescCount(String sql) throws SQLException {
+        assertGroupByOrderBy(sql, "count(*)", new Object[] {2L, 1L, 1L});
     }
 
-    @Test
-    @DisplayName("select year_of_birth, count(*) from people group by year_of_birth order by count(*), year_of_birth")
-    void groupByOrderByCount() throws SQLException {
-        assertGroupByOrderBy(getDisplayName(), "year_of_birth", new Object[] {1942L, 1943L, 1940L});
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year_of_birth, count(*) from people group by year_of_birth order by count(*), year_of_birth",
+            "select year_of_birth, count(*) from (select * from people) group by year_of_birth order by count(*), year_of_birth",
+            "select year_of_birth, count(*) from (select year_of_birth from people) group by year_of_birth order by count(*), year_of_birth"
+    })
+    void groupByOrderByCount(String sql) throws SQLException {
+        assertGroupByOrderBy(sql, "year_of_birth", new Object[] {1942L, 1943L, 1940L});
     }
 
     private void assertGroupByOrderBy(String query, String column, Object[] expected) throws SQLException {
@@ -1750,10 +1778,14 @@ class SelectTest {
 
 
 
-    @Test
-    @DisplayName("select year_of_birth as year, count(*) as counter, sum(kids_count) as total_kids, max(kids_count) as max_kids, min(kids_count) as min_kids from people group by year_of_birth")
-    void groupByYearOfBirthWithMultipleAggregations() throws SQLException {
-        ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year_of_birth as year, count(*) as counter, sum(kids_count) as total_kids, max(kids_count) as max_kids, min(kids_count) as min_kids from people group by year_of_birth",
+            "select year_of_birth as year, count(*) as counter, sum(kids_count) as total_kids, max(kids_count) as max_kids, min(kids_count) as min_kids from (select * from people) group by year_of_birth",
+            "select year_of_birth as year, count(*) as counter, sum(kids_count) as total_kids, max(kids_count) as max_kids, min(kids_count) as min_kids from (select year_of_birth, kids_count, kids_count from people) group by year_of_birth",
+    })
+    void groupByYearOfBirthWithMultipleAggregations(String sql) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(5, md.getColumnCount());
