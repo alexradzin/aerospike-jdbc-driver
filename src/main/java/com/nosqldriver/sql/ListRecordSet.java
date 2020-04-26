@@ -69,7 +69,7 @@ public class ListRecordSet extends ValueTypedResultSet<List<?>> {
                     continue;
                 }
 
-                if (type == 0) {
+                if (type == 0 || TypeTransformer.isAssignableFrom(rowType, type)) {
                     type = rowType;
                     column.withType(type);
                     continue;

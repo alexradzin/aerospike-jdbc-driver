@@ -201,11 +201,7 @@ public class TypeTransformer {
         if (d != l) {
             return Double.class;
         }
-        int i = n.intValue();
-        if (l != i) {
-            return Long.class;
-        }
-        return Integer.class;
+        return Long.class;
     }
 
     public static Class commonType(Class c1, Class c2) {

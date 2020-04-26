@@ -1579,18 +1579,12 @@ class SelectTest {
     @ValueSource(strings = {
             "select year_of_birth, count(*) from people group by year_of_birth",
             "select year_of_birth, count(*) from people group by year_of_birth having count(*) > 0",
+            "select year_of_birth, count(*) from (select * from people) group by year_of_birth",
+            "select year_of_birth, count(*) from (select year_of_birth from people) group by year_of_birth",
+            "select year_of_birth, count(*) from (select year_of_birth from people) group by year_of_birth having count(*) > 0",
     })
     void groupByYearOfBirth(String sql) throws SQLException {
         assertGroupByYearOfBirth(sql, BIGINT, BIGINT);
-    }
-
-    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
-    @ValueSource(strings = {
-            "select year_of_birth, count(*) from (select * from people) group by year_of_birth",
-            "select year_of_birth, count(*) from (select year_of_birth from people) group by year_of_birth",
-    })
-    void groupByYearOfBirthNestedQuery(String sql) throws SQLException {
-        assertGroupByYearOfBirth(sql, INTEGER, INTEGER);
     }
 
     @Test
@@ -1656,7 +1650,21 @@ class SelectTest {
             "select year_of_birth, count(*) as n from people group by year_of_birth having n = 2",
             "select year_of_birth, count(*) as n from people group by year_of_birth having n = 4 - 2",
             "select year_of_birth, count(*) from people group by year_of_birth having count(*) > 1",
-            "select year_of_birth, count(*) as n from people group by year_of_birth having n > 1"
+            "select year_of_birth, count(*) as n from people group by year_of_birth having n > 1",
+
+            "select year_of_birth, count(*) from (select * from people) group by year_of_birth having count(*) = 2",
+            "select year_of_birth, count(*) as num from (select * from people)  group by year_of_birth having count(*) = 2",
+            "select year_of_birth, count(*) as n from (select * from people)  group by year_of_birth having n = 2",
+            "select year_of_birth, count(*) as n from (select * from people)  group by year_of_birth having n = 4 - 2",
+            "select year_of_birth, count(*) from (select * from people)  group by year_of_birth having count(*) > 1",
+            "select year_of_birth, count(*) as n from (select * from people)  group by year_of_birth having n > 1",
+
+            "select year_of_birth, count(*) from (select year_of_birth from people) group by year_of_birth having count(*) = 2",
+            "select year_of_birth, count(*) as num from (select year_of_birth from people)  group by year_of_birth having count(*) = 2",
+            "select year_of_birth, count(*) as n from (select year_of_birth from people)  group by year_of_birth having n = 2",
+            "select year_of_birth, count(*) as n from (select year_of_birth from people)  group by year_of_birth having n = 4 - 2",
+            "select year_of_birth, count(*) from (select year_of_birth from people)  group by year_of_birth having count(*) > 1",
+            "select year_of_birth, count(*) as n from (select year_of_birth from people)  group by year_of_birth having n > 1",
     })
     void groupByYearOfBirthHavingCount2(String sql) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(sql);
@@ -1689,10 +1697,18 @@ class SelectTest {
         assertEquals(stream(beatles).map(Person::getYearOfBirth).collect(toSet()), years);
     }
 
-    @Test
-    @DisplayName("select year_of_birth as year, sum(kids_count) as total_kids from people group by year_of_birth")
-    void groupByYearOfBirthWithAggregation() throws SQLException {
-        ResultSet rs = executeQuery(getDisplayName(), NAMESPACE, true, "year_of_birth", "year", null /*INTEGER*/, "sum(kids_count)", "total_kids", null /*INTEGER*/); // default: types
+
+
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year_of_birth as year, sum(kids_count) as total_kids from people group by year_of_birth",
+            "select year_of_birth as year, sum(kids_count) as total_kids from (select * from people) group by year_of_birth",
+            "select year_of_birth as year, sum(kids_count) as total_kids from (select year_of_birth, kids_count from people) group by year_of_birth"
+    })
+    void groupByYearOfBirthWithAggregation(String sql) throws SQLException {
+        ResultSet rs = executeQuery(sql, NAMESPACE, true, "year_of_birth", "year", null /*INTEGER*/, "sum(kids_count)", "total_kids", null /*INTEGER*/); // default: types
 
         Collection<Integer> years = new HashSet<>();
         assertTrue(rs.next());

@@ -194,14 +194,22 @@ class ListRecordSetTest {
 
     @Test
     void discoverTypesIncompatibleTypesInSameColumn() {
-        assertThrows(SQLException.class, () -> new ListRecordSet(null, null, null, singletonList(DATA.create(null, null, "data", "data")), asList(singletonList(1), singletonList("1"))).getMetaData());
+        assertThrows(SQLException.class, () -> discoverTypesCompatibleTypesInSameColumn(1, "1"));
     }
 
     @Test
     void discoverTypesCompatibleTypesInSameColumn() throws SQLException {
-        assertEquals(Types.BIGINT, new ListRecordSet(null, null, null, singletonList(DATA.create(null, null, "data", "data")), asList(singletonList(1L), singletonList(1))).getMetaData().getColumnType(1));
+        discoverTypesCompatibleTypesInSameColumn(1L, 1);
     }
 
+    @Test
+    void discoverTypesCompatibleTypesInSameColumn2() throws SQLException {
+        discoverTypesCompatibleTypesInSameColumn(1, 1L);
+    }
+
+    private void discoverTypesCompatibleTypesInSameColumn(Object val1, Object val2) throws SQLException {
+        assertEquals(Types.BIGINT, new ListRecordSet(null, null, null, singletonList(DATA.create(null, null, "data", "data")), asList(singletonList(val1), singletonList(val2))).getMetaData().getColumnType(1));
+    }
 
     @Test
     void updateValueListRecordSet() throws SQLException {

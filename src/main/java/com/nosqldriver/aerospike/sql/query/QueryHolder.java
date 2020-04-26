@@ -437,7 +437,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         }
 
         List<DataColumn> aggregationColumns = columns.stream().filter(c-> AGGREGATED.equals(c.getRole())).collect(Collectors.toList());
-        int aggregationColumnsCount = (int)aggregationColumns.size();
+        int aggregationColumnsCount = aggregationColumns.size();
         if (aggregationColumnsCount > 0) {
             Pattern functionCall = Pattern.compile("\\w+\\((.*)\\)");
             Value[] fieldsForAggregation = aggregationColumns.stream()
@@ -567,7 +567,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                 }
             };
         } else if(set == null && columns.stream().map(DataColumn::getRole).anyMatch(r -> AGGREGATED.equals(r) || GROUP.equals(r))) {
-            expressioned = client -> new ListRecordSet(sqlStatement, schema, set, columns, new AggregatedValues(nakedQuery.apply(client), columns).read());
+            expressioned = client -> new FilteredResultSet(new ListRecordSet(sqlStatement, schema, set, columns, new AggregatedValues(nakedQuery.apply(client), columns).read()), columns, having == null ? rs -> true : new ResultSetRowFilter(having, functionManager), true);
         } else {
             expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns, indexByName), functionManager, columns, indexByName);
         }

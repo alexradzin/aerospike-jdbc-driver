@@ -44,9 +44,9 @@ class AggregatedValuesTest {
 
     @Test
     void oneCount() {
-        one("count(*)", 1, 1);
-        one("count(*)", 0, 1);
-        one("count(*)", 2, 1);
+        one("count(*)", 1, 1L);
+        one("count(*)", 0, 1L);
+        one("count(*)", 2, 1L);
     }
 
     @Test
@@ -144,21 +144,19 @@ class AggregatedValuesTest {
     }
 
     @Test
-    void sum() throws SQLException {
+    void sum() {
         long now = System.currentTimeMillis();
-        ResultSet rs = severalColumns(
-                asList(
-                        DATA.create("test", "data", "name", null),
-                        DATA.create("test", "data", "number", null)
-                ),
-                asList(
-                        GROUP.create("test", "data", "name", null),
-                        AGGREGATED.create("test", "data", "sum(number)", null)
-                ),
-                asList(asList("x", 1), asList("x", 2), asList("y", now)),
-                asList(asList("x", 3), asList("y", now)));
-
-        rs.getMetaData();
+        severalColumns(
+            asList(
+                    DATA.create("test", "data", "name", null),
+                    DATA.create("test", "data", "number", null)
+            ),
+            asList(
+                    GROUP.create("test", "data", "name", null),
+                    AGGREGATED.create("test", "data", "sum(number)", null)
+            ),
+            asList(asList("x", 1), asList("x", 2), asList("y", now)),
+            asList(asList("x", 3L), asList("y", now)));
     }
 
 
@@ -167,10 +165,9 @@ class AggregatedValuesTest {
         severalColumns(singletonList(DATA.create("test", "data", "n", "n")), aggregationColumns, data, expected);
     }
 
-    private ResultSet severalColumns(List<DataColumn> columns, List<DataColumn> aggregationColumns, Iterable<List<?>> data, List<?> expected) {
+    private void severalColumns(List<DataColumn> columns, List<DataColumn> aggregationColumns, Iterable<List<?>> data, List<?> expected) {
         ResultSet rs = new ListRecordSet(null, "", "", columns, data);
         List<?> actual = new AggregatedValues(rs, aggregationColumns).read();
         assertEquals(expected, actual);
-        return rs;
    }
 }
