@@ -1603,13 +1603,13 @@ class SelectTest {
             "select year_of_birth, count(*) from (select year_of_birth from people) group by year_of_birth having count(*) > 0",
     })
     void groupByYearOfBirth(String sql) throws SQLException {
-        assertGroupByYearOfBirth(sql, BIGINT, BIGINT);
+        assertGroupByYearOfBirth(testConn, sql);
     }
 
     @Test
     @DisplayName("select year_of_birth as yob, count(*) as n from people group by year_of_birth")
     void groupByYearOfBirthWithAliases() throws SQLException {
-        ResultSetMetaData md = assertGroupByYearOfBirth(getDisplayName(), BIGINT, BIGINT);
+        ResultSetMetaData md = assertGroupByYearOfBirth(testConn, getDisplayName());
         assertEquals("yob", md.getColumnLabel(1));
         assertEquals("n", md.getColumnLabel(2));
     }
@@ -1633,15 +1633,16 @@ class SelectTest {
     }
 
 
-    private ResultSetMetaData assertGroupByYearOfBirth(String sql, int yearOfBirthType, int countType) throws SQLException {
-        ResultSet rs = testConn.createStatement().executeQuery(sql);
+    @VisibleForPackage
+    static ResultSetMetaData assertGroupByYearOfBirth(Connection conn,  String sql) throws SQLException {
+        ResultSet rs = conn.createStatement().executeQuery(sql);
         ResultSetMetaData md = rs.getMetaData();
         assertNotNull(md);
         assertEquals(2, md.getColumnCount());
         assertEquals("year_of_birth", md.getColumnName(1));
-        assertEquals(yearOfBirthType, md.getColumnType(1));
+        assertEquals(BIGINT, md.getColumnType(1));
         assertEquals("count(*)", md.getColumnName(2));
-        assertEquals(countType, md.getColumnType(2));
+        assertEquals(BIGINT, md.getColumnType(2));
 
         assertEquals("Cursor is not positioned on any row", assertThrows(SQLException.class, () -> rs.getInt(1)).getMessage());
 
@@ -2049,7 +2050,7 @@ class SelectTest {
         assertEquals(0.0, rs.getDouble(DOES_NOT_EXIST));
     }
 
-    private int assertCounts(ResultSet rs) throws SQLException {
+    private static int assertCounts(ResultSet rs) throws SQLException {
         int yearOfBirth = rs.getInt(1);
         assertEquals(count(stream(beatles), p -> p.getYearOfBirth() == yearOfBirth, Person::getKidsCount), rs.getDouble(2), 0.01);
         return yearOfBirth;
@@ -2070,7 +2071,7 @@ class SelectTest {
         return yearOfBirth;
     }
 
-    private <T> long count(Stream<T> stream, Predicate<T> filter, ToIntFunction<T> pf) {
+    private static <T> long count(Stream<T> stream, Predicate<T> filter, ToIntFunction<T> pf) {
         return stream.filter(filter).mapToInt(pf).count();
     }
 

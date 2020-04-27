@@ -317,7 +317,8 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
                     Object result = eval(ec.getExpression());
                     if (result != null) {
                         Class type = TypeTransformer.getMinimalType(result);
-                        Integer sqlType = SqlLiterals.sqlTypes.get(type);
+                        //Integer sqlType = SqlLiterals.sqlTypes.get(type);
+                        Integer sqlType = SqlLiterals.sqlTypes.get(result.getClass());
                         if (sqlType != null) {
                             ec.withType(sqlType);
                         }

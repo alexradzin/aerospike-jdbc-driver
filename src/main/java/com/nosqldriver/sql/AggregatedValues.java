@@ -25,7 +25,7 @@ public class AggregatedValues {
 
     private static final BiFunction<Object, Object, Object> sum = (one, two) -> {
         if (one == null) {
-            return two;
+            return cast((Number)two);
         }
         return cast(TypeTransformer.cast(one, Double.class, 0.0) + TypeTransformer.cast(two, Double.class, 0.0));
     };

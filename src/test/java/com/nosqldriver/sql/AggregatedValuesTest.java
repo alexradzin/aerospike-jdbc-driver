@@ -51,9 +51,9 @@ class AggregatedValuesTest {
 
     @Test
     void oneSum() {
-        one("sum(n)", 1, 1);
-        one("sum(n)", 0, 0);
-        one("sum(n)", 2, 2);
+        one("sum(n)", 1, 1L);
+        one("sum(n)", 0, 0L);
+        one("sum(n)", 2, 2L);
     }
 
 
@@ -70,14 +70,14 @@ class AggregatedValuesTest {
 
     @Test
     void allFunctionsOneLine() {
-        oneColumn(singletonList(singletonList(1)), singletonList(asList(1, 1, 1, 1, 1, 1)));
+        oneColumn(singletonList(singletonList(1)), singletonList(asList(1L, 1L, 1, 1, 1, 1L)));
     }
 
     @Test
     void allFunctionsSeveralLines() {
         oneColumn(
                 asList(singletonList(10), singletonList(1), singletonList(5)),
-                singletonList(asList(3, 16, 16.0/3.0, 1, 10, 100 + 1 + 25)));
+                singletonList(asList(3L, 16L, 16.0/3.0, 1L, 10L, 100L + 1L + 25L)));
     }
 
 
@@ -100,7 +100,7 @@ class AggregatedValuesTest {
                         AGGREGATED.create("test", null, "sumsqs(age)", null)
                 ),
                 asList(asList(1940, year - 1940), asList(1942, year - 1942), asList(1943, year - 1943), asList(1940, year - 1940)),
-                singletonList(asList(4, 7765, 315, 7765.0/4, 315.0/4, 1940, 77, 1943, 80, 15073813, 24813)));
+                singletonList(asList(4L, 7765L, 315L, 7765.0/4, 315.0/4, 1940L, 77L, 1943L, 80L, 15073813L, 24813L)));
     }
 
     @Test
@@ -112,7 +112,7 @@ class AggregatedValuesTest {
                         GROUP.create("test", "data", "year", null)
                 ),
                 asList(asList(1940, "John"), asList(1942, "Paul"), asList(1943, "George"), asList(1940, "Ringo")),
-                asList(asList(2, 1940), asList(1, 1942), asList(1, 1943)));
+                asList(asList(2L, 1940), asList(1L, 1942), asList(1L, 1943)));
     }
 
     @Test
@@ -124,7 +124,7 @@ class AggregatedValuesTest {
                         AGGREGATED.create("test", "data", "count(*)", null)
                 ),
                 asList(asList(1940, "John"), asList(1942, "Paul"), asList(1943, "George"), asList(1940, "Ringo")),
-                asList(asList(1940, 2), asList(1942, 1), asList(1943, 1)));
+                asList(asList(1940, 2L), asList(1942, 1L), asList(1943, 1L)));
     }
 
     @Test
@@ -140,7 +140,7 @@ class AggregatedValuesTest {
                         AGGREGATED.create("test", "data", "sum(year)", null)
                 ),
                 asList(asList(1940, "John"), asList(1942, "Paul"), asList(1943, "George"), asList(1940, "Ringo")),
-                asList(asList(1940, 2, 1940 * 2), asList(1942, 1, 1942), asList(1943, 1, 1943)));
+                asList(asList(1940, 2L, 1940L * 2), asList(1942, 1L, 1942L), asList(1943, 1L, 1943L)));
     }
 
     @Test
