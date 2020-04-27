@@ -190,7 +190,7 @@ public class TypeTransformer {
         return factory.apply(cal.getTime().getTime());
     }
 
-    public static Class getMinimalType(Object value) {
+    public static Class getMinimalType(Object value, Class barier) {
         Class type = value.getClass();
         if (!(value instanceof Number)) {
             return type;
@@ -198,10 +198,14 @@ public class TypeTransformer {
         Number n = (Number)value;
         double d = n.doubleValue();
         long l = n.longValue();
-        if (d != l) {
+        if (d != l || Double.class.equals(barier)) {
             return Double.class;
         }
-        return Long.class;
+        int i = n.intValue();
+        if (l != i  || Long.class.equals(barier)) {
+            return Long.class;
+        }
+        return Integer.class;
     }
 
     public static Class commonType(Class c1, Class c2) {

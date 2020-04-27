@@ -116,7 +116,7 @@ public class AggregatedValues {
 
     static Object cast(Number result) {
         @SuppressWarnings("unchecked")
-        Class<Object> minimalType = TypeTransformer.getMinimalType(result);
+        Class<Object> minimalType = TypeTransformer.getMinimalType(result, Long.class);
         return Double.class.equals(minimalType) ? result : TypeTransformer.safeCast(result, minimalType);
     }
 
@@ -186,7 +186,7 @@ public class AggregatedValues {
     }
 
     private void updateType(DataColumn column, Object value) {
-        Class type = getMinimalType(value);
+        Class type = getMinimalType(value, Long.class);
         Class existingType = SqlLiterals.sqlToJavaTypes.get(column.getType());
         Class newType = commonType(type, existingType);
         column.withType(sqlTypes.get(newType));
