@@ -13,6 +13,7 @@ import com.aerospike.client.query.IndexType;
 import com.nosqldriver.Person;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.DataColumnBasedResultSetMetaData;
 import com.nosqldriver.util.ThrowingFunction;
 
 import java.sql.Connection;
@@ -424,7 +425,9 @@ public class TestDataUtils {
 
     public static ResultSetMetaData validate(ResultSetMetaData md, DataColumn ... expectedColumns) throws SQLException {
         assertNotNull(md);
-        System.out.println("Column names: " + Arrays.stream(expectedColumns).map(DataColumn::getName).collect(Collectors.toList()));
+        System.out.println("Expected Column names: " + Arrays.stream(expectedColumns).map(DataColumn::getName).collect(Collectors.toList()));
+        System.out.println("Actual Column names: " + ((DataColumnBasedResultSetMetaData)md).getColumns().stream().map(DataColumn::getName).collect(Collectors.toList()));
+
         assertEquals(expectedColumns.length, md.getColumnCount(), "Column names: " + Arrays.stream(expectedColumns).map(DataColumn::getName).toString());
 
         for (int i = 0; i < expectedColumns.length; i++) {
