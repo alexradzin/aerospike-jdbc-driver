@@ -423,6 +423,7 @@ public class TestDataUtils {
 
     public static ResultSetMetaData validate(ResultSetMetaData md, DataColumn ... expectedColumns) throws SQLException {
         assertNotNull(md);
+        System.out.println("Column names: " + Arrays.stream(expectedColumns).map(DataColumn::getName).toString());
         assertEquals(expectedColumns.length, md.getColumnCount(), "Column names: " + Arrays.stream(expectedColumns).map(DataColumn::getName).toString());
 
         for (int i = 0; i < expectedColumns.length; i++) {
