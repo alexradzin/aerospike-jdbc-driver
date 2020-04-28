@@ -23,6 +23,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -422,7 +423,7 @@ public class TestDataUtils {
 
     public static ResultSetMetaData validate(ResultSetMetaData md, DataColumn ... expectedColumns) throws SQLException {
         assertNotNull(md);
-        assertEquals(expectedColumns.length, md.getColumnCount());
+        assertEquals(expectedColumns.length, md.getColumnCount(), "Column names: " + Arrays.stream(expectedColumns).map(DataColumn::getName).toString());
 
         for (int i = 0; i < expectedColumns.length; i++) {
             int j = i + 1;
