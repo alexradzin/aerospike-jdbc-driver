@@ -31,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.aerospike.client.Log.setCallback;
 import static com.aerospike.client.Log.setLevel;
@@ -423,7 +424,7 @@ public class TestDataUtils {
 
     public static ResultSetMetaData validate(ResultSetMetaData md, DataColumn ... expectedColumns) throws SQLException {
         assertNotNull(md);
-        System.out.println("Column names: " + Arrays.stream(expectedColumns).map(DataColumn::getName).toString());
+        System.out.println("Column names: " + Arrays.stream(expectedColumns).map(DataColumn::getName).collect(Collectors.toList()));
         assertEquals(expectedColumns.length, md.getColumnCount(), "Column names: " + Arrays.stream(expectedColumns).map(DataColumn::getName).toString());
 
         for (int i = 0; i < expectedColumns.length; i++) {
