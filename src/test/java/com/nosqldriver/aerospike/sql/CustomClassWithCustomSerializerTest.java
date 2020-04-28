@@ -26,14 +26,13 @@ class CustomClassWithCustomSerializerTest  {
     private final Connection testConn;
 
     CustomClassWithCustomSerializerTest() throws SQLException {
-        this.testConn = DriverManager.getConnection(aerospikeTestUrl + "?custom.function.parse=" + PersonParser.class.getName());;
+        this.testConn = DriverManager.getConnection(aerospikeTestUrl + "?custom.function.parse=" + PersonParser.class.getName());
     }
 
 
     @BeforeAll
-    @AfterAll
-    static void dropAll() throws SQLException {
-        deleteAllRecords(NAMESPACE, PEOPLE);
+    static void init() throws SQLException {
+        dropAll();
 
         PreparedStatement insert = getTestConnection().prepareStatement("insert into people (PK, data) values (?, ?)");
         for (Person p : beatles) {
@@ -44,6 +43,10 @@ class CustomClassWithCustomSerializerTest  {
     }
 
 
+    @AfterAll
+    static void dropAll() {
+        deleteAllRecords(NAMESPACE, PEOPLE);
+    }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {

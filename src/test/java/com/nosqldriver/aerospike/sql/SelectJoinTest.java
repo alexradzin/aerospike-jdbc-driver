@@ -42,6 +42,7 @@ class SelectJoinTest {
     @VisibleForPackage static final Collection<String> guitar  = new HashSet<>(singleton("guitar"));
     @BeforeAll
     static void init() {
+        dropAll();
         writeBeatles();
         writeAllPersonalInstruments();
     }
@@ -81,7 +82,6 @@ class SelectJoinTest {
     @ValueSource(strings = {
             "select * from people as p join instruments as i on p.id=i.person_id",
     })
-    //@Disabled //FIXME: fails on build server
     void oneToManyJoinSelectAllFields(String sql) throws SQLException {
         ResultSet rs = executeQuery(sql,
                 DATA.create(NAMESPACE, PEOPLE, "kids_count", "kids_count").withType(BIGINT),

@@ -104,6 +104,7 @@ class SelectTest {
 
     @BeforeAll
     static void init() {
+        dropAll();
         TestDataUtils.writeBeatles();
     }
 
