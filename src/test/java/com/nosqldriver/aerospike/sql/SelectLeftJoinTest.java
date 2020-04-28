@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class SelectLeftJoinTest {
     @BeforeAll
     static void init() {
+        dropAll();
         writeBeatles();
         writeGuitars();
     }

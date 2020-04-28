@@ -4,6 +4,7 @@ import com.aerospike.client.Bin;
 import com.aerospike.client.Key;
 import com.aerospike.client.policy.WritePolicy;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,12 +50,17 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 class SpecialSelectTest {
     private Connection testConn = getTestConnection();
 
-    @AfterEach
-    void dropAll() {
+    @BeforeAll
+    static void dropAll() {
         deleteAllRecords(NAMESPACE, PEOPLE);
         deleteAllRecords(NAMESPACE, INSTRUMENTS);
         deleteAllRecords(NAMESPACE, SUBJECT_SELECTION);
         deleteAllRecords(NAMESPACE, DATA);
+    }
+
+    @AfterEach
+    void dropAllRecords() {
+        dropAll();
     }
 
     @Test

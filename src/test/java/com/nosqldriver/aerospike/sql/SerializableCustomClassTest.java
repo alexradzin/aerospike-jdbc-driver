@@ -24,9 +24,8 @@ class SerializableCustomClassTest {
 
 
     @BeforeAll
-    @AfterAll
-    static void dropAll() throws SQLException {
-        deleteAllRecords(NAMESPACE, PEOPLE);
+    static void init() throws SQLException {
+        dropAll();
 
         PreparedStatement insert = getTestConnection().prepareStatement("insert into people (PK, data) values (?, ?)");
         for (Person p : beatles) {
@@ -36,6 +35,10 @@ class SerializableCustomClassTest {
         }
     }
 
+    @AfterAll
+    static void dropAll() {
+        deleteAllRecords(NAMESPACE, PEOPLE);
+    }
 
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
