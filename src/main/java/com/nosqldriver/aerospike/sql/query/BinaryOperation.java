@@ -59,6 +59,23 @@ public class BinaryOperation {
         }
     }
 
+    @VisibleForPackage
+    static class ComparableEqualityPredicate<T> implements Predicate<ResultSet> {
+        private final Comparable<T> keyValue;
+        private final Predicate<Integer> eq;
+
+        ComparableEqualityPredicate(Comparable<T> keyValue, Predicate<Integer> eq) {
+            this.keyValue = keyValue;
+            this.eq = eq;
+        }
+
+        @Override
+        public boolean test(ResultSet rs) {
+            //noinspection unchecked
+            return Boolean.TRUE.equals(SneakyThrower.get(() -> eq.test(keyValue.compareTo((T)rs.getObject("PK")))));
+        }
+    }
+
     public BinaryOperation() {
     }
 
@@ -70,7 +87,7 @@ public class BinaryOperation {
     }
 
     public enum Operator {
-        EQ("=") {
+        EQ("=", value -> value == 0) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 boolean subSelect = operation.values.stream().anyMatch(v -> v instanceof QueryHolder);
@@ -99,24 +116,30 @@ public class BinaryOperation {
                 return filter;
             }
         },
-        NE("!=") {
+        NE("!=", value -> value != 0) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 if (!operation.values.isEmpty() &&  "PK".equals(operation.column)) {
-                    queries.createScanQuery(operation.statement, new PrimaryKeyEqualityPredicate(createKey(operation.values.get(0), queries), false));
+                    queries.createScanQuery(operation.statement, createPkPredicate(operation.values.get(0), queries));
+                    return queries;
                 }
                 return queries;
             }
         },
-        NEQ("<>") {
+        NEQ("<>", value -> value != 0) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 return NE.update(queries, operation);
             }
         },
-        GT(">") {
+        GT(">", value -> value < 0) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
+                if (queries.isPkQuerySupported() && !operation.values.isEmpty() &&  "PK".equals(operation.column)) {
+                    queries.createScanQuery(operation.statement, createPkPredicate(operation.values.get(0), queries));
+                    return queries;
+                }
+
                 if (operation.values.isEmpty() || operation.values.get(0) instanceof QueryHolder) {
                     assertPkFiltering(operation);
                     return queries;
@@ -125,15 +148,23 @@ public class BinaryOperation {
                 return updateComparisonOperation(queries, operation, o -> values);
             }
         },
-        GE(">=") {
+        GE(">=", value -> value <= 0) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
+                if (queries.isPkQuerySupported() && !operation.values.isEmpty() &&  "PK".equals(operation.column)) {
+                    queries.createScanQuery(operation.statement, createPkPredicate(operation.values.get(0), queries));
+                    return queries;
+                }
                 return updateComparisonOperation(queries, operation, o -> asList(operation.values.get(0), Long.MAX_VALUE));
             }
         },
-        LT("<") {
+        LT("<", value -> value > 0) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
+                if (queries.isPkQuerySupported() && !operation.values.isEmpty() &&  "PK".equals(operation.column)) {
+                    queries.createScanQuery(operation.statement, createPkPredicate(operation.values.get(0), queries));
+                    return queries;
+                }
                 if (operation.values.isEmpty() || operation.values.get(0) instanceof QueryHolder) {
                     assertPkFiltering(operation);
                     return queries;
@@ -143,13 +174,17 @@ public class BinaryOperation {
                 return updateComparisonOperation(queries, operation, o -> values);
             }
         },
-        LE("<=") {
+        LE("<=", value -> value >= 0) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
+                if (queries.isPkQuerySupported() && !operation.values.isEmpty() &&  "PK".equals(operation.column)) {
+                    queries.createScanQuery(operation.statement, createPkPredicate(operation.values.get(0), queries));
+                    return queries;
+                }
                 return updateComparisonOperation(queries, operation, o -> asList(Long.MIN_VALUE, operation.values.get(0)));
             }
         },
-        BETWEEN("BETWEEN") {
+        BETWEEN("BETWEEN", null) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 if ("PK".equals(operation.column) || operation.values.stream().anyMatch(v -> v instanceof QueryHolder)) {
@@ -162,7 +197,7 @@ public class BinaryOperation {
                 return queries;
             }
         },
-        IN("IN") {
+        IN("IN", null) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 if ("PK".equals(operation.column) && operation.values.stream().noneMatch(v -> v instanceof QueryHolder)) {
@@ -199,13 +234,13 @@ public class BinaryOperation {
                 return c;
             }
         },
-        AND("AND", false) {
+        AND("AND", null, false) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 return queries;
             }
         },
-        OR("OR", false) {
+        OR("OR", null, false) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 return queries;
@@ -219,14 +254,16 @@ public class BinaryOperation {
         }
         private final static Collection<Operator> binaryComparisonOperators = new HashSet<>(Arrays.asList(Operator.EQ, Operator.LT, Operator.LE, Operator.GE, Operator.GT, Operator.NE, Operator.NEQ));
         private final String operator;
+        protected final Predicate<Integer> eq;
         private final boolean requiresColumn;
 
-        Operator(String operator) {
-            this(operator, true);
+        Operator(String operator, Predicate<Integer> eq) {
+            this(operator, eq, true);
         }
 
-        Operator(String operator, boolean requiresColumn) {
+        Operator(String operator, Predicate<Integer> eq, boolean requiresColumn) {
             this.operator = operator;
+            this.eq = eq;
             this.requiresColumn = requiresColumn;
         }
 
@@ -261,6 +298,11 @@ public class BinaryOperation {
                 SneakyThrower.sneakyThrow(new SQLException("Filtering by PK supports =, !=, IN"));
             }
         }
+
+        protected Predicate<ResultSet> createPkPredicate(Object value, QueryHolder queries) {
+            return queries.isPkQuerySupported() ? new ComparableEqualityPredicate<>((Comparable<?>)value, eq) : new PrimaryKeyEqualityPredicate(createKey(value, queries), false);
+        }
+
     }
 
     public void setStatement(Statement statement) {

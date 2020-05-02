@@ -877,6 +877,9 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                 .collect(toList());
     }
 
+    public boolean isPkQuerySupported() {
+        return getPk;
+    }
 
 
 

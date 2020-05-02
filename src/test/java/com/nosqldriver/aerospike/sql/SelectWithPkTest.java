@@ -11,6 +11,10 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.INSTRUMENTS;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
@@ -28,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
-public class SelectWithPkTest {
+class SelectWithPkTest {
     private static Connection queryKeyConn;
     @BeforeAll
     static void init() throws SQLException {
@@ -66,6 +70,10 @@ public class SelectWithPkTest {
             "select PK, id, first_name, last_name, year_of_birth, kids_count from people where 2=1",
             "select PK, id, first_name, last_name, year_of_birth, kids_count from people where 2=1+1",
             "select PK, id, first_name, last_name, year_of_birth, kids_count from people limit 0",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK>0",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK>=0",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK<10",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK<=4",
     })
     void metadataOneTableWithPk(String sql) throws SQLException {
         try(ResultSet rs = executeQuery(queryKeyConn, sql,
@@ -82,6 +90,48 @@ public class SelectWithPkTest {
         }
     }
 
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people;1,2,3,4",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK>0;1,2,3,4",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK>=0;1,2,3,4",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK<5;1,2,3,4",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK<=5;1,2,3,4",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK<=4;1,2,3,4",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK>=1;1,2,3,4",
+
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK>1;2,3,4",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK<4;1,2,3",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK<1;",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK>4;",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK<=0;",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK>=5;",
+
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK=4;4",
+            "select PK, id, first_name, last_name, year_of_birth, kids_count from people where PK!=2;1,3,4",
+    })
+    void selectByPk(String conf) throws SQLException {
+        String[] args = conf.split(";");
+        String sql = args[0];
+        Collection<String> expected = args.length > 1 ? new HashSet<>(Arrays.asList(args[1].split(","))) : Collections.emptySet();
+        try(ResultSet rs = executeQuery(queryKeyConn, sql,
+                PK.create(NAMESPACE, PEOPLE, "PK", "PK").withType(BIGINT),
+                DATA.create(NAMESPACE, PEOPLE, "id", "id").withType(BIGINT),
+                DATA.create(NAMESPACE, PEOPLE, "first_name", "first_name").withType(VARCHAR),
+                DATA.create(NAMESPACE, PEOPLE, "last_name", "last_name").withType(VARCHAR),
+                DATA.create(NAMESPACE, PEOPLE, "year_of_birth", "year_of_birth").withType(BIGINT),
+                DATA.create(NAMESPACE, PEOPLE, "kids_count", "kids_count").withType(BIGINT)
+        )) {
+            Collection<String> actual = new HashSet<>();
+            while (rs.next()) {
+                assertEquals(rs.getInt("PK"), rs.getInt("id"));
+                String pk = "" + rs.getInt("PK");
+                actual.add(pk);
+            }
+            assertEquals(expected, actual);
+        }
+    }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
