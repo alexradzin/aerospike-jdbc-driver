@@ -26,6 +26,7 @@ import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.PK;
 import static java.lang.String.format;
 import static java.sql.Types.BIGINT;
+import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -132,6 +133,34 @@ class SelectWithPkTest {
             assertEquals(expected, actual);
         }
     }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select PK+id from people;PK + id;2,4,6,8",
+            "select PK+PK from people;PK + PK;2,4,6,8",
+            "select PK+1 from people;PK + 1;2,3,4,5",
+            "select PK*2 from people;PK * 2;2,4,6,8",
+    })
+    void selectCalcWithPk(String conf) throws SQLException {
+        String[] args = conf.split(";");
+        String sql = args[0];
+        String fieldName = args[1];
+        Collection<String> expected = args.length > 2 ? new HashSet<>(Arrays.asList(args[2].split(","))) : Collections.emptySet();
+        try(ResultSet rs = executeQuery(queryKeyConn, sql,
+                DATA.create(NAMESPACE, PEOPLE, fieldName, null).withType(INTEGER)
+        )) {
+            Collection<String> actual = new HashSet<>();
+            while (rs.next()) {
+                String field = "" + rs.getInt(1);
+                actual.add(field);
+            }
+            assertEquals(expected, actual);
+        }
+    }
+
+
+
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {

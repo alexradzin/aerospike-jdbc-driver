@@ -387,7 +387,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     }
 
     private String[] getNames() {
-        return columns.stream().filter(c -> c.getName() != null).map(DataColumn::getName).toArray(String[]::new);
+        return columns.stream().filter(c -> c.getName() != null && !"PK".equals(c.getName())).map(DataColumn::getName).toArray(String[]::new);
     }
 
     public void setSchema(String schema) {
