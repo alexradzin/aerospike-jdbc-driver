@@ -197,6 +197,9 @@ class SelectWithPkTest {
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select people.PK, instruments.PK, first_name, instruments.name as instrument from people as p join instruments as i on p.id=i.person_id",
+            "select people.PK, instruments.PK, first_name, instruments.name as instrument from people as p join instruments as i on p.PK=i.PK",
+            "select people.PK, instruments.PK, first_name, instruments.name as instrument from people as p join instruments as i on p.PK=i.person_id",
+            "select people.PK, instruments.PK, first_name, instruments.name as instrument from people as p join instruments as i on p.id=i.PK",
     })
     void metadataJoinWithPk(String sql) throws SQLException {
         try(ResultSet rs = executeQuery(queryKeyConn, sql,
