@@ -1,36 +1,28 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.util.FunctionManager;
-import com.nosqldriver.util.SneakyThrower;
 
 import java.sql.ResultSet;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toCollection;
 
 public class ExpressionAwareResultSetFactory {
-    private final List<String> functionNames = new ArrayList<>();
+    private final Collection<String> functionNames;
 
     private static final Pattern EXPRESSION_DELIMITERS = Pattern.compile("[\\s()[],;.*+-/=><?:%^&!]]");
     private static final Pattern NUMBER = Pattern.compile("\\b[+-]?\\d+(:?\\.\\d+)?(:?e[+-]?\\d+)?\\b");
     private static final Pattern QUOTES = Pattern.compile("'[^']*'");
 
-    public ExpressionAwareResultSetFactory() {
-        SneakyThrower.call(() -> {
-            @SuppressWarnings("unchecked")
-            List<Object> definedFunctions = (List<Object>) new JavascriptEngineFactory(null).getEngine().eval("functions");
-            this.functionNames.addAll(definedFunctions.stream().filter(f -> f instanceof String).map(f -> (String)f).filter(f -> !f.startsWith("_")).collect(Collectors.toList()));
-        });
-    }
-
-    public void addFunctionNames(Collection<String> functionNames) {
-        this.functionNames.addAll(functionNames);
+    public ExpressionAwareResultSetFactory(FunctionManager functionManager) {
+        functionManager.getFunctionNames();
+        functionNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        functionNames.addAll(functionManager.getFunctionNames());
     }
 
     public ResultSet wrap(ResultSet rs, FunctionManager functionManager, List<DataColumn> columns, boolean indexByName) {

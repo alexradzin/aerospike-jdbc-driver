@@ -904,6 +904,32 @@ class SelectTest {
         selectedPeople.forEach((key, value) -> assertEquals(value.intValue(), key.length()));
     }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select substring(first_name, 1, 1) as initial from people",
+    })
+    void selectSpecificFieldsWithLenFunction111(String query) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+
+        Set<String> initials = new HashSet<>();
+
+        while (rs.next()) {
+            initials.add(rs.getString("initial"));
+        }
+
+        assertEquals(stream(beatles).map(p -> p.getFirstName().substring(0, 1)).collect(Collectors.toSet()), initials);
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select concat('a', 'b', 'c')",
+    })
+    void concat(String query) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+        while (rs.next()) {
+            assertEquals("abc", rs.getString(1));
+        }
+    }
 
     @Test
     void selectSpecificFieldsWithFunctions2() throws SQLException {

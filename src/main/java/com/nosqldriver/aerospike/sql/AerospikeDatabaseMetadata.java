@@ -7,6 +7,7 @@ import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.SimpleWrapper;
+import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.SneakyThrower;
 import com.nosqldriver.util.ThrowingSupplier;
 
@@ -62,17 +63,17 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     private final IAerospikeClient client;
     private final Connection connection;
     private final InfoPolicy infoPolicy;
-    private final Collection<String> predefinedFunctions;
+    private final FunctionManager functionManager;
     private static final String newLine = System.lineSeparator();
 
 
-    public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client, Connection connection, AerospikePolicyProvider policyProvider, Collection<String> predefinedFunctions) {
+    public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client, Connection connection, AerospikePolicyProvider policyProvider, FunctionManager functionManager) {
         this.url = url;
         clientInfo = parser.clientInfo(url, info);
         this.client = client;
         this.connection = connection;
         infoPolicy = policyProvider.getInfoPolicy();
-        this.predefinedFunctions = predefinedFunctions;
+        this.functionManager = functionManager;
         manifest = manifest();
         dbInfo = new HashMap<>();
         Arrays.stream(client.getNodes()).forEach(node -> dbInfo.putAll(Info.request(infoPolicy, node)));
@@ -1113,9 +1114,8 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern) {
-        ExpressionAwareResultSetFactory expressionAwareResultSetFactory = new ExpressionAwareResultSetFactory();
-        expressionAwareResultSetFactory.addFunctionNames(predefinedFunctions);
-        List<List<?>> jsFunctions = expressionAwareResultSetFactory.getClientSideFunctionNames().stream().map(name -> asList(null, null, name, "JavaScript", functionResultUnknown, name)).collect(toList());
+        ExpressionAwareResultSetFactory expressionAwareResultSetFactory = new ExpressionAwareResultSetFactory(functionManager);
+        List<List<?>> jsFunctions = expressionAwareResultSetFactory.getClientSideFunctionNames().stream().map(name -> asList(null, null, name, "Java", functionResultUnknown, name)).collect(toList());
         List<List<?>> luaFunctions = Stream.of("min", "max", "sum", "avg", "count", "distinct").map(name -> asList(null, null, name, "Lua", functionResultUnknown, name)).collect(toList());
 
         List<List<?>> functions = new ArrayList<>();

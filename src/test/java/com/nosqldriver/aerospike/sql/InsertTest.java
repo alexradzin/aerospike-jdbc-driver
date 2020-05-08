@@ -592,7 +592,7 @@ class InsertTest {
 
 
     @Test
-    void insertAsciiStreams() throws SQLException, IOException {
+    void insertAsciiStreams() throws SQLException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
         assertNull(client.get(null, key1));
         PreparedStatement ps = testConn.prepareStatement("insert into data (PK, ascii_stream, ascii_stream_i, ascii_stream_l) values (?, ?, ?, ?)");
@@ -614,7 +614,7 @@ class InsertTest {
     }
 
     @Test
-    void insertCharacterStreams() throws SQLException, IOException {
+    void insertCharacterStreams() throws SQLException {
         Key key1 = new Key(NAMESPACE, DATA, 1);
         assertNull(client.get(null, key1));
         PreparedStatement ps = testConn.prepareStatement("insert into data (PK, char_stream, char_stream_i, char_stream_l, nchar_stream, nchar_stream_l) values (?, ?, ?, ?, ?, ?)");

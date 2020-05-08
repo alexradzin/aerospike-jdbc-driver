@@ -8,7 +8,12 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 public class DataUtil {
-    public List<?> toList(Map<String, Object> map) {
+    public List<?> toList(Object arg) {
+        if (arg instanceof List) {
+            return (List<?>)arg;
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> map = (Map<String, Object>)arg;
         TreeMap<Integer, Object> m2 = map.entrySet().stream().collect(Collectors.toMap(e -> Integer.parseInt(e.getKey()), Map.Entry::getValue, (v1, v2) -> v2, TreeMap::new));
         int n = m2.size();
         if (n != map.size()) {
@@ -24,7 +29,7 @@ public class DataUtil {
         return new ArrayList<>(m2.values());
     }
 
-    public Object[] toArray(Map<String, Object> map) {
+    public Object[] toArray(Object map) {
         return toList(map).toArray();
     }
 }

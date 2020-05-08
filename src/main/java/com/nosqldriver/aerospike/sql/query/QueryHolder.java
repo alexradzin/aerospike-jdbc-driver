@@ -117,8 +117,9 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     private boolean indexByName = false;
     private final boolean getPk;
 
-    private final ExpressionAwareResultSetFactory expressionResultSetWrappingFactory = new ExpressionAwareResultSetFactory();
     private final FunctionManager functionManager;
+    private final ExpressionAwareResultSetFactory expressionResultSetWrappingFactory;
+    private final ColumnType[] types;
 
     public enum ChainOperation {
         UNION, UNION_ALL, SUB_QUERY
@@ -130,12 +131,13 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         this.policyProvider = policyProvider;
         keyRecordFetcherFactory = new KeyRecordFetcherFactory(policyProvider.getQueryPolicy());
         this.functionManager = functionManager;
+        expressionResultSetWrappingFactory = new ExpressionAwareResultSetFactory(functionManager);
         statement = new Statement();
-        expressionResultSetWrappingFactory.addFunctionNames(functionManager.getCustomFunctionNames());
         if (schema != null) {
             statement.setNamespace(schema);
         }
         getPk = Stream.of(policyProvider.getQueryPolicy(), policyProvider.getBatchPolicy(), policyProvider.getScanPolicy()).anyMatch(p -> p.sendKey);
+        types = initTypes();
     }
 
     public Function<IAerospikeClient, ResultSet> getQuery(java.sql.Statement sqlStatement) {
@@ -592,134 +594,136 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         public abstract void addColumn(Expression expr, String alias, boolean visible, String schema, String table);
     }
 
-    private ColumnType[] types = new ColumnType[] {
-            new ColumnType((e) -> e instanceof Column) {
+    private ColumnType[] initTypes() {
+        return new ColumnType[]{
+                new ColumnType((e) -> e instanceof Column) {
 
-                @Override
-                protected String getCatalog(Expression expr) {
-                    return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(schema);
-                }
+                    @Override
+                    protected String getCatalog(Expression expr) {
+                        return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(schema);
+                    }
 
-                @Override
-                protected String getTable(Expression expr) {
-                    String table = ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(set);
-                    // resolve alias
-                    if (Objects.equals(table, setAlias)) {
+                    @Override
+                    protected String getTable(Expression expr) {
+                        String table = ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(set);
+                        // resolve alias
+                        if (Objects.equals(table, setAlias)) {
+                            return set;
+                        }
+                        Optional<String> joinAlias = joins.stream().filter(j -> Objects.equals(table, j.setAlias)).findFirst().map(j -> j.setAlias);
+                        return joinAlias.orElse(table);
+                    }
+
+                    @Override
+                    protected String getText(Expression expr) {
+                        return ((Column) expr).getColumnName();
+                    }
+
+                    @Override
+                    public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
+                        String name = getText(expr);
+                        DataColumn.DataColumnRole role = visible ? "PK".equals(name) ? PK : DATA : HIDDEN;
+                        if (PK.equals(role)) {
+                            name = expr.toString();
+                        }
+                        columns.add(role.create(getCatalog(expr), getTable(expr), name, alias));
+                        statement.setBinNames(getNames());
+                    }
+                },
+
+                new ColumnType(e -> e instanceof BinaryExpression || e instanceof LongValue || e instanceof DoubleValue || e instanceof net.sf.jsqlparser.expression.StringValue || (e instanceof net.sf.jsqlparser.expression.Function && expressionResultSetWrappingFactory.getClientSideFunctionNames().contains(((net.sf.jsqlparser.expression.Function) e).getName())) || e instanceof SignedExpression) {
+                    @Override
+                    protected String getCatalog(Expression expr) {
+                        return schema;
+                    }
+
+                    @Override
+                    protected String getTable(Expression expr) {
                         return set;
                     }
-                    Optional<String> joinAlias = joins.stream().filter(j -> Objects.equals(table, j.setAlias)).findFirst().map(j -> j.setAlias);
-                    return joinAlias.orElse(table);
-                }
 
-                @Override
-                protected String getText(Expression expr) {
-                    return ((Column) expr).getColumnName();
-                }
-
-                @Override
-                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
-                    String name = getText(expr);
-                    DataColumn.DataColumnRole role = visible ? "PK".equals(name) ? PK : DATA : HIDDEN;
-                    if (PK.equals(role)) {
-                        name = expr.toString();
+                    @Override
+                    protected String getText(Expression expr) {
+                        return expr.toString();
                     }
-                    columns.add(role.create(getCatalog(expr), getTable(expr), name, alias));
-                    statement.setBinNames(getNames());
-                }
-            },
 
-            new ColumnType(e -> e instanceof BinaryExpression || e instanceof LongValue || e instanceof DoubleValue || e instanceof net.sf.jsqlparser.expression.StringValue || (e instanceof net.sf.jsqlparser.expression.Function && expressionResultSetWrappingFactory.getClientSideFunctionNames().contains(((net.sf.jsqlparser.expression.Function)e).getName())) || e instanceof SignedExpression) {
-                @Override
-                protected String getCatalog(Expression expr) {
-                    return schema;
-                }
-
-                @Override
-                protected String getTable(Expression expr) {
-                    return set;
-                }
-
-                @Override
-                protected String getText(Expression expr) {
-                    return expr.toString();
-                }
-
-                @Override
-                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
-                    String column = getText(expr);
-                    columns.add(EXPRESSION.create(getCatalog(expr), getTable(expr), getText(expr), alias));
-                    expressionResultSetWrappingFactory.getVariableNames(column).forEach(v -> columns.add(HIDDEN.create(getCatalog(expr), getTable(expr), v, alias)));
-                    statement.setBinNames(getNames());
-                }
-            },
+                    @Override
+                    public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
+                        String column = getText(expr);
+                        columns.add(EXPRESSION.create(getCatalog(expr), getTable(expr), getText(expr), alias));
+                        expressionResultSetWrappingFactory.getVariableNames(column).forEach(v -> columns.add(HIDDEN.create(getCatalog(expr), getTable(expr), v, alias)));
+                        statement.setBinNames(getNames());
+                    }
+                },
 
 
-            new ColumnType(e -> e instanceof net.sf.jsqlparser.expression.Function) {
-                @Override
-                protected String getCatalog(Expression expr) {
-                    return schema;
-                }
+                new ColumnType(e -> e instanceof net.sf.jsqlparser.expression.Function) {
+                    @Override
+                    protected String getCatalog(Expression expr) {
+                        return schema;
+                    }
 
-                @Override
-                protected String getTable(Expression expr) {
-                    return set;
-                }
+                    @Override
+                    protected String getTable(Expression expr) {
+                        return set;
+                    }
 
-                @Override
-                protected String getText(Expression expr) {
-                    return expr.toString();
-                }
+                    @Override
+                    protected String getText(Expression expr) {
+                        return expr.toString();
+                    }
 
-                @Override
-                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
-                    columns.add(AGGREGATED.create(getCatalog(expr), getTable(expr), getText(expr), alias));
-                }
-            },
+                    @Override
+                    public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
+                        columns.add(AGGREGATED.create(getCatalog(expr), getTable(expr), getText(expr), alias));
+                    }
+                },
 
-            new ColumnType(e -> e instanceof String && ((String)e).startsWith("distinct")) {
-                @Override
-                protected String getCatalog(Expression expr) {
-                    return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(null);
-                }
+                new ColumnType(e -> e instanceof String && ((String) e).startsWith("distinct")) {
+                    @Override
+                    protected String getCatalog(Expression expr) {
+                        return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(null);
+                    }
 
-                @Override
-                protected String getTable(Expression expr) {
-                    return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(null);
-                }
+                    @Override
+                    protected String getTable(Expression expr) {
+                        return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(null);
+                    }
 
-                @Override
-                protected String getText(Expression expr) {
-                    return "distinct" + expr.toString();
-                }
+                    @Override
+                    protected String getText(Expression expr) {
+                        return "distinct" + expr.toString();
+                    }
 
-                @Override
-                public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
-                    columns.add(AGGREGATED.create(catalog, table, getText(expr), alias));
-                }
-            },
-            new ColumnType(e -> e instanceof ArrayExpression) {
+                    @Override
+                    public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
+                        columns.add(AGGREGATED.create(catalog, table, getText(expr), alias));
+                    }
+                },
+                new ColumnType(e -> e instanceof ArrayExpression) {
 
-                @Override
-                protected String getCatalog(Expression expr) {
-                    return schema;
-                }
+                    @Override
+                    protected String getCatalog(Expression expr) {
+                        return schema;
+                    }
 
-                @Override
-                protected String getTable(Expression expr) {
-                    return null;
-                }
+                    @Override
+                    protected String getTable(Expression expr) {
+                        return null;
+                    }
 
-                @Override
-                protected String getText(Expression expr) {
-                    return expr == null ? null : expr.toString();
-                }
+                    @Override
+                    protected String getText(Expression expr) {
+                        return expr == null ? null : expr.toString();
+                    }
 
-                @Override
-                public void addColumn(Expression expr, String alias, boolean visible, String schema, String table) {
-                    columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
+                    @Override
+                    public void addColumn(Expression expr, String alias, boolean visible, String schema, String table) {
+                        columns.add(DATA.create(getCatalog(expr), getTable(expr), getText(expr), alias));
+                    }
                 }
-            }
-    };
+        };
+    }
 
     public void addGroupField(String field) {
         boolean updated = false;

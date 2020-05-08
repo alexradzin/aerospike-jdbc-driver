@@ -1,5 +1,6 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.util.FunctionManager;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -12,7 +13,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ExpressionAwareResultSetFactoryTest {
-    private final ExpressionAwareResultSetFactory exprFactory = new ExpressionAwareResultSetFactory();
+    private final ExpressionAwareResultSetFactory exprFactory = new ExpressionAwareResultSetFactory(new FunctionManager());
 
     @Test
     void emptyExpression() {

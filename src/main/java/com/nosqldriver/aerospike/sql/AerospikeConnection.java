@@ -141,7 +141,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
 
     @Override
     public DatabaseMetaData getMetaData() {
-        return new AerospikeDatabaseMetadata(url, props, client, this, policyProvider, functionManager.getCustomFunctionNames());
+        return new AerospikeDatabaseMetadata(url, props, client, this, policyProvider, functionManager);
     }
 
     @Override
@@ -393,7 +393,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     private FunctionManager init(FunctionManager functionManager, Properties props) {
         props.entrySet().stream()
                 .filter(e -> ((String)e.getKey()).startsWith(CUSTOM_FUNCTION_PREFIX))
-                .forEach(e -> functionManager.addCustomFunction(((String)e.getKey()).substring(CUSTOM_FUNCTION_PREFIX_LENGTH), (String)e.getValue()));
+                .forEach(e -> functionManager.addFunction(((String)e.getKey()).substring(CUSTOM_FUNCTION_PREFIX_LENGTH), (String)e.getValue()));
         return functionManager;
     }
 }

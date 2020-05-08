@@ -98,10 +98,7 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                             }
                         } else if (EXPRESSION.equals(c.getRole())) {
                             String functionName = c.getExpression().replaceFirst("\\(.*", "");
-                            Class<Function<?, ?>> f = functionManager.getCustomFunction(functionName);
-                            if (f != null) {
-                                functionManager.getFunctionReturnType(f).map(clazz -> subColumns.addAll(extractFieldTypes(c, clazz)));
-                            }
+                            functionManager.getFunctionReturnType(functionName).map(clazz -> subColumns.addAll(extractFieldTypes(c, clazz)));
                         }
                         if (c.getLabel() == null) {
                             c.withLabel(c.getName());
