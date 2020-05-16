@@ -6,6 +6,9 @@ import java.util.Collections;
 import java.util.Map.Entry;
 
 public class PreparedStatementUtil {
+    public static final char PS_PLACEHOLDER_PREFIX = '_';
+
+
     public static Entry<String, Integer> parseParameters(String sql, int offset) {
         StringBuilder fixedIndexSqlBuf = new StringBuilder();
         int count = 0;
@@ -16,7 +19,7 @@ public class PreparedStatementUtil {
             }
             if (!intoConstant && c == '?') {
                 count++;
-                fixedIndexSqlBuf.append('$').append(count + offset);
+                fixedIndexSqlBuf.append(PS_PLACEHOLDER_PREFIX).append(count + offset);
             } else {
                 fixedIndexSqlBuf.append(c);
             }
@@ -27,7 +30,6 @@ public class PreparedStatementUtil {
     public static Iterable<String> splitQueries(String sql) {
         Collection<String> queries = new ArrayList<>();
         StringBuilder currentQuery = new StringBuilder();
-        int count = 0;
         boolean intoConstant = false;
 
         for (char c : sql.toCharArray()) {

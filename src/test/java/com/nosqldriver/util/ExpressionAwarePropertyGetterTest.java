@@ -39,7 +39,7 @@ class ExpressionAwarePropertyGetterTest {
 
     @Test
     void validMathExpressionWithVariableInMap() {
-        assertExpression(singletonMap("five", 5), "five - 2", 3.0);
+        assertExpression(singletonMap("five", 5), "five - 2", 3);
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.nosqldriver.sql;
 
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.util.FunctionManager;
+import com.nosqldriver.util.ScriptEngineWrapper;
 import com.nosqldriver.util.SneakyThrower;
 
 import javax.script.Bindings;
@@ -25,17 +26,10 @@ public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T
 
     public ExpressionEvaluator(String expr, Map<String, Object> initialBindings, FunctionManager functionManager) {
         this.expr = expr;
-        engine = new JavascriptEngineFactory(functionManager).getEngine();
+        engine = new ScriptEngineFactory(functionManager).getEngine();
+        fixedExpr = engine instanceof ScriptEngineWrapper ? ((ScriptEngineWrapper)engine).fixWhereExpression(expr) : expr;
         Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
         bindings.putAll(initialBindings);
-        // TODO: this replacement is pretty naive. It might corrupt strings that contain equal sign and words "and" and "or"
-        fixedExpr = expr.replaceAll("(?<![<>])=", "==")
-                .replaceAll("(?i)(\\w+)\\s+between\\s+(\\d+)\\s+and\\s+(\\d+)", "$1>=$2 and $1<=$3")
-                .replaceAll("(?i) AND ", " && ").replaceAll("(?i) OR ", " || ").replace("<>", "!=")
-                .replaceAll("(?i) like\\s+'%(.*?)%'", ".match(/.*$1.*/)!=null")
-                .replaceAll("(?i) like\\s+'%(.*?)'", ".match(/.*$1__ENDOFLINEINLIKEEXPRESSION__/)!=null").replace("__ENDOFLINEINLIKEEXPRESSION__", "$")
-                .replaceAll("(?i) like\\s+'(.*?)%'", ".match(/^$1.*/)!=null")
-                .replaceAll("(?i)like ", "==");
     }
 
 
@@ -69,7 +63,7 @@ public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T
             }
             bindings.putAll(ctx);
             return engine.eval(expr);
-        } catch (ScriptException e) {
+        } catch (Exception e) {
             return SneakyThrower.sneakyThrow(new SQLException(e.getMessage(), e));
         }
     }

@@ -21,8 +21,10 @@ import static com.nosqldriver.util.DateParser.*;
 import static java.lang.String.format;
 import static java.util.Base64.*;
 
+// Only functions allow discovering generic types of arguments; lambdas do not allow this.
+@SuppressWarnings({"Convert2Lambda", "Anonymous2MethodRef"})
 @VisibleForPackage
-class StandardFunctions {
+public class StandardFunctions {
     private static DataUtil dataUtil = new DataUtil();
 
     private static Function<Object, Date> date = arg -> {
@@ -42,57 +44,231 @@ class StandardFunctions {
     };
 
     @VisibleForPackage
-    static final Map<String, Object> functions = new HashMap<>();
+    public static final Map<String, Object> functions = new HashMap<>();
     static {
-        final Function<String, Integer> stringLength = String::length;
+        final Function<String, Integer> stringLength = new Function<String, Integer>() {
+            @Override
+            public Integer apply(String s) {
+                return s.length();
+            }
+        };
         functions.put("len", stringLength);
         functions.put("length", stringLength);
 
-        functions.put("ascii", (Function<String, Integer>) s -> s.length() > 0 ? (int)s.charAt(0) : null);
-        functions.put("char", (Function<Integer, String>) code -> code == null ? null : new String(new char[] {(char)code.intValue()}));
+        functions.put("ascii", new Function<String, Integer>() {
+            @Override
+            public Integer apply(String s) {
+                return s.length() > 0 ? (int) s.charAt(0) : null;
+            }
+        });
+        functions.put("char", new Function<Integer, String>() {
+            @Override
+            public String apply(Integer code) {
+                return code == null ? null : new String(new char[] {(char)code.intValue()});
+            }
+        });
         functions.put("locate", (VarargsFunction<Object, Integer>) args -> {
             String subStr = (String)args[0];
             String str = (String)args[1];
             int offset = args.length > 2 ? (Integer)args[2] - 1 : 0;
             return str.indexOf(subStr) + 1 - offset;
         });
-        functions.put("instr", (BiFunction<String, String, Integer>) (str, subStr) -> str.indexOf(subStr) + 1);
-        functions.put("trim", (Function<String, String>) s -> s == null ? null : s.trim());
-        functions.put("ltrim", (Function<String, String>) s -> s == null ? null : s.replaceFirst("^ *", ""));
-        functions.put("rtrim", (Function<String, String>) s -> s == null ? null : s.replaceFirst(" *$", ""));
-        functions.put("strcmp", (BiFunction<String, String, Integer>) String::compareTo);
-        functions.put("left", (BiFunction<String, Integer, String>) (s, n) -> s.substring(0, n));
+        functions.put("instr", new BiFunction<String, String, Integer>() {
+            @Override
+            public Integer apply(String str, String subStr) {
+                return str.indexOf(subStr) + 1;
+            }
+        });
+        functions.put("trim", new Function<String, String>() {
 
-        Function<String, String> toLowerCase = s -> s == null ? null : s.toLowerCase();
+            @Override
+            public String apply(String s) {
+                return s == null ? null : s.trim();
+            }
+        });
+        functions.put("ltrim", new Function<String, String>() {
+            @Override
+            public String apply(String s) {
+                return s == null ? null : s.replaceFirst("^ *", "");
+            }
+        });
+        functions.put("rtrim", new Function<String, String>() {
+            @Override
+            public String apply(String s) {
+                return s == null ? null : s.replaceFirst(" *$", "");
+            }
+        });
+        functions.put("strcmp", new BiFunction<String, String, Integer>() {
+
+            @Override
+            public Integer apply(String s, String s2) {
+                return s.compareTo(s2);
+            }
+        });
+        functions.put("left", new BiFunction<String, Integer, String>() {
+            @Override
+            public String apply(String s, Integer n) {
+                return s.substring(0, n);
+            }
+        });
+
+        Function<String, String> toLowerCase = new Function<String, String>() {
+            @Override
+            public String apply(String s) {
+                return s == null ? null : s.toLowerCase();
+            }
+        };
         functions.put("lower", toLowerCase);
         functions.put("lcase", toLowerCase);
 
-        Function<String, String> toUpperCase = s -> s == null ? null : s.toUpperCase();
+        Function<String, String> toUpperCase = new Function<String, String>() {
+            @Override
+            public String apply(String s) {
+                return s == null ? null : s.toUpperCase();
+            }
+        };
         functions.put("upper", toUpperCase);
         functions.put("ucase", toUpperCase);
-        functions.put("str", (Function<Object, String>) String::valueOf);
-        functions.put("space", (Function<Integer, String>) i -> i == 0 ? "" : format("%" + i + "c", ' '));
-        functions.put("reverse", (Function<String, String>) s -> s == null ? null : new StringBuilder(s).reverse().toString());
-        functions.put("to_base64", (Function<Object, String>) b -> b == null ? null : getEncoder().encodeToString(b instanceof String ? ((String)b).getBytes() : (byte[])b));
-        functions.put("from_base64", (Function<String, byte[]>) s -> s == null ? null : java.util.Base64.getDecoder().decode(s));
-        functions.put("substring", (TriFunction<String, Integer, Integer, String>) (s, start, length) -> s.substring(start - 1, length));
-        functions.put("concat", (VarargsFunction<Object, String>) args -> Arrays.stream(args).map(String::valueOf).collect(Collectors.joining()));
-        functions.put("concat_ws", (VarargsFunction<Object, String>) args -> Arrays.stream(args).skip(1).map(String::valueOf).collect(Collectors.joining((String)args[0])));
-        functions.put("date", (VarargsFunction<Object, Date>) args -> date.apply(args.length > 0 ? args[0] : null));
-        functions.put("calendar", (VarargsFunction<Object, Calendar>) StandardFunctions::calendar);
-        functions.put("now", (Supplier<Long>) System::currentTimeMillis);
-        functions.put("year", (VarargsFunction<Object, Integer>) args -> calendar(args).get(Calendar.YEAR));
-        functions.put("month", (VarargsFunction<Object, Integer>) args -> calendar(args).get(Calendar.MONTH) + 1);
-        functions.put("dayofmonth", (VarargsFunction<Object, Integer>) args -> calendar(args).get(Calendar.DAY_OF_MONTH));
-        functions.put("hour", (VarargsFunction<Object, Integer>) args -> calendar(args).get(Calendar.HOUR_OF_DAY));
-        functions.put("minute", (VarargsFunction<Object, Integer>) args -> calendar(args).get(Calendar.MINUTE));
-        functions.put("second", (VarargsFunction<Object, Integer>) args -> calendar(args).get(Calendar.SECOND));
-        functions.put("millisecond", (VarargsFunction<Object, Integer>) args -> calendar(args).get(Calendar.MILLISECOND));
-        functions.put("epoch", (VarargsFunction<Object, Long>) args -> parse((String)args[0], args.length > 1 ? (String)args[1] : null).getTime());
-        functions.put("millis", (Function<Date, Long>) Date::getTime);
-        functions.put("map", (Function<String, Map<?, ?>>) json -> (Map<?, ?>)parseJson(json));
-        functions.put("list", (Function<String, List<?>>) json -> dataUtil.toList(parseJson(json)));
-        functions.put("array", (Function<String, Object[]>) json -> dataUtil.toArray(parseJson(json)));
+
+        functions.put("str", new Function<Object, String>() {
+            @Override
+            public String apply(Object o) {
+                return String.valueOf(o);
+            }
+        });
+        functions.put("space", new Function<Integer, String>() {
+            @Override
+            public String apply(Integer i) {
+                return i == 0 ? "" : format("%" + i + "c", ' ');
+            }
+        });
+        functions.put("reverse", new Function<String, String>() {
+            @Override
+            public String apply(String s) {
+                return s == null ? null : new StringBuilder(s).reverse().toString();
+            }
+        });
+        functions.put("to_base64", new Function<Object, String>() {
+            @Override
+            public String apply(Object b) {
+                return b == null ? null : getEncoder().encodeToString(b instanceof String ? ((String)b).getBytes() : (byte[])b);
+            }
+        });
+        functions.put("from_base64", new Function<String, byte[]>() {
+            @Override
+            public byte[] apply(String s) {
+                return s == null ? null : java.util.Base64.getDecoder().decode(s);
+            }
+        });
+        functions.put("substring", new TriFunction<String, Integer, Integer, String>() {
+
+            @Override
+            public String apply(String s, Integer start, Integer length) {
+                return s.substring(start - 1, length);
+            }
+        });
+        functions.put("concat", new VarargsFunction<Object, String>() {
+            @Override
+            public String apply(Object... args) {
+                return Arrays.stream(args).map(String::valueOf).collect(Collectors.joining());
+            }
+        });
+        functions.put("concat_ws", new VarargsFunction<Object, String>() {
+            @Override
+            public String apply(Object... args) {
+                return Arrays.stream(args).skip(1).map(String::valueOf).collect(Collectors.joining((String)args[0]));
+            }
+        });
+        functions.put("date", new VarargsFunction<Object, Date>() {
+            @Override
+            public Date apply(Object... args) {
+                return date.apply(args.length > 0 ? args[0] : null);
+            }
+        });
+        functions.put("calendar", new VarargsFunction<Object, Calendar>() {
+            @Override
+            public Calendar apply(Object... args) {
+                return calendar(args);
+            }
+        });
+        functions.put("now", new Supplier<Long>() {
+            @Override
+            public Long get() {
+                return System.currentTimeMillis();
+            }
+        });
+        functions.put("year", new VarargsFunction<Object, Integer>() {
+            @Override
+            public Integer apply(Object... args) {
+                return calendar(args).get(Calendar.YEAR);
+            }
+        });
+        functions.put("month", new VarargsFunction<Object, Integer>() {
+            @Override
+            public Integer apply(Object... args) {
+                return calendar(args).get(Calendar.MONTH) + 1;
+            }
+        });
+        functions.put("dayofmonth", new VarargsFunction<Object, Integer>() {
+            @Override
+            public Integer apply(Object... args) {
+                return calendar(args).get(Calendar.DAY_OF_MONTH);
+            }
+        });
+        functions.put("hour", new VarargsFunction<Object, Integer>() {
+            @Override
+            public Integer apply(Object... args) {
+                return calendar(args).get(Calendar.HOUR_OF_DAY);
+            }
+        });
+        functions.put("minute", new VarargsFunction<Object, Integer>() {
+            @Override
+            public Integer apply(Object... args) {
+                return calendar(args).get(Calendar.MINUTE);
+            }
+        });
+        functions.put("second", new VarargsFunction<Object, Integer>() {
+            @Override
+            public Integer apply(Object... args) {
+                return calendar(args).get(Calendar.SECOND);
+            }
+        });
+        functions.put("millisecond", new VarargsFunction<Object, Integer>() {
+            @Override
+            public Integer apply(Object... args) {
+                return calendar(args).get(Calendar.MILLISECOND);
+            }
+        });
+        functions.put("epoch", new VarargsFunction<Object, Long>() {
+            @Override
+            public Long apply(Object... args) {
+                return parse((String)args[0], args.length > 1 ? (String)args[1] : null).getTime();
+            }
+        });
+        functions.put("millis", new Function<Date, Long>() {
+            @Override
+            public Long apply(Date date) {
+                return date.getTime();
+            }
+        });
+        functions.put("map", new Function<String, Map<?, ?>>() {
+            @Override
+            public Map<?, ?> apply(String json) {
+                return (Map<?, ?>)parseJson(json);
+            }
+        });
+        functions.put("list", new Function<String, List<?>>() {
+            @Override
+            public List<?> apply(String json) {
+                return dataUtil.toList(parseJson(json));
+            }
+        });
+        functions.put("array", new Function<String, Object[]>() {
+            @Override
+            public Object[] apply(String json) {
+                return dataUtil.toArray(parseJson(json));
+            }
+        });
     }
 
 

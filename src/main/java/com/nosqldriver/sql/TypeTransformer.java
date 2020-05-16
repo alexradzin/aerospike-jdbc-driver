@@ -89,6 +89,9 @@ public class TypeTransformer {
             }
         });
         typeTransformers.put(byte[].class, o -> {
+            if (o instanceof String) {
+                return ((String)o).getBytes();
+            }
             if (!(o instanceof byte[])) {
                 SneakyThrower.sneakyThrow(new SQLException(format("%s cannot be transformed to byte[]", o)));
             }

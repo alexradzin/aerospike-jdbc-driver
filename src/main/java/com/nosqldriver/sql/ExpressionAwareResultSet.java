@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.System.currentTimeMillis;
@@ -38,7 +37,6 @@ import static java.util.stream.Collectors.toMap;
 
 @VisibleForPackage
 class ExpressionAwareResultSet extends ResultSetWrapper {
-    private static final Pattern ref = Pattern.compile("\\w+\\[\\w+\\]");
     private final ScriptEngine engine;
     private final ResultSet rs;
     private final Map<String, String> aliasToEval;
@@ -50,7 +48,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
         super(rs, columns, indexByName);
         //TODO: store DataColumn in aliasToEval, call it alias to Expression
         aliasToEval = columns.stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getLabel() != null).collect(toMap(DataColumn::getLabel, DataColumn::getExpression));
-        engine = new JavascriptEngineFactory(functionManager).getEngine();
+        engine = new ScriptEngineFactory(functionManager).getEngine();
         this.rs = rs;
     }
 

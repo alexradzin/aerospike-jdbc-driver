@@ -53,7 +53,7 @@ public class FunctionManager {
         return Optional.ofNullable(functions.get(name)).flatMap(f -> getFunctionReturnType(f.getClass()));
     }
 
-    public Optional<Class> getFunctionReturnType(Class deserializerClass) {
+    private Optional<Class> getFunctionReturnType(Class deserializerClass) {
         return getFunctionType(deserializerClass, 1);
     }
 

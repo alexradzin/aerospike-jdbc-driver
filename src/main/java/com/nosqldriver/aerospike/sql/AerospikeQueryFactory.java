@@ -18,7 +18,7 @@ import com.nosqldriver.aerospike.sql.query.QueryHolder;
 import com.nosqldriver.aerospike.sql.query.QueryHolder.ChainOperation;
 import com.nosqldriver.aerospike.sql.query.ValueRefPredExp;
 import com.nosqldriver.sql.DataColumn;
-import com.nosqldriver.sql.JavascriptEngineFactory;
+import com.nosqldriver.sql.ScriptEngineFactory;
 import com.nosqldriver.sql.JoinType;
 import com.nosqldriver.sql.OrderItem;
 import com.nosqldriver.sql.RecordExpressionEvaluator;
@@ -99,6 +99,7 @@ import java.util.stream.LongStream;
 import static com.nosqldriver.aerospike.sql.query.KeyFactory.createKey;
 import static com.nosqldriver.sql.OrderItem.Direction.ASC;
 import static com.nosqldriver.sql.OrderItem.Direction.DESC;
+import static com.nosqldriver.sql.PreparedStatementUtil.PS_PLACEHOLDER_PREFIX;
 import static com.nosqldriver.sql.PreparedStatementUtil.parseParameters;
 import static com.nosqldriver.sql.SqlLiterals.operatorKey;
 import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
@@ -126,7 +127,7 @@ public class AerospikeQueryFactory {
         this.policyProvider = policyProvider;
         this.indexes = indexes;
         this.functionManager = functionManager;
-        engine = new JavascriptEngineFactory(functionManager).getEngine();
+        engine = new ScriptEngineFactory(functionManager).getEngine();
     }
 
     @VisibleForPackage
@@ -782,7 +783,7 @@ public class AerospikeQueryFactory {
                 int totalParamCount = parseParameters(sql, 0).getValue();
                 int whereParamCount = parseParameters(whereExpr.get(), 0).getValue();
                 int paramOffset = totalParamCount - whereParamCount;
-                Map<String, Object> psValues = IntStream.range(0, parameterValues.length).boxed().filter(i -> parameterValues[i] != null).collect(Collectors.toMap(i -> "$" + (i + 1), i -> parameterValues[i]));
+                Map<String, Object> psValues = IntStream.range(0, parameterValues.length).boxed().filter(i -> parameterValues[i] != null).collect(Collectors.toMap(i -> "" + PS_PLACEHOLDER_PREFIX + (i + 1), i -> parameterValues[i]));
                 recordPredicate.set(new RecordExpressionEvaluator(parseParameters(whereExpr.get(), paramOffset).getKey(), psValues, functionManager));
             } else if (filterByPk.get()) {
                 recordPredicate.set(r -> false);
