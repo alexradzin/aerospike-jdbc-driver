@@ -131,7 +131,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         this.policyProvider = policyProvider;
         keyRecordFetcherFactory = new KeyRecordFetcherFactory(policyProvider.getQueryPolicy());
         this.functionManager = functionManager;
-        expressionResultSetWrappingFactory = new ExpressionAwareResultSetFactory(functionManager);
+        expressionResultSetWrappingFactory = new ExpressionAwareResultSetFactory(functionManager, policyProvider.getDriverPolicy());
         statement = new Statement();
         if (schema != null) {
             statement.setNamespace(schema);
@@ -435,7 +435,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                     columns.stream().filter(c -> AGGREGATED.equals(c.getRole())).map(DataColumn::getName).filter(expr -> expr.contains("(")).map(expr -> expr.replace('(', ':').replace(")", "")))
                     .map(StringValue::new).toArray(Value[]::new);
             statement.setAggregateFunction(getClass().getClassLoader(), "groupby.lua", "groupby", "groupby", args);
-            return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having, functionManager), keyRecordFetcherFactory, functionManager, getPk);
+            return new AerospikeDistinctQuery(sqlStatement, schema, columns, statement, policyProvider.getQueryPolicy(), having == null ? rs -> true : new ResultSetRowFilter(having, functionManager, policyProvider.getDriverPolicy()), keyRecordFetcherFactory, functionManager, getPk);
         }
 
         List<DataColumn> aggregationColumns = columns.stream().filter(c-> AGGREGATED.equals(c.getRole())).collect(Collectors.toList());
@@ -569,14 +569,14 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                 }
             };
         } else if(set == null && columns.stream().map(DataColumn::getRole).anyMatch(r -> AGGREGATED.equals(r) || GROUP.equals(r))) {
-            expressioned = client -> new FilteredResultSet(new ListRecordSet(sqlStatement, schema, set, columns, new AggregatedValues(nakedQuery.apply(client), columns).read()), columns, having == null ? rs -> true : new ResultSetRowFilter(having, functionManager), true);
+            expressioned = client -> new FilteredResultSet(new ListRecordSet(sqlStatement, schema, set, columns, new AggregatedValues(nakedQuery.apply(client), columns).read()), columns, having == null ? rs -> true : new ResultSetRowFilter(having, functionManager, policyProvider.getDriverPolicy()), true);
         } else {
             expressioned = client -> expressionResultSetWrappingFactory.wrap(new ResultSetWrapper(nakedQuery.apply(client), columns, indexByName), functionManager, columns, indexByName);
         }
 
-        Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), columns, new ResultSetRowFilter(whereExpression, functionManager), indexByName) : expressioned;
+        Function<IAerospikeClient, ResultSet> filtered = whereExpression != null ? client -> new FilteredResultSet(expressioned.apply(client), columns, new ResultSetRowFilter(whereExpression, functionManager, policyProvider.getDriverPolicy()), indexByName) : expressioned;
         Function<IAerospikeClient, ResultSet> joined = joins.isEmpty() ? filtered : client -> new JoinedResultSet(filtered.apply(client), joins.stream().map(join -> new JoinHolder(new JoinRetriever(sqlStatement, client, join, functionManager), new ResultSetMetadataSupplier(sqlStatement, client, join, functionManager), join.skipIfMissing)).collect(toList()));
-        Function<IAerospikeClient, ResultSet> ordered = !ordering.isEmpty() ? client -> new SortedResultSet(joined.apply(client), ordering, min(max(offset, 0) + (limit >=0 ? limit : Integer.MAX_VALUE), Integer.MAX_VALUE), functionManager) : joined;
+        Function<IAerospikeClient, ResultSet> ordered = !ordering.isEmpty() ? client -> new SortedResultSet(joined.apply(client), ordering, min(max(offset, 0) + (limit >=0 ? limit : Integer.MAX_VALUE), Integer.MAX_VALUE), functionManager, policyProvider.getDriverPolicy()) : joined;
         Function<IAerospikeClient, ResultSet> limited = offset >= 0 || limit >= 0 ? client -> new FilteredResultSet(ordered.apply(client), columns, new OffsetLimit(offset < 0 ? 0 : offset, limit < 0 ? Long.MAX_VALUE : limit), indexByName) : ordered;
         return client -> new NameCheckResultSetWrapper(limited.apply(client), columns, indexByName);
 

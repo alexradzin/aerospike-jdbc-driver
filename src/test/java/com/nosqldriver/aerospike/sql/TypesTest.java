@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.IOException;
 import java.math.RoundingMode;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DateFormat;
@@ -35,9 +36,31 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
-class TypesTest {
+class DefaultConnectionTypesTest extends TypesTest {
+    DefaultConnectionTypesTest() {
+        super(getTestConnection());
+    }
+}
+
+class JsConnectionTypesTest extends TypesTest {
+    JsConnectionTypesTest() throws SQLException {
+        super(DriverManager.getConnection(TestDataUtils.aerospikeTestUrlJs));
+    }
+}
+
+class LuaConnectionTypesTest extends TypesTest {
+    LuaConnectionTypesTest() throws SQLException {
+        super(DriverManager.getConnection(TestDataUtils.aerospikeTestUrlLua));
+    }
+}
+
+abstract class TypesTest {
     private static final String TYPE_TEST_TABLE = "types_test";
-    private Connection testConn = getTestConnection();
+    private Connection testConn;
+
+    TypesTest(Connection conn) {
+        testConn = conn;
+    }
 
     @BeforeEach
     @AfterEach

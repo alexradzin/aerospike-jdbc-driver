@@ -60,6 +60,8 @@ public class TestDataUtils {
     static final int aerospikePort = Integer.parseInt(System.getProperty("aerospike.port", "3000"));
     static final String aerospikeRootUrl = format("jdbc:aerospike:%s:%d", aerospikeHost, aerospikePort);
     static final String aerospikeTestUrl = format("jdbc:aerospike:%s:%d/test", aerospikeHost, aerospikePort);
+    static final String aerospikeTestUrlJs = format("jdbc:aerospike:%s:%d/test?policy.driver.script=js", aerospikeHost, aerospikePort);
+    static final String aerospikeTestUrlLua = format("jdbc:aerospike:%s:%d/test?policy.driver.script=lua", aerospikeHost, aerospikePort);
 
     private static AerospikeClient client;
     private static Connection testConn = null;

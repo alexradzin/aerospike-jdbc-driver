@@ -44,11 +44,11 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
     private volatile ResultSetMetaData metaData;
 
     @VisibleForPackage
-    ExpressionAwareResultSet(ResultSet rs, FunctionManager functionManager, List<DataColumn> columns, boolean indexByName) {
+    ExpressionAwareResultSet(ResultSet rs, FunctionManager functionManager, DriverPolicy driverPolicy, List<DataColumn> columns, boolean indexByName) {
         super(rs, columns, indexByName);
         //TODO: store DataColumn in aliasToEval, call it alias to Expression
         aliasToEval = columns.stream().filter(c -> DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).filter(c -> c.getLabel() != null).collect(toMap(DataColumn::getLabel, DataColumn::getExpression));
-        engine = new ScriptEngineFactory(functionManager).getEngine();
+        engine = new ScriptEngineFactory(functionManager, driverPolicy).getEngine();
         this.rs = rs;
     }
 

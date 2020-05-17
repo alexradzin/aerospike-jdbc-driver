@@ -31,24 +31,24 @@ class SortedResultSetTest {
 
     @Test
     void emptyAll() throws SQLException {
-        assertFalse(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, emptyList(), emptyList()), emptyList(), new FunctionManager()).next());
+        assertFalse(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, emptyList(), emptyList()), emptyList(), new FunctionManager(), new DriverPolicy()).next());
     }
 
     @Test
     void oneColumnNoRecords() throws SQLException {
-        assertFalse(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, emptyList()), emptyList(), new FunctionManager()).next());
+        assertFalse(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, emptyList()), emptyList(), new FunctionManager(), new DriverPolicy()).next());
     }
 
     @Test
     void oneColumnOneOrderByNoRecords() throws SQLException {
-        assertFalse(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, emptyList()), singletonList(new OrderItem("data")), new FunctionManager()).next());
+        assertFalse(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, emptyList()), singletonList(new OrderItem("data")), new FunctionManager(), new DriverPolicy()).next());
     }
 
 
 
     @Test
     void oneColumnOneOrderByOneRecord() throws SQLException {
-        assertTrue(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, singletonList(singletonList("a"))), singletonList(new OrderItem("data")), new FunctionManager()).next());
+        assertTrue(new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, singletonList(singletonList("a"))), singletonList(new OrderItem("data")), new FunctionManager(), new DriverPolicy()).next());
     }
 
     @Test
@@ -87,7 +87,7 @@ class SortedResultSetTest {
 
     @Test
     void highLimit() {
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, emptyList()), emptyList(), Integer.MAX_VALUE + 1L, new FunctionManager())).getMessage().startsWith("Cannot cast value"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> new SortedResultSet(new ListRecordSet(null, NAMESPACE, TABLE, dataColumn, emptyList()), emptyList(), Integer.MAX_VALUE + 1L, new FunctionManager(), new DriverPolicy())).getMessage().startsWith("Cannot cast value"));
     }
 
     private ResultSet dataRs(List<DataColumn> columns, Iterable<List<?>> data) {
@@ -97,13 +97,13 @@ class SortedResultSetTest {
     private void assertOneColumnOneOrderBySeveralRecords(List<DataColumn> columns, List<List<?>> data, OrderItem orderBy, String extractColumn, String[] expected) throws SQLException {
         assertEquals(
                 asList(expected),
-                TestDataUtils.toListOfMaps(new SortedResultSet(dataRs(columns, data), singletonList(orderBy), new FunctionManager())).stream().map(row -> row.get(extractColumn)).collect(toList()));
+                TestDataUtils.toListOfMaps(new SortedResultSet(dataRs(columns, data), singletonList(orderBy), new FunctionManager(), new DriverPolicy())).stream().map(row -> row.get(extractColumn)).collect(toList()));
     }
 
     private void assertOneColumnSeveralOrderBySeveralRecords(List<DataColumn> columns, List<List<?>> data, List<OrderItem> orderBy, String extractColumn, String[] expected) throws SQLException {
         assertEquals(
                 asList(expected),
-                TestDataUtils.toListOfMaps(new SortedResultSet(dataRs(columns, data), orderBy, new FunctionManager())).stream().map(row -> row.get(extractColumn)).collect(toList()));
+                TestDataUtils.toListOfMaps(new SortedResultSet(dataRs(columns, data), orderBy, new FunctionManager(), new DriverPolicy())).stream().map(row -> row.get(extractColumn)).collect(toList()));
     }
 
 }

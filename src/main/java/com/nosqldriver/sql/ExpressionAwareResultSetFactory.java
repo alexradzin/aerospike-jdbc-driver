@@ -14,19 +14,20 @@ import static java.util.stream.Collectors.toCollection;
 
 public class ExpressionAwareResultSetFactory {
     private final Collection<String> functionNames;
+    private final DriverPolicy driverPolicy;
 
     private static final Pattern EXPRESSION_DELIMITERS = Pattern.compile("[\\s()[],;.*+-/=><?:%^&!]]");
     private static final Pattern NUMBER = Pattern.compile("\\b[+-]?\\d+(:?\\.\\d+)?(:?e[+-]?\\d+)?\\b");
     private static final Pattern QUOTES = Pattern.compile("'[^']*'");
 
-    public ExpressionAwareResultSetFactory(FunctionManager functionManager) {
-        functionManager.getFunctionNames();
+    public ExpressionAwareResultSetFactory(FunctionManager functionManager, DriverPolicy driverPolicy) {
         functionNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         functionNames.addAll(functionManager.getFunctionNames());
+        this.driverPolicy = driverPolicy;
     }
 
     public ResultSet wrap(ResultSet rs, FunctionManager functionManager, List<DataColumn> columns, boolean indexByName) {
-        return new ExpressionAwareResultSet(rs, functionManager, columns, indexByName);
+        return new ExpressionAwareResultSet(rs, functionManager, driverPolicy, columns, indexByName);
     }
 
     public Collection<String> getVariableNames(String expr) {

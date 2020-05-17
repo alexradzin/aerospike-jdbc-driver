@@ -149,7 +149,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
                 }
 
                 List<String> indexes = new ArrayList<>();
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes, statement.functionManager);
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes, statement.functionManager, statement.policyProvider.getDriverPolicy());
                 aqf.createQueryPlan(sql);
                 String[] index = aqf.getIndexes().iterator().next().split("\\.");
 
@@ -192,7 +192,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
                 List<String> indexes = new ArrayList<>();
-                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes, statement.functionManager);
+                AerospikeQueryFactory aqf = new AerospikeQueryFactory(statement, statement.schema.get(), statement.policyProvider, indexes, statement.functionManager, statement.policyProvider.getDriverPolicy());
                 aqf.createQueryPlan(sql);
                 String indexName = aqf.getIndexes().iterator().next().split("\\.")[2];
                 statement.client.dropIndex(null, aqf.getSchema(), aqf.getSet(), indexName);
@@ -508,7 +508,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
 
 
     protected AerospikeQueryFactory createQueryFactory() {
-        return new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes, functionManager);
+        return new AerospikeQueryFactory(this, schema.get(), policyProvider, indexes, functionManager, policyProvider.getDriverPolicy());
     }
 
     public IAerospikeClient getClient() {

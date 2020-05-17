@@ -219,7 +219,7 @@ public class LuaScriptEngineWrapper extends ScriptEngineWrapper {
         }
 
         if (luaValue instanceof LuaString) {
-            return byte[].class.equals(requiredType) || getBindings(ScriptContext.ENGINE_SCOPE).containsKey(bytesWrapperKey((LuaString)luaValue)) ?
+            return byte[].class.equals(requiredType) ? // || getBindings(ScriptContext.ENGINE_SCOPE).containsKey(bytesWrapperKey((LuaString)luaValue)) ?
                     ((LuaString)luaValue).m_bytes :
                     luaValue.tojstring();
         }

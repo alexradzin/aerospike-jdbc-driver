@@ -10,8 +10,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ResultSetRowFilter extends ExpressionEvaluator<ResultSet> {
-    public ResultSetRowFilter(String expr, FunctionManager functionManager) {
-        super(expr, Collections.emptyMap(), functionManager);
+    public ResultSetRowFilter(String expr, FunctionManager functionManager, DriverPolicy driverPolicy) {
+        super(expr, Collections.emptyMap(), functionManager, driverPolicy);
     }
 
     @Override

@@ -2,11 +2,13 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.policy.BatchPolicy;
+import com.aerospike.client.policy.ClientPolicy;
 import com.aerospike.client.policy.InfoPolicy;
 import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.policy.WritePolicy;
+import com.nosqldriver.sql.DriverPolicy;
 
 import java.util.Arrays;
 import java.util.Properties;
@@ -19,6 +21,8 @@ public class AerospikePolicyProvider {
     private final ScanPolicy scanPolicy;
     private final WritePolicy writePolicy;
     private final InfoPolicy infoPolicy;
+    private final ClientPolicy clientPolicy;
+    private final DriverPolicy driverPolicy;
 
     private final ConnectionParametersParser parser = new ConnectionParametersParser();
 
@@ -31,6 +35,8 @@ public class AerospikePolicyProvider {
         scanPolicy = parser.initProperties(client.getScanPolicyDefault(), merge(common, parser.subProperties(props, "policy.scan")));
         writePolicy = parser.initProperties(client.getWritePolicyDefault(), merge(common, parser.subProperties(props, "policy.write")));
         infoPolicy = parser.initProperties(client.getInfoPolicyDefault(), merge(common, parser.subProperties(props, "policy.info")));
+        clientPolicy = parser.initProperties(new ClientPolicy(), merge(common, parser.subProperties(props, "policy.client")));
+        driverPolicy = parser.initProperties(new DriverPolicy(), merge(common, parser.subProperties(props, "policy.driver")));
     }
 
     private Properties merge(Properties ... properties) {
@@ -61,5 +67,13 @@ public class AerospikePolicyProvider {
 
     public InfoPolicy getInfoPolicy() {
         return infoPolicy;
+    }
+
+    public ClientPolicy getClientPolicy() {
+        return clientPolicy;
+    }
+
+    public DriverPolicy getDriverPolicy() {
+        return driverPolicy;
     }
 }

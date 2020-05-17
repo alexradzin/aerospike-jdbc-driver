@@ -8,7 +8,6 @@ import com.nosqldriver.util.SneakyThrower;
 import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
-import javax.script.ScriptException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,9 +23,9 @@ public abstract class ExpressionEvaluator<T> implements Predicate<T>, Function<T
     private final ScriptEngine engine;
     private final String fixedExpr;
 
-    public ExpressionEvaluator(String expr, Map<String, Object> initialBindings, FunctionManager functionManager) {
+    public ExpressionEvaluator(String expr, Map<String, Object> initialBindings, FunctionManager functionManager, DriverPolicy driverPolicy) {
         this.expr = expr;
-        engine = new ScriptEngineFactory(functionManager).getEngine();
+        engine = new ScriptEngineFactory(functionManager, driverPolicy).getEngine();
         fixedExpr = engine instanceof ScriptEngineWrapper ? ((ScriptEngineWrapper)engine).fixWhereExpression(expr) : expr;
         Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
         bindings.putAll(initialBindings);

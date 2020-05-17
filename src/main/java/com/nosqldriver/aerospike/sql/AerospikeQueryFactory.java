@@ -18,6 +18,7 @@ import com.nosqldriver.aerospike.sql.query.QueryHolder;
 import com.nosqldriver.aerospike.sql.query.QueryHolder.ChainOperation;
 import com.nosqldriver.aerospike.sql.query.ValueRefPredExp;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.DriverPolicy;
 import com.nosqldriver.sql.ScriptEngineFactory;
 import com.nosqldriver.sql.JoinType;
 import com.nosqldriver.sql.OrderItem;
@@ -121,13 +122,13 @@ public class AerospikeQueryFactory {
     private final ScriptEngine engine;
 
     @VisibleForPackage
-    AerospikeQueryFactory(Statement statement, String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes, FunctionManager functionManager) {
+    AerospikeQueryFactory(Statement statement, String schema, AerospikePolicyProvider policyProvider, Collection<String> indexes, FunctionManager functionManager, DriverPolicy driverPolicy) {
         this.statement = statement;
         this.schema = schema;
         this.policyProvider = policyProvider;
         this.indexes = indexes;
         this.functionManager = functionManager;
-        engine = new ScriptEngineFactory(functionManager).getEngine();
+        engine = new ScriptEngineFactory(functionManager, driverPolicy).getEngine();
     }
 
     @VisibleForPackage
@@ -676,7 +677,7 @@ public class AerospikeQueryFactory {
                     for (Expression expression : update.getExpressions()) {
                         // If set statement uses any element of expression ()+-*/ or function call - treat it as expression.
                         // Otherwise treat it either as column reference or simple value.
-                        Function<Record, Object> evaluator = new RecordExpressionEvaluator(expression.toString(), Collections.emptyMap(), functionManager);
+                        Function<Record, Object> evaluator = new RecordExpressionEvaluator(expression.toString(), Collections.emptyMap(), functionManager, policyProvider.getDriverPolicy());
                         AtomicReference<Function<Record, Object>> extractorRef = new AtomicReference<>();
 
                         expression.accept(new ExpressionVisitorAdapter() {
@@ -784,7 +785,7 @@ public class AerospikeQueryFactory {
                 int whereParamCount = parseParameters(whereExpr.get(), 0).getValue();
                 int paramOffset = totalParamCount - whereParamCount;
                 Map<String, Object> psValues = IntStream.range(0, parameterValues.length).boxed().filter(i -> parameterValues[i] != null).collect(Collectors.toMap(i -> "" + PS_PLACEHOLDER_PREFIX + (i + 1), i -> parameterValues[i]));
-                recordPredicate.set(new RecordExpressionEvaluator(parseParameters(whereExpr.get(), paramOffset).getKey(), psValues, functionManager));
+                recordPredicate.set(new RecordExpressionEvaluator(parseParameters(whereExpr.get(), paramOffset).getKey(), psValues, functionManager, policyProvider.getDriverPolicy()));
             } else if (filterByPk.get()) {
                 recordPredicate.set(r -> false);
             }

@@ -8,8 +8,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class RecordExpressionEvaluator extends ExpressionEvaluator<Record> implements Predicate<Record>, Function<Record, Object> {
-    public RecordExpressionEvaluator(String expr, Map<String, Object> initialBindings, FunctionManager functionManager) {
-        super(expr, initialBindings, functionManager);
+    public RecordExpressionEvaluator(String expr, Map<String, Object> initialBindings, FunctionManager functionManager, DriverPolicy driverPolicy) {
+        super(expr, initialBindings, functionManager, driverPolicy);
     }
 
     @Override

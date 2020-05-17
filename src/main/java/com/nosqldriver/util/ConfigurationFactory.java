@@ -51,7 +51,7 @@ public class ConfigurationFactory {
             try {
                 set(clazz, (String)key, (String)value, object);
             } catch (ReflectiveOperationException e1) {
-                // ignore it; this property does not belong to ClientPolicy
+                // ignore it; this property does not belong to policy
             }
         });
 
