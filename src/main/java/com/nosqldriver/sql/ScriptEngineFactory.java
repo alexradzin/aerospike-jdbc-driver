@@ -39,7 +39,6 @@ public class ScriptEngineFactory {
         scriptEngineFactories.put(Script.lua, LuaScriptEngineWrapper::new);
     }
     private static final Set<String> internalScriptConstants = new HashSet<>(asList(ARGV, ENGINE, ENGINE_VERSION, FILENAME, LANGUAGE_VERSION, LANGUAGE, NAME));
-    private final ScriptEngine engine;
 
     public ScriptEngineFactory(FunctionManager functionManager, DriverPolicy driverPolicy) {
         this(Collections.emptyMap(), functionManager, driverPolicy);
@@ -48,17 +47,21 @@ public class ScriptEngineFactory {
     private ScriptEngineFactory(Map<String, Object> bindings, FunctionManager functionManager, DriverPolicy driverPolicy) {
         synchronized (lock) {
             ScriptEngine tmp = threadEngine.get();
+            final ScriptEngine engine;
             if (tmp == null) {
                 engine = driverPolicy.getScript() == null ? scriptEngineFactories.values().stream().map(Supplier::get).filter(ScriptEngineWrapper::isValid).findFirst()
                         .orElseThrow(() -> new IllegalStateException("Cannot initialize scripting engine"))
                         :
                         scriptEngineFactories.get(driverPolicy.getScript()).get();
-                setBindings(GLOBAL_SCOPE);
-                setBindings(ENGINE_SCOPE);
+                setBindings(engine, GLOBAL_SCOPE);
+                setBindings(engine, ENGINE_SCOPE);
                 threadEngine.set(engine);
             } else {
                 engine = tmp;
-                engine.getBindings(ENGINE_SCOPE).clear();
+                Bindings b = engine.getBindings(ENGINE_SCOPE);
+                Map<String, Object> internal = b.entrySet().stream().filter(e -> internalScriptConstants.contains(e.getKey())).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                b.clear();
+                b.putAll(internal);
             }
             if (functionManager != null) {
                 functionManager.getFunctionNames().forEach(name -> engine.put(name, functionManager.getFunction(name)));
@@ -68,14 +71,23 @@ public class ScriptEngineFactory {
     }
 
     public ScriptEngine getEngine() {
-        return engine;
+        synchronized (lock) {
+            return threadEngine.get();
+        }
     }
 
-    private void setBindings(int scope) {
-        Bindings b = new SimpleBindings(new TreeMap<>(CASE_INSENSITIVE_ORDER));
+    private void setBindings(ScriptEngine engine, int scope) {
+        Bindings b = new SimpleBindings(Collections.synchronizedMap(new TreeMap<>(CASE_INSENSITIVE_ORDER)));
         b.putAll(engine.getBindings(scope).entrySet().stream()
                 .filter(e -> internalScriptConstants.contains(e.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
         engine.setBindings(b, scope);
+    }
+
+
+    public static void cleanup() {
+        synchronized (lock) {
+            threadEngine.remove();
+        }
     }
 }
