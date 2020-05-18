@@ -181,6 +181,14 @@ The next issue is the export format. CSV format does not hold any schema informa
 
 (*) `[date]` is optional argument. If omitted current date is used. Otherwise can be either Date object or epoch or string representation of date parsed using one of the following formats: yyyy-MM-dd HH:mm:ss.SSS z, yyyy-MM-dd HH:mm:ss z, yyyy-MM-dd HH:mm:ss.SSS, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd HH:mm, yyyy-MM-dd
 
+## Working with serializable maps
+Aerospike can hold map in single bin. One can either query map as-is or its fields separately. For example is the bin name is `data` and it contains map that hold perosnal data like `first_name`, `last_name` and `year_of_birth` the data can be queried as following:
+
+```sql
+select data[first_name], data[last_name], data[year_of_birth] from (select data from people)
+```
+Please note that Aerospike returns map of strings, so values of all fields including those that look like numeric are represented as strings. For example `year_of_birth` is not represented as number but as string that contains numeric characters.  
+
 ## Working with serializable classes
 Let's take an example. We have class `Person`:
 
