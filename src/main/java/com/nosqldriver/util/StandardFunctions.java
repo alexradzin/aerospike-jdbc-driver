@@ -8,6 +8,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -46,14 +47,26 @@ public class StandardFunctions {
     @VisibleForPackage
     public static final Map<String, Object> functions = new HashMap<>();
     static {
-        final Function<String, Integer> stringLength = new Function<String, Integer>() {
+        final Function<Object, Integer> objLength = new Function<Object, Integer>() {
             @Override
-            public Integer apply(String s) {
-                return s.length();
+            public Integer apply(Object o) {
+                if (o == null) {
+                    return 0;
+                }
+                if (o instanceof CharSequence) {
+                    return ((CharSequence)o).length();
+                }
+                if (o instanceof Collection) {
+                    return ((Collection)o).size();
+                }
+                if (o instanceof Map) {
+                    return ((Map)o).size();
+                }
+                throw new IllegalArgumentException("function length() does not support " + o);
             }
         };
-        functions.put("len", stringLength);
-        functions.put("length", stringLength);
+        functions.put("len", objLength);
+        functions.put("length", objLength);
 
         functions.put("ascii", new Function<String, Integer>() {
             @Override

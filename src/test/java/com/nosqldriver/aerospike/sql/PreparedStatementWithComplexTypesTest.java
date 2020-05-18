@@ -737,6 +737,72 @@ class PreparedStatementWithComplexTypesTest {
     }
 
 
+    @Test
+    void lengthOfCollections() throws SQLException {
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, a0, a1, a2, a3, l0, l1, l2, l3, m0, m1, m2, m3, s0, s1, s2, s3) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+        insert.setInt(1, 1);
+        insert.setArray(2, testConn.createArrayOf("varchar", new String[0]));
+        insert.setArray(3, testConn.createArrayOf("varchar", new String[] {"one"}));
+        insert.setArray(4, testConn.createArrayOf("varchar", new String[] {"one", "two"}));
+        insert.setArray(5, testConn.createArrayOf("varchar", new String[] {"one", "two", "three"}));
+        insert.setObject(6, Collections.emptyList());
+        insert.setObject(7, Collections.singletonList("one"));
+        insert.setObject(8, Arrays.asList("one", "two"));
+        insert.setObject(9, Arrays.asList("one", "two", "three"));
+        insert.setObject(10, Collections.emptyMap());
+        insert.setObject(11, Collections.singletonMap("one", "One"));
+        Map<String, String> map2 = new HashMap<>();
+        map2.put("one", "One");
+        map2.put("two", "Two");
+        insert.setObject(12, map2);
+        Map<String, String> map3 = new HashMap<>();
+        map3.put("one", "One");
+        map3.put("two", "Two");
+        map3.put("three", "Three");
+        insert.setObject(13, map3);
+        insert.setString(14, "");
+        insert.setString(15, "a");
+        insert.setString(16, "ab");
+        insert.setString(17, "abc");
+
+        int rowCount = insert.executeUpdate();
+        assertEquals(1, rowCount);
+
+        PreparedStatement select = testConn.prepareStatement("select len(a0) as la0, len(a1) as la1, len(a2) as la2, len(a3) as la3, len(l0) as ll0, len(l1) as ll1, len(l2) as ll2, len(l3) as ll3, len(m0) as lm0, len(m1) as lm1, len(m2) as lm2, len(m3) as lm3, len(s0) as ls0, len(s1) as ls1, len(s2) as ls2, len(s3) as ls3, len(nothing) as empty from data where PK=?");
+        select.setInt(1, 1);
+
+        ResultSet rs = select.executeQuery();
+        assertTrue(rs.next());
+
+        assertEquals(0, rs.getInt(1));
+        assertEquals(1, rs.getInt(2));
+        assertEquals(2, rs.getInt(3));
+        assertEquals(3, rs.getInt(4));
+
+        assertEquals(0, rs.getInt(5));
+        assertEquals(1, rs.getInt(6));
+        assertEquals(2, rs.getInt(7));
+        assertEquals(3, rs.getInt(8));
+
+        assertEquals(0, rs.getInt(9));
+        assertEquals(1, rs.getInt(10));
+        assertEquals(2, rs.getInt(11));
+        assertEquals(3, rs.getInt(12));
+
+        assertEquals(0, rs.getInt(13));
+        assertEquals(1, rs.getInt(14));
+        assertEquals(2, rs.getInt(15));
+        assertEquals(3, rs.getInt(16));
+
+        assertEquals(0, rs.getInt(17));
+
+        assertFalse(rs.next());
+
+    }
+
+
+
     private void insertOneRowCustomClass(String text, int n) throws SQLException {
         MySerializableClass obj = new MySerializableClass(n, text);
 
