@@ -515,7 +515,6 @@ class PreparedStatementWithComplexTypesTest {
     }
 
     @Test
-    @Disabled
     void getFieldsOfMap() throws SQLException {
         Map<String, Object> map = new TreeMap<>();
         map.put("number", 123456);
@@ -532,17 +531,14 @@ class PreparedStatementWithComplexTypesTest {
         assertEquals("map[number]", md.getColumnName(1));
         assertEquals("map[text]", md.getColumnName(2));
 
+        assertTrue(rs.next());
+        assertEquals(123456, rs.getInt(1));
+        assertEquals(123456, rs.getInt("map[number]"));
+        assertEquals(text, rs.getString(2));
+        assertEquals(text, rs.getString("map[text]"));
 
-//        assertTrue(rs.next());
-//        assertEquals(123456, rs.getInt(1));
-//        assertEquals(123456, rs.getInt("map[number]"));
-//        assertEquals(text, rs.getString(2));
-//        assertEquals(text, rs.getString("map[text]"));
-//
-//        assertFalse(rs.next());
+        assertFalse(rs.next());
     }
-
-
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
@@ -563,7 +559,6 @@ class PreparedStatementWithComplexTypesTest {
         assertEquals("struct[text]", md.getColumnName(2));
         assertEquals(Types.INTEGER, md.getColumnType(1));
         assertEquals(Types.VARCHAR, md.getColumnType(2));
-
 
         assertTrue(rs.next());
         assertEquals(n, rs.getInt(1));

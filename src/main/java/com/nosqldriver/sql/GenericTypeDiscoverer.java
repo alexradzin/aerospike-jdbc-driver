@@ -23,6 +23,7 @@ import static com.nosqldriver.sql.DataColumn.DataColumnRole.role;
 import static com.nosqldriver.sql.SqlLiterals.getSqlType;
 import static java.lang.String.format;
 import static java.sql.Types.OTHER;
+import static java.sql.Types.VARCHAR;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 
@@ -93,7 +94,13 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                         if (value != null) {
                             int sqlType = getSqlType(value);
                             c.withType(sqlType);
-                            if (sqlType == OTHER) {
+                            if (value instanceof Map) {
+                                @SuppressWarnings("unchecked")
+                                List<DataColumn> mapColumns = ((Map<String, String>)value).keySet().stream()
+                                        .map(key -> format("%s[%s]", c.getName(), key))
+                                        .map(name -> HIDDEN.create(c.getCatalog(), c.getTable(), name, name).withType(VARCHAR)).collect(Collectors.toList());
+                                subColumns.addAll(mapColumns);
+                            } else if (sqlType == OTHER) {
                                 subColumns.addAll(extractFieldTypes(c, value.getClass()));
                             }
                         } else if (EXPRESSION.equals(c.getRole())) {
@@ -123,5 +130,4 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                 })
                 .collect(toList());
     }
-
 }
