@@ -40,11 +40,14 @@ import java.util.stream.Stream;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static java.lang.String.format;
 import static java.sql.Connection.TRANSACTION_NONE;
+import static java.sql.JDBCType.OTHER;
+import static java.sql.Types.ARRAY;
 import static java.sql.Types.BIGINT;
 import static java.sql.Types.BLOB;
 import static java.sql.Types.CHAR;
 import static java.sql.Types.DOUBLE;
 import static java.sql.Types.INTEGER;
+import static java.sql.Types.JAVA_OBJECT;
 import static java.sql.Types.SMALLINT;
 import static java.sql.Types.TINYINT;
 import static java.sql.Types.VARCHAR;
@@ -884,8 +887,20 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
                         asList("BLOB", BLOB, 65535, "", "", "[(M)]", (short)typeNullable,
                                 true, (short)typeSearchable, false, false, false, "bytes",
                                 (short)0, (short)0, BLOB, 0, 10
+                        ),
+                        asList("LIST", ARRAY, 0, "", "", "[(M)]", (short)typeNullable,
+                                true, (short)typeSearchable, false, false, false, "bytes",
+                                (short)0, (short)0, BLOB, 0, 10
+                        ),
+                        asList("MAP", OTHER, 0, "", "", "[(M)]", (short)typeNullable,
+                                true, (short)typeSearchable, false, false, false, "bytes",
+                                (short)0, (short)0, OTHER, 0, 10
+                        ),
+                        asList("JAVA_OBJECT", JAVA_OBJECT, 0, "", "", "[(M)]", (short)typeNullable,
+                                true, (short)typeSearchable, false, false, false, "bytes",
+                                (short)0, (short)0, JAVA_OBJECT, 0, 10
                         )
-                        // TODO: list, map, GeoJson
+                        // TODO: GeoJson
                 );
 
 
@@ -1119,7 +1134,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern) {
         ExpressionAwareResultSetFactory expressionAwareResultSetFactory = new ExpressionAwareResultSetFactory(functionManager, driverPolicy);
         List<List<?>> jsFunctions = expressionAwareResultSetFactory.getClientSideFunctionNames().stream().map(name -> asList(null, null, name, "Java", functionResultUnknown, name)).collect(toList());
-        List<List<?>> luaFunctions = Stream.of("min", "max", "sum", "avg", "count", "distinct").map(name -> asList(null, null, name, "Lua", functionResultUnknown, name)).collect(toList());
+        List<List<?>> luaFunctions = Stream.of("min", "max", "sum", "avg", "sumsqs", "count", "distinct").map(name -> asList(null, null, name, "Lua", functionResultUnknown, name)).collect(toList());
 
         List<List<?>> functions = new ArrayList<>();
         functions.addAll(jsFunctions);
