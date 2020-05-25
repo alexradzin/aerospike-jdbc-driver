@@ -26,10 +26,24 @@ class ConnectionParametersParserTest {
     }
 
     @Test
+    void oneHostWithSlashAndPort() {
+        assertArrayEquals(
+                new Host[] {new Host("myhost", 3210)},
+                new ConnectionParametersParser().hosts("jdbc:aerospike://myhost:3210"));
+    }
+
+    @Test
     void oneHostWithoutPort() {
         assertArrayEquals(
                 new Host[] {new Host("somehost", 3000)},
                 new ConnectionParametersParser().hosts("jdbc:aerospike:somehost"));
+    }
+
+    @Test
+    void oneHostWithSlashWithoutPort() {
+        assertArrayEquals(
+                new Host[] {new Host("somehost", 3000)},
+                new ConnectionParametersParser().hosts("jdbc:aerospike://somehost"));
     }
 
     @Test
@@ -73,6 +87,13 @@ class ConnectionParametersParserTest {
         assertArrayEquals(
                 new Host[] {new Host("first", 3100), new Host("second", 3200), new Host("third", 3300)},
                 new ConnectionParametersParser().hosts("jdbc:aerospike:first:3100,second:3200,third:3300?timeout=1234"));
+    }
+
+    @Test
+    void severalHostWithSlashWithPortWithParameters() {
+        assertArrayEquals(
+                new Host[] {new Host("first", 3100), new Host("second", 3200), new Host("third", 3300)},
+                new ConnectionParametersParser().hosts("jdbc:aerospike://first:3100,second:3200,third:3300?timeout=1234"));
     }
 
     @Test

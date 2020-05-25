@@ -20,7 +20,7 @@ import static java.util.stream.Collectors.toSet;
 
 @VisibleForPackage
 class ConnectionParametersParser {
-    private static final Pattern AS_JDBC_URL = Pattern.compile("^jdbc:aerospike:([^/?]+)");
+    private static final Pattern AS_JDBC_URL = Pattern.compile("^jdbc:aerospike:(?://)?([^/?]+)");
     private static final Pattern AS_JDBC_SCHEMA = Pattern.compile("/([^?]+)");
 
     @VisibleForPackage
