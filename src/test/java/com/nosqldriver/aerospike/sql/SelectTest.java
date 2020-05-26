@@ -148,7 +148,9 @@ class SelectTest {
         assertEquals(FETCH_FORWARD, rs.getFetchDirection());
         assertEquals(Integer.MAX_VALUE, rs.getFetchSize());
         rs.setFetchSize(Integer.MAX_VALUE); //should be OK
-        assertThrows(SQLException.class, () -> rs.setFetchSize(2));
+        rs.setFetchSize(2);
+        assertEquals("Fetch size cannot be changed at runtime. The current fetch size is 0", rs.getWarnings().getMessage());
+        rs.clearWarnings();
         assertEquals(TYPE_FORWARD_ONLY, rs.getType());
         assertEquals(CONCUR_READ_ONLY, rs.getConcurrency());
         assertEquals(HOLD_CURSORS_OVER_COMMIT, rs.getHoldability());
@@ -430,7 +432,8 @@ class SelectTest {
             assertEquals(1, statement.getFetchSize());
             statement.setFetchSize(1);
             assertEquals(1, statement.getFetchSize());
-            assertThrows(SQLException.class, () -> statement.setFetchSize(2));
+            statement.setFetchSize(2);
+            assertEquals("Fetch size 2 (other than 1) is not supported right now and will be ignored", statement.getWarnings().getMessage());
             assertEquals(1, statement.getFetchSize());
 
             assertEquals(testConn, statement.getConnection());
@@ -447,11 +450,16 @@ class SelectTest {
 
     private void selectAll(String sql, Function<String, ResultSet> executor) throws SQLException {
         ResultSet rs = executor.apply(sql);
+        assertNull(rs.getWarnings());
 
         assertEquals(FETCH_FORWARD, rs.getFetchDirection());
         assertEquals(1, rs.getFetchSize());
         rs.setFetchSize(1); //should be OK
-        assertThrows(SQLException.class, () -> rs.setFetchSize(2));
+        assertNull(rs.getWarnings());
+        rs.setFetchSize(2);
+        assertEquals("Fetch size 2 (other than 1) is not supported right now and will be ignored", rs.getWarnings().getMessage());
+        rs.clearWarnings();
+        assertEquals(1, rs.getFetchSize());
         assertEquals(TYPE_FORWARD_ONLY, rs.getType());
         assertEquals(CONCUR_READ_ONLY, rs.getConcurrency());
         assertEquals(HOLD_CURSORS_OVER_COMMIT, rs.getHoldability());

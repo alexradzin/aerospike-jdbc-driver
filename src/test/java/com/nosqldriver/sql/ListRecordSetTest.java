@@ -134,7 +134,9 @@ class ListRecordSetTest {
 
 
         assertEquals(1, rs.getFetchSize());
-        assertThrows(SQLException.class, () -> rs.setFetchSize(2));
+        rs.setFetchSize(2);
+        assertEquals("Fetch size 2 (other than 1) is not supported right now and will be ignored", rs.getWarnings().getMessage());
+        assertEquals(1, rs.getFetchSize());
         assertEquals(ResultSet.TYPE_FORWARD_ONLY, rs.getType());
         assertEquals(ResultSet.CONCUR_READ_ONLY, rs.getConcurrency());
 

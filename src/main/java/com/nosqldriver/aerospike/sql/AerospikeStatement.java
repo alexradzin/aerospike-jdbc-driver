@@ -385,7 +385,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
     @Override
     public void setFetchSize(int rows) throws SQLException {
         if (rows != 1) {
-            throw new SQLException("Fetch size other than 1 is not supported right now");
+            addWarning(format("Fetch size %d (other than 1) is not supported right now and will be ignored", rows));
         }
     }
 

@@ -29,7 +29,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabelResultSet, SimpleWrapper {
+import static java.lang.String.format;
+
+public class JoinedResultSet extends WarningsHolder implements ResultSet, ResultSetAdaptor, IndexToLabelResultSet, SimpleWrapper {
     private final ResultSet resultSet;
     private final List<JoinHolder> joinHolders;
     private final List<ResultSet> resultSets = new ArrayList<>();
@@ -444,5 +446,10 @@ public class JoinedResultSet implements ResultSet, ResultSetAdaptor, IndexToLabe
             labels.add(tag);
         }
         return labels;
+    }
+
+    @Override
+    public void setFetchSize(int rows) throws SQLException {
+        resultSet.setFetchSize(rows);
     }
 }

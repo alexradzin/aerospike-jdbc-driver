@@ -518,15 +518,7 @@ public interface ResultSetAdaptor extends ResultSet {
     }
 
     @Override
-    default void setFetchSize(int rows) throws SQLException {
-        //TODO: add support of fetch size
-        if (rows != 1) {
-            throw new SQLFeatureNotSupportedException("This version supports fetch size=1 only");
-        }
-    }
-
-    @Override
-    default int getFetchSize() throws SQLException {
+default int getFetchSize() throws SQLException {
         return 1;
     }
 

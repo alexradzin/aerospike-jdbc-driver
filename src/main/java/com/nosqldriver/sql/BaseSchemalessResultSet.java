@@ -502,4 +502,11 @@ public abstract class BaseSchemalessResultSet<R> extends WarningsHolder implemen
     protected void setCurrentRecord(R r) {
         // default empty implementation
     }
+
+    @Override
+    public void setFetchSize(int rows) {
+        if (rows != 1) {
+            addWarning(format("Fetch size %d (other than 1) is not supported right now and will be ignored", rows));
+        }
+    }
 }

@@ -14,7 +14,7 @@ import java.util.Map;
 
 import static java.lang.String.format;
 
-public class BufferedResultSet implements ResultSet, DelegatingResultSet, ResultSetAdaptor, SimpleWrapper {
+public class BufferedResultSet extends WarningsHolder implements ResultSet, DelegatingResultSet, ResultSetAdaptor, SimpleWrapper {
     private final ResultSet rs;
     private final Collection<Map<String, Object>> buffer;
     private final int fetchSize;
@@ -195,9 +195,7 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public void setFetchSize(int rows) throws SQLException {
-        if (rows != fetchSize) {
-            throw new SQLException(format("Fetch size cannot be changed at runtime. The current fetch size is %d", buffer.size()));
-        }
+        addWarning(format("Fetch size cannot be changed at runtime. The current fetch size is %d", buffer.size()));
     }
 
     @Override
@@ -259,11 +257,21 @@ public class BufferedResultSet implements ResultSet, DelegatingResultSet, Result
 
     @Override
     public SQLWarning getWarnings() throws SQLException {
-        return rs.getWarnings();
+        WarningsHolder holder = new WarningsHolder();
+        return addWarning(addWarning(holder, super.getWarnings()), rs.getWarnings()).getWarnings();
+    }
+
+
+    private WarningsHolder addWarning(WarningsHolder holder, SQLWarning warning) {
+        if (warning != null && warning.getMessage() != null) {
+            holder.addWarning(warning.getMessage());
+        }
+        return holder;
     }
 
     @Override
     public void clearWarnings() throws SQLException {
+        super.clearWarnings();
         rs.clearWarnings();
     }
 
