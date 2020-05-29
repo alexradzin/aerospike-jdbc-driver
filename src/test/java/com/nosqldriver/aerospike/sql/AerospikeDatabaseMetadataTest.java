@@ -166,7 +166,7 @@ class AerospikeDatabaseMetadataTest {
         assertTrue(Integer.parseInt(md.getDatabaseProductVersion().split("\\.")[0]) >= 4);
         assertEquals(AerospikeDriver.class.getName(), md.getDriverName());
         assertNotEquals("", md.getDriverVersion()); // taken from manifest and is not available in dev environment
-        assertEquals(" ", md.getIdentifierQuoteString());
+        assertEquals("\"", md.getIdentifierQuoteString());
         assertEquals("", md.getSQLKeywords());
         assertTrue(md.getNumericFunctions().contains("sum"));
         assertTrue(md.getStringFunctions().contains("concat"));

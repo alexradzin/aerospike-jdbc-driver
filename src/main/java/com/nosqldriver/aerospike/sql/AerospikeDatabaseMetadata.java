@@ -5,12 +5,12 @@ import com.aerospike.client.Info;
 import com.aerospike.client.policy.InfoPolicy;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.DriverPolicy;
-import com.nosqldriver.sql.ExpressionAwareResultSetFactory;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.SimpleWrapper;
 import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.SneakyThrower;
 import com.nosqldriver.util.ThrowingSupplier;
+import com.nosqldriver.util.TypeGroup;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
@@ -216,7 +218,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public String getIdentifierQuoteString() {
-        return " ";
+        return "\"";
     }
 
     @Override
@@ -226,22 +228,28 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public String getNumericFunctions() {
-        return "sum,avg,min,max,count,len,charIndex,now,year";
+        return getFunctions(String.class) + "sum,sumsqs,avg,min,max,count";
     }
 
     @Override
     public String getStringFunctions() {
-        return "char,concat,left,lower,upper,str,substring,space,reverse";
+        return getFunctions(String.class);
+    }
+
+    private String getFunctions(Class type) {
+        return functionManager.getFunctionNames().stream()
+                .filter(name -> Optional.ofNullable(functionManager.getFunction(name).getClass().getAnnotation(TypeGroup.class))
+                    .map(g -> Arrays.asList(g.value()).contains(type)).orElse(false)).collect(Collectors.joining(","));
     }
 
     @Override
     public String getSystemFunctions() {
-        return "";
+        return getFunctions(System.class);
     }
 
     @Override
     public String getTimeDateFunctions() {
-        return "year,now";
+        return getFunctions(Date.class);
     }
 
     @Override
@@ -1132,12 +1140,11 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern) {
-        ExpressionAwareResultSetFactory expressionAwareResultSetFactory = new ExpressionAwareResultSetFactory(functionManager, driverPolicy);
-        List<List<?>> jsFunctions = expressionAwareResultSetFactory.getClientSideFunctionNames().stream().map(name -> asList(null, null, name, "Java", functionResultUnknown, name)).collect(toList());
+        List<List<?>> clientFunctions = functionManager.getFunctionNames().stream().map(name -> asList(null, null, name, "Java", functionResultUnknown, name)).collect(toList());
         List<List<?>> luaFunctions = Stream.of("min", "max", "sum", "avg", "sumsqs", "count", "distinct").map(name -> asList(null, null, name, "Lua", functionResultUnknown, name)).collect(toList());
 
         List<List<?>> functions = new ArrayList<>();
-        functions.addAll(jsFunctions);
+        functions.addAll(clientFunctions);
         functions.addAll(luaFunctions);
         functions.sort(Comparator.comparing(o -> ((String) o.get(2))));
 

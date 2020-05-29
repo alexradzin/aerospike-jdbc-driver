@@ -3,6 +3,7 @@ package com.nosqldriver.util;
 import com.nosqldriver.VisibleForPackage;
 import org.json.simple.parser.JSONParser;
 
+import java.sql.Array;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -47,7 +48,7 @@ public class StandardFunctions {
     @VisibleForPackage
     public static final Map<String, Object> functions = new HashMap<>();
     static {
-        final Function<Object, Integer> objLength = new Function<Object, Integer>() {
+        final Function<Object, Integer> objLength = new @TypeGroup(String.class) Function<Object, Integer>() {
             @Override
             public Integer apply(Object o) {
                 if (o == null) {
@@ -68,13 +69,13 @@ public class StandardFunctions {
         functions.put("len", objLength);
         functions.put("length", objLength);
 
-        functions.put("ascii", new Function<String, Integer>() {
+        functions.put("ascii", new @TypeGroup(String.class) Function<String, Integer>() {
             @Override
             public Integer apply(String s) {
                 return s.length() > 0 ? (int) s.charAt(0) : null;
             }
         });
-        functions.put("char", new Function<Integer, String>() {
+        functions.put("char", new @TypeGroup(String.class) Function<Integer, String>() {
             @Override
             public String apply(Integer code) {
                 return code == null ? null : new String(new char[] {(char)code.intValue()});
@@ -86,46 +87,46 @@ public class StandardFunctions {
             int offset = args.length > 2 ? (Integer)args[2] - 1 : 0;
             return str.indexOf(subStr) + 1 - offset;
         });
-        functions.put("instr", new BiFunction<String, String, Integer>() {
+        functions.put("instr", new @TypeGroup(String.class) BiFunction<String, String, Integer>() {
             @Override
             public Integer apply(String str, String subStr) {
                 return str.indexOf(subStr) + 1;
             }
         });
-        functions.put("trim", new Function<String, String>() {
+        functions.put("trim", new @TypeGroup(String.class) Function<String, String>() {
 
             @Override
             public String apply(String s) {
                 return s == null ? null : s.trim();
             }
         });
-        functions.put("ltrim", new Function<String, String>() {
+        functions.put("ltrim", new @TypeGroup(String.class) Function<String, String>() {
             @Override
             public String apply(String s) {
                 return s == null ? null : s.replaceFirst("^ *", "");
             }
         });
-        functions.put("rtrim", new Function<String, String>() {
+        functions.put("rtrim", new @TypeGroup(String.class) Function<String, String>() {
             @Override
             public String apply(String s) {
                 return s == null ? null : s.replaceFirst(" *$", "");
             }
         });
-        functions.put("strcmp", new BiFunction<String, String, Integer>() {
+        functions.put("strcmp", new @TypeGroup(String.class) BiFunction<String, String, Integer>() {
 
             @Override
             public Integer apply(String s, String s2) {
                 return s.compareTo(s2);
             }
         });
-        functions.put("left", new BiFunction<String, Integer, String>() {
+        functions.put("left", new @TypeGroup(String.class) BiFunction<String, Integer, String>() {
             @Override
             public String apply(String s, Integer n) {
                 return s.substring(0, n);
             }
         });
 
-        Function<String, String> toLowerCase = new Function<String, String>() {
+        Function<String, String> toLowerCase = new @TypeGroup(String.class) Function<String, String>() {
             @Override
             public String apply(String s) {
                 return s == null ? null : s.toLowerCase();
@@ -134,7 +135,7 @@ public class StandardFunctions {
         functions.put("lower", toLowerCase);
         functions.put("lcase", toLowerCase);
 
-        Function<String, String> toUpperCase = new Function<String, String>() {
+        Function<String, String> toUpperCase = new @TypeGroup(String.class) Function<String, String>() {
             @Override
             public String apply(String s) {
                 return s == null ? null : s.toUpperCase();
@@ -143,140 +144,140 @@ public class StandardFunctions {
         functions.put("upper", toUpperCase);
         functions.put("ucase", toUpperCase);
 
-        functions.put("str", new Function<Object, String>() {
+        functions.put("str", new @TypeGroup(String.class) Function<Object, String>() {
             @Override
             public String apply(Object o) {
                 return String.valueOf(o);
             }
         });
-        functions.put("space", new Function<Integer, String>() {
+        functions.put("space", new @TypeGroup(String.class) Function<Integer, String>() {
             @Override
             public String apply(Integer i) {
                 return i == 0 ? "" : format("%" + i + "c", ' ');
             }
         });
-        functions.put("reverse", new Function<String, String>() {
+        functions.put("reverse", new @TypeGroup(String.class) Function<String, String>() {
             @Override
             public String apply(String s) {
                 return s == null ? null : new StringBuilder(s).reverse().toString();
             }
         });
-        functions.put("to_base64", new Function<Object, String>() {
+        functions.put("to_base64", new @TypeGroup(String.class) Function<Object, String>() {
             @Override
             public String apply(Object b) {
                 return b == null ? null : getEncoder().encodeToString(b instanceof String ? ((String)b).getBytes() : (byte[])b);
             }
         });
-        functions.put("from_base64", new Function<String, byte[]>() {
+        functions.put("from_base64", new @TypeGroup(String.class) Function<String, byte[]>() {
             @Override
             public byte[] apply(String s) {
                 return s == null ? null : java.util.Base64.getDecoder().decode(s);
             }
         });
-        functions.put("substring", new TriFunction<String, Integer, Integer, String>() {
+        functions.put("substring", new @TypeGroup(String.class) TriFunction<String, Integer, Integer, String>() {
 
             @Override
             public String apply(String s, Integer start, Integer length) {
                 return s.substring(start - 1, length);
             }
         });
-        functions.put("concat", new VarargsFunction<Object, String>() {
+        functions.put("concat", new @TypeGroup(String.class) VarargsFunction<Object, String>() {
             @Override
             public String apply(Object... args) {
                 return Arrays.stream(args).map(String::valueOf).collect(Collectors.joining());
             }
         });
-        functions.put("concat_ws", new VarargsFunction<Object, String>() {
+        functions.put("concat_ws", new @TypeGroup(String.class) VarargsFunction<Object, String>() {
             @Override
             public String apply(Object... args) {
                 return Arrays.stream(args).skip(1).map(String::valueOf).collect(Collectors.joining((String)args[0]));
             }
         });
-        functions.put("date", new VarargsFunction<Object, Date>() {
+        functions.put("date", new @TypeGroup(Date.class) VarargsFunction<Object, Date>() {
             @Override
             public Date apply(Object... args) {
                 return date.apply(args.length > 0 ? args[0] : null);
             }
         });
-        functions.put("calendar", new VarargsFunction<Object, Calendar>() {
+        functions.put("calendar", new @TypeGroup(Date.class) VarargsFunction<Object, Calendar>() {
             @Override
             public Calendar apply(Object... args) {
                 return calendar(args);
             }
         });
-        functions.put("now", new Supplier<Long>() {
+        functions.put("now", new @TypeGroup({Date.class, Long.class}) Supplier<Long>() {
             @Override
             public Long get() {
                 return System.currentTimeMillis();
             }
         });
-        functions.put("year", new VarargsFunction<Object, Integer>() {
+        functions.put("year", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.YEAR);
             }
         });
-        functions.put("month", new VarargsFunction<Object, Integer>() {
+        functions.put("month", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.MONTH) + 1;
             }
         });
-        functions.put("dayofmonth", new VarargsFunction<Object, Integer>() {
+        functions.put("dayofmonth", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.DAY_OF_MONTH);
             }
         });
-        functions.put("hour", new VarargsFunction<Object, Integer>() {
+        functions.put("hour", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.HOUR_OF_DAY);
             }
         });
-        functions.put("minute", new VarargsFunction<Object, Integer>() {
+        functions.put("minute", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.MINUTE);
             }
         });
-        functions.put("second", new VarargsFunction<Object, Integer>() {
+        functions.put("second", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.SECOND);
             }
         });
-        functions.put("millisecond", new VarargsFunction<Object, Integer>() {
+        functions.put("millisecond", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.MILLISECOND);
             }
         });
-        functions.put("epoch", new VarargsFunction<Object, Long>() {
+        functions.put("epoch", new @TypeGroup({Date.class, Long.class}) VarargsFunction<Object, Long>() {
             @Override
             public Long apply(Object... args) {
                 return parse((String)args[0], args.length > 1 ? (String)args[1] : null).getTime();
             }
         });
-        functions.put("millis", new Function<Date, Long>() {
+        functions.put("millis", new @TypeGroup(Date.class) Function<Date, Long>() {
             @Override
             public Long apply(Date date) {
                 return date.getTime();
             }
         });
-        functions.put("map", new Function<String, Map<?, ?>>() {
+        functions.put("map", new @TypeGroup({String.class, Map.class}) Function<String, Map<?, ?>>() {
             @Override
             public Map<?, ?> apply(String json) {
                 return (Map<?, ?>)parseJson(json);
             }
         });
-        functions.put("list", new Function<String, List<?>>() {
+        functions.put("list", new @TypeGroup({String.class, List.class}) Function<String, List<?>>() {
             @Override
             public List<?> apply(String json) {
                 return dataUtil.toList(parseJson(json));
             }
         });
-        functions.put("array", new Function<String, Object[]>() {
+        functions.put("array", new @TypeGroup({String.class, Array.class})  Function<String, Object[]>() {
             @Override
             public Object[] apply(String json) {
                 return dataUtil.toArray(parseJson(json));
