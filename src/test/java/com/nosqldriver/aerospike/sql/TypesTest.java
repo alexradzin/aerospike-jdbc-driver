@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DateFormat;
@@ -424,6 +425,42 @@ abstract class TypesTest {
         assertFalse(rs.next());
     }
 
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select coalesce('a'); a",
+            "select coalesce(text_column) from types_test; mytext",
+            "select coalesce(null_column, text_column) from types_test; mytext",
+            "select coalesce(doesnotexist, text_column) from types_test; mytext",
+            "select coalesce(text_column, null_column) from types_test; mytext",
+            "select coalesce(double_column, null_column) from types_test; 3.14",
+            "select coalesce(null_column, double_column) from types_test; 3.14",
+            "select coalesce(doesnotexist, double_column) from types_test; 3.14",
+    })
+    void coalesce(String test) throws SQLException {
+        PreparedStatement ps = testConn.prepareStatement(format("insert into %s (PK, text_column, double_column, null_column) values (?,?,?,?)", TYPE_TEST_TABLE));
+        ps.setInt(1, 1);
+        ps.setString(2, "mytext");
+        ps.setDouble(3, 3.14);
+        ps.setNull(4, VARCHAR);
+        ps.executeUpdate();
+
+
+        String[] testParams = test.split("\\s*;\\s*");
+        String sql = testParams[0];
+        String expectedStr = testParams[1];
+        Object expectedValue;
+        try {
+            expectedValue = Double.parseDouble(expectedStr);
+        } catch (NumberFormatException e) {
+            expectedValue = expectedStr;
+        }
+
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertEquals(expectedValue, rs.getObject(1));
+        assertFalse(rs.next());
+    }
 
 
     private void functionStrcmp(String sql, int expected) throws SQLException {

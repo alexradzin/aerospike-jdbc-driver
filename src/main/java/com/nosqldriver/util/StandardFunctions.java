@@ -201,6 +201,12 @@ public class StandardFunctions {
                 return Arrays.stream(args).skip(1).map(String::valueOf).collect(Collectors.joining((String)args[0]));
             }
         });
+        functions.put("coalesce", new @TypeGroup(Object.class) VarargsFunction<Object, Object>() {
+            @Override
+            public Object apply(Object... args) {
+                return Arrays.stream(args).filter(e -> e != null).findFirst().orElse(null);
+            }
+        });
         functions.put("date", new @TypeGroup(Date.class) VarargsFunction<Object, Date>() {
             @Override
             public Date apply(Object... args) {
