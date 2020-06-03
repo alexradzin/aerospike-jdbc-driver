@@ -3,6 +3,8 @@ package com.nosqldriver.util;
 import com.nosqldriver.VisibleForPackage;
 import org.json.simple.parser.JSONParser;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Array;
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -14,6 +16,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -81,11 +86,14 @@ public class StandardFunctions {
                 return code == null ? null : new String(new char[] {(char)code.intValue()});
             }
         });
-        functions.put("locate", (VarargsFunction<Object, Integer>) args -> {
-            String subStr = (String)args[0];
-            String str = (String)args[1];
-            int offset = args.length > 2 ? (Integer)args[2] - 1 : 0;
-            return str.indexOf(subStr) + 1 - offset;
+        functions.put("locate", new VarargsFunction<Object, Integer>() {
+            @Override
+            public Integer apply(Object... args) {
+                String subStr = (String) args[0];
+                String str = (String) args[1];
+                int offset = args.length > 2 ? (Integer) args[2] - 1 : 0;
+                return str.indexOf(subStr) + 1 - offset;
+            }
         });
         functions.put("instr", new @TypeGroup(String.class) BiFunction<String, String, Integer>() {
             @Override
@@ -205,7 +213,7 @@ public class StandardFunctions {
                 return calendar(args);
             }
         });
-        functions.put("now", new @TypeGroup({Date.class, Long.class}) Supplier<Long>() {
+        functions.put("now", new @TypeGroup({Date.class, Number.class}) Supplier<Long>() {
             @Override
             public Long get() {
                 return System.currentTimeMillis();
@@ -281,6 +289,154 @@ public class StandardFunctions {
             @Override
             public Object[] apply(String json) {
                 return dataUtil.toArray(parseJson(json));
+            }
+        });
+
+
+        // Numeric functions
+        functions.put("abs", new @TypeGroup(Number.class)  Function<Number, Number>() {
+            @Override
+            public Number apply(Number value) {
+                if (value == null) {
+                    return null;
+                }
+                if (value instanceof Double || value instanceof BigDecimal) {
+                    return Math.abs(value.doubleValue());
+                }
+                if (value instanceof Float) {
+                    return Math.abs((Float)value);
+                }
+                if (value instanceof Long || value instanceof AtomicLong) {
+                    return Math.abs(value.longValue());
+                }
+                if (value instanceof Integer || value instanceof Short || value instanceof Byte || value instanceof AtomicInteger) {
+                    return Math.abs(value.intValue());
+                }
+                throw new IllegalArgumentException("abs() supports only numeric arguments");
+            }
+        });
+
+        functions.put("acos", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number value) {
+                return Math.acos(value.doubleValue());
+            }
+        });
+        functions.put("asin", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number value) {
+                return Math.asin(value.doubleValue());
+            }
+        });
+        functions.put("atan", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number value) {
+                return Math.atan(value.doubleValue());
+            }
+        });
+        functions.put("atan2", new @TypeGroup(Number.class)  BiFunction<Number, Number, Double>() {
+            @Override
+            public Double apply(Number y, Number x) {
+                return Math.atan2(y.doubleValue(), x.doubleValue());
+            }
+        });
+        functions.put("cos", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number value) {
+                return Math.cos(value.doubleValue());
+            }
+        });
+        functions.put("cot", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number value) {
+                return 1.0 / Math.tan(value.doubleValue());
+            }
+        });
+        functions.put("exp", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number value) {
+                return Math.exp(value.doubleValue());
+            }
+        });
+        functions.put("ln", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number value) {
+                return Math.log(value.doubleValue());
+            }
+        });
+        functions.put("log10", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number value) {
+                return Math.log10(value.doubleValue());
+            }
+        });
+        functions.put("log2", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number value) {
+                return Math.log(value.doubleValue()) / Math.log(2);
+            }
+        });
+        functions.put("pi", new @TypeGroup(Number.class) Supplier<Double>() {
+            @Override
+            public Double get() {
+                return Math.PI;
+            }
+        });
+        BiFunction<Number, Number, Double> pow = new @TypeGroup(Number.class) BiFunction<Number, Number, Double>() {
+            @Override
+            public Double apply(Number a, Number b) {
+                return Math.pow(a.doubleValue(), b.doubleValue());
+            }
+        };
+        functions.put("pow", pow);
+        functions.put("power", pow);
+
+        functions.put("degrees", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number angrad) {
+                return Math.toDegrees(angrad.doubleValue());
+            }
+        });
+        functions.put("radians", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number angdeg) {
+                return Math.toRadians(angdeg.doubleValue());
+            }
+        });
+        functions.put("sin", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number a) {
+                return Math.sin(a.doubleValue());
+            }
+        });
+        functions.put("tan", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number a) {
+                return Math.tan(a.doubleValue());
+            }
+        });
+        functions.put("ceil", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number a) {
+                return Math.ceil(a.doubleValue());
+            }
+        });
+        functions.put("floor", new @TypeGroup(Number.class)  Function<Number, Double>() {
+            @Override
+            public Double apply(Number a) {
+                return Math.floor(a.doubleValue());
+            }
+        });
+        functions.put("round", new @TypeGroup(Number.class)  BiFunction<Number, Integer, Double>() {
+            @Override
+            public Double apply(Number value, Integer places) {
+                return BigDecimal.valueOf(value.doubleValue()).setScale(places, RoundingMode.HALF_UP).doubleValue();
+            }
+        });
+        functions.put("rand", new VarargsFunction<Object, Double>() {
+            @Override
+            public Double apply(Object... t) {
+                return (t.length > 0 ? new Random(((Number)t[0]).longValue()) : new Random()).nextDouble();
             }
         });
     }

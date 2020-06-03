@@ -228,7 +228,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public String getNumericFunctions() {
-        return getFunctions(String.class) + "sum,sumsqs,avg,min,max,count";
+        return getFunctions(Number.class) + "sum,sumsqs,avg,min,max,count";
     }
 
     @Override

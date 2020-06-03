@@ -36,6 +36,18 @@ public class LuaScriptEngineWrapper extends ScriptEngineWrapper {
         fromLuaValue.put(Float.class, LuaValue::tofloat);
         fromLuaValue.put(Double.class, LuaValue::todouble);
 
+        fromLuaValue.put(Number.class, luaValue -> {
+            if (luaValue instanceof LuaDouble) {
+                return luaValue.todouble();
+            }
+            if (luaValue instanceof LuaInteger) {
+                long l = luaValue.tolong();
+                return l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE ? (int)l : l;
+            }
+            throw new ClassCastException("Cannot cast " + luaValue + " to a number");
+        });
+
+
         fromLuaValue.put(LuaInteger.class, LuaValue::toint);
         fromLuaValue.put(LuaBoolean.class, LuaValue::toboolean);
         fromLuaValue.put(LuaDouble.class, luaValue -> {

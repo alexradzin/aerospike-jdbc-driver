@@ -379,6 +379,53 @@ abstract class TypesTest {
         functionStrcmp("select strcmp('a', ''), strcmp('b', 'a'), strcmp('ac', 'ab'), strcmp('abcd', 'abc')", 1);
     }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select abs(0), abs(1), abs(-1), abs(3.14), abs(-1.9); 0,1,1,3.14,1.9",
+            "select sin(0.), sin(0), sin(" + Math.PI/2 + "); 0, 0, 1",
+            "select cos(0.), cos(0), cos(" + Math.PI/2 + "); 1, 1, 0",
+            "select tan(0.), tan(0); 0, 0",
+            "select cot(" + Math.PI/2 + "); 0",
+            "select asin(0.), asin(0), asin(1); 0, 0, " + Math.PI/2,
+            "select acos(1.), acos(1), acos(0); 0, 0, " + Math.PI/2,
+            "select atan(0.), atan(0); 0, 0",
+            "select atan2(0., 0.), atan2(0, 0); 0, 0",
+            "select exp(0.), exp(0), exp(1); 1., 1, " + Math.E,
+            "select ln(1.), ln(1), log10(1.), log10(1), log2(1.), log2(1); 0., 0",
+            "select pi(); " + Math.PI,
+            "select pow(0., 0), pow(2, 3); 1., 8",
+            "select ceil(3.14), floor(3.14), round(3.14, 1); 4, 3, 3.1",
+            "select rand(123); 0.7231742029971469",
+            "select degrees(0), degrees(" + Math.PI/2 + "); 0, 90",
+            "select radians(0), radians(90); 0, " + Math.PI/2
+    })
+    void numericFunctions(String test) throws SQLException {
+        String[] testParams = test.split("\\s*;\\s*");
+        String sql = testParams[0];
+        String[] expectedStr = testParams[1].split("\\s*,\\s*");
+        Number[] expected = new Number[expectedStr.length];
+        int n = expected.length;
+        for (int i = 0; i < n; i++) {
+            String s = expectedStr[i];
+            if ("null".equals(s)) {
+                expected[i] = null;
+            } else if (s.contains(".")) {
+                expected[i] = Double.parseDouble(s);
+            } else {
+                expected[i] = Integer.parseInt(s);
+            }
+        }
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        for (int i = 0; i < n; i++) {
+            assertEquals(expected[i].doubleValue(), ((Number)rs.getObject(i + 1)).doubleValue(), 0.001);
+        }
+
+        assertFalse(rs.next());
+    }
+
+
+
     private void functionStrcmp(String sql, int expected) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(sql);
         assertTrue(rs.next());
