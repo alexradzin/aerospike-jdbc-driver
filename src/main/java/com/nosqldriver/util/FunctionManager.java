@@ -39,7 +39,7 @@ public class FunctionManager {
         try {
             addFunction(name, clazz.getConstructor().newInstance());
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalArgumentException(e);
         }
 
 

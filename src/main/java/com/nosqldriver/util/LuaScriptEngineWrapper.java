@@ -26,7 +26,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class LuaScriptEngineWrapper extends ScriptEngineWrapper {
-    private static final Map<Class, Function<LuaValue, Object>> fromLuaValue = new HashMap<>();
+    private static final Map<Type, Function<LuaValue, Object>> fromLuaValue = new HashMap<>();
     static {
         fromLuaValue.put(LuaValue.NIL.getClass(), null);
         fromLuaValue.put(Byte.class, LuaValue::tobyte);
@@ -55,6 +55,7 @@ public class LuaScriptEngineWrapper extends ScriptEngineWrapper {
             return ((v == Math.floor(v)) && !Double.isInfinite(v)) ? luaValue.tolong() : v;
         });
         fromLuaValue.put(LuaUserdata.class, luaValue -> ((LuaUserdata)luaValue).userdata());
+        fromLuaValue.put(Object.class, luaValue -> luaValue);
     }
 
     private final Map<Class, Function<Object, LuaValue>> toLuaValue = new HashMap<>();
@@ -221,7 +222,7 @@ public class LuaScriptEngineWrapper extends ScriptEngineWrapper {
 
 
 
-    public Object fromLuaValue(LuaValue luaValue, Type requiredType) {
+    private Object fromLuaValue(LuaValue luaValue, Type requiredType) {
         if (LuaValue.NIL.equals(luaValue)) {
             return null;
         }

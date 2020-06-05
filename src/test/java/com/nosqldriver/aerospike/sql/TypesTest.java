@@ -36,6 +36,7 @@ import static java.sql.Types.DOUBLE;
 import static java.sql.Types.VARCHAR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
@@ -221,10 +222,10 @@ abstract class TypesTest {
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
-            "select year('2019-09-23 14:49:03.123'), month('2019-09-23 14:49:03.123'), dayofmonth('2019-09-23 14:49:03.123'), hour('2019-09-23 14:49:03.123'), minute('2019-09-23 14:49:03.123'), second('2019-09-23 14:49:03.123'), millisecond('2019-09-23 14:49:03.123')",
-            "select YEAR('2019-09-23 14:49:03.123'), MONTH('2019-09-23 14:49:03.123'), DAYOFMONTH('2019-09-23 14:49:03.123'), HOUR('2019-09-23 14:49:03.123'), MINUTE('2019-09-23 14:49:03.123'), SECOND('2019-09-23 14:49:03.123'), MILLISECOND('2019-09-23 14:49:03.123')",
+            "select year('2019-09-23 14:49:03.123'), month('2019-09-23 14:49:03.123'), dayofmonth('2019-09-23 14:49:03.123'), hour('2019-09-23 14:49:03.123'), minute('2019-09-23 14:49:03.123'), second('2019-09-23 14:49:03.123'), millisecond('2019-09-23 14:49:03.123'), epoch('2019-09-23 14:49:03.123')",
+            "select YEAR('2019-09-23 14:49:03.123'), MONTH('2019-09-23 14:49:03.123'), DAYOFMONTH('2019-09-23 14:49:03.123'), HOUR('2019-09-23 14:49:03.123'), MINUTE('2019-09-23 14:49:03.123'), SECOND('2019-09-23 14:49:03.123'), MILLISECOND('2019-09-23 14:49:03.123'), EPOCH('2019-09-23 14:49:03.123')",
     })
-    void timePartsFromString(String sql) throws SQLException {
+    void timePartsFromString(String sql) throws SQLException, ParseException {
         ResultSet rs = testConn.createStatement().executeQuery(sql);
         assertTrue(rs.next());
         assertEquals(2019, rs.getInt(1));
@@ -234,6 +235,7 @@ abstract class TypesTest {
         assertEquals(49, rs.getInt(5));
         assertEquals(3, rs.getInt(6));
         assertEquals(123, rs.getInt(7));
+        assertEquals(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").parse("2019-09-23 14:49:03.123").getTime(), rs.getLong(8));
         assertFalse(rs.next());
     }
 
@@ -248,6 +250,37 @@ abstract class TypesTest {
         ResultSet rs = testConn.createStatement().executeQuery(sql);
         assertTrue(rs.next());
         assertEquals(9, rs.getInt(1));
+        assertFalse(rs.next());
+    }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select year('foobar')",
+            "select month('foobar')",
+            "select dayofmonth('foobar')",
+            "select hour('foobar')",
+            "select minute('foobar')",
+            "select second('foobar')",
+            "select millisecond('foobar')",
+            "select epoch('foobar')",
+    })
+    void wrongDateFormat(String sql) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertEquals("Cannot parse foobar as date", assertThrows(SQLException.class, () -> rs.getInt(1)).getMessage());
+        assertFalse(rs.next());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select length(1)",
+            "select length(3.14)",
+    })
+    void wrongLength(String sql) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        assertTrue(rs.next());
+        assertTrue(assertThrows(SQLException.class, () -> rs.getInt(1)).getMessage().contains("function length() does not support "));
         assertFalse(rs.next());
     }
 
@@ -364,6 +397,30 @@ abstract class TypesTest {
         assertEquals("Hello", rs.getString(6));
     }
 
+    @Test
+    void stringFunctions() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(
+                "select left('Hello world', 5), " +
+                        "lower('Hello'), lcase('Hello'), " +
+                        "upper('Hello'), ucase('Hello'), " +
+                        "str('Hello'), str(123), str(3.14)");
+
+        assertTrue(rs.next());
+        //left
+        assertEquals("Hello", rs.getString(1));
+        // lower
+        assertEquals("hello", rs.getString(2));
+        assertEquals("hello", rs.getString(3));
+        // upper
+        assertEquals("HELLO", rs.getString(4));
+        assertEquals("HELLO", rs.getString(5));
+
+        // str
+        assertEquals("Hello", rs.getString(6));
+        assertEquals("123", rs.getString(7));
+        assertEquals("3.14", rs.getString(8));
+    }
+
 
     @Test
     void functionStrcmpEq() throws SQLException {
@@ -382,7 +439,7 @@ abstract class TypesTest {
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
-            "select abs(0), abs(1), abs(-1), abs(3.14), abs(-1.9); 0,1,1,3.14,1.9",
+            "select abs(0), abs(1), abs(-1), abs(3.14), abs(-1.9), abs(-1569239343123); 0,1,1,3.14,1.9,1569239343123",
             "select sin(0.), sin(0), sin(" + Math.PI/2 + "); 0, 0, 1",
             "select cos(0.), cos(0), cos(" + Math.PI/2 + "); 1, 1, 0",
             "select tan(0.), tan(0); 0, 0",
@@ -394,7 +451,7 @@ abstract class TypesTest {
             "select exp(0.), exp(0), exp(1); 1., 1, " + Math.E,
             "select ln(1.), ln(1), log10(1.), log10(1), log2(1.), log2(1); 0., 0",
             "select pi(); " + Math.PI,
-            "select pow(0., 0), pow(2, 3); 1., 8",
+            "select pow(0., 0), pow(2, 3),power(1., 1), power(3, 2); 1., 8, 1., 9",
             "select ceil(3.14), floor(3.14), round(3.14, 1); 4, 3, 3.1",
             "select rand(123); 0.7231742029971469",
             "select degrees(0), degrees(" + Math.PI/2 + "); 0, 90",
@@ -413,13 +470,24 @@ abstract class TypesTest {
             } else if (s.contains(".")) {
                 expected[i] = Double.parseDouble(s);
             } else {
-                expected[i] = Integer.parseInt(s);
+                long value = Long.parseLong(s);
+                if (value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE) {
+                    expected[i] = (int)value;
+                } else {
+                    expected[i] = value;
+                }
             }
         }
         ResultSet rs = testConn.createStatement().executeQuery(sql);
         assertTrue(rs.next());
         for (int i = 0; i < n; i++) {
-            assertEquals(expected[i].doubleValue(), ((Number)rs.getObject(i + 1)).doubleValue(), 0.001);
+            Double expectedValue = expected[i] == null ? null : expected[i].doubleValue();
+            Object actual = rs.getObject(i + 1);
+            if (expectedValue == null) {
+                assertNull(actual);
+            } else {
+                assertEquals(expectedValue, ((Number)actual).doubleValue(), 0.001);
+            }
         }
 
         assertFalse(rs.next());

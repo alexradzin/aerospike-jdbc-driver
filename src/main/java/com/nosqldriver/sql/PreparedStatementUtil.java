@@ -37,7 +37,7 @@ public class PreparedStatementUtil {
                 intoConstant = !intoConstant;
             }
             if (!intoConstant && c == ';') {
-                queries.add(currentQuery.toString());
+                appendNotEmpty(queries, currentQuery.toString());
                 currentQuery.setLength(0);
             } else {
                 currentQuery.append(c);
@@ -46,13 +46,16 @@ public class PreparedStatementUtil {
 
 
         if (currentQuery.length() > 0 && currentQuery.toString().trim().length() > 0) {
-            String query = currentQuery.toString();
-            if (query.trim().length() > 0) {
-                queries.add(currentQuery.toString());
-            }
+            appendNotEmpty(queries, currentQuery.toString());
         }
 
         return queries;
+    }
+
+    private static void appendNotEmpty(Collection<String> queries, String query) {
+        if (query.trim().length() > 0) {
+            queries.add(query);
+        }
     }
 
 }

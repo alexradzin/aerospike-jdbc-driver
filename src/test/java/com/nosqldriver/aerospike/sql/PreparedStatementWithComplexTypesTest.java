@@ -698,6 +698,45 @@ class PreparedStatementWithComplexTypesTest {
         assertFalse(rs.next());
     }
 
+
+    @Test
+    void writeAndReadObjectUsingCustomSerializationWrongDbColumn() throws SQLException, IOException {
+        String query = "select custom[number] from (select deserialize(wrong) as custom from data)";
+        MyNotSerializableClass obj = new MyNotSerializableClass(1, "text");
+
+        Connection conn = DriverManager.getConnection(aerospikeTestUrl + "?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        PreparedStatement insert = conn.prepareStatement("insert into data (PK, blob) values (?, ?)");
+        insert.setInt(1, 1);
+        insert.setBytes(2, MyNotSerializableClass.serialize(obj));
+        assertEquals(1, insert.executeUpdate());
+
+        ResultSet rs = conn.createStatement().executeQuery(query);
+        assertThrows(SQLException.class, () -> rs.getObject(1)).getMessage();
+        String actualMessage = assertThrows(SQLException.class, () -> rs.getObject(1)).getMessage();
+        assertTrue(actualMessage.contains("\"wrong\" is not defined in <eval> at line number 1"));
+        assertFalse(rs.next());
+    }
+
+    @Test
+    void writeAndReadObjectUsingCustomSerializationWrongObjectField() throws SQLException, IOException {
+        String query = "select custom[wrong] from (select deserialize(blob) as custom from data)";
+        MyNotSerializableClass obj = new MyNotSerializableClass(1, "text");
+
+        Connection conn = DriverManager.getConnection(aerospikeTestUrl + "?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        PreparedStatement insert = conn.prepareStatement("insert into data (PK, blob) values (?, ?)");
+        insert.setInt(1, 1);
+        insert.setBytes(2, MyNotSerializableClass.serialize(obj));
+        assertEquals(1, insert.executeUpdate());
+
+        ResultSet rs = conn.createStatement().executeQuery(query);
+        assertTrue(rs.next());
+        assertThrows(SQLException.class, () -> rs.getObject(1)).getMessage();
+        String actualMessage = assertThrows(SQLException.class, () -> rs.getObject(1)).getMessage();
+        assertEquals("Column 'custom[wrong]' not found", actualMessage);
+        assertFalse(rs.next());
+    }
+
+
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select custom[number], custom[text] from (select deserialize(blob) as custom from data) where custom[number]=567",
@@ -722,18 +761,6 @@ class PreparedStatementWithComplexTypesTest {
         assertEquals(Types.INTEGER, md.getColumnType(1));
         assertEquals(Types.VARCHAR, md.getColumnType(2));
         assertFalse(rs.next());
-    }
-
-
-
-    @Test
-    void notExistingCustomFunction() {
-        assertThrows(IllegalArgumentException.class, () -> DriverManager.getConnection(TestDataUtils.aerospikeRootUrl + "?custom.function.deserialize=DoesNotExist"));
-    }
-
-    @Test
-    void wrongCustomFunction() {
-        assertThrows(IllegalArgumentException.class, () -> DriverManager.getConnection(TestDataUtils.aerospikeRootUrl + "?custom.function.deserialize=" + getClass().getName()));
     }
 
 
@@ -799,6 +826,18 @@ class PreparedStatementWithComplexTypesTest {
 
         assertFalse(rs.next());
 
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "doesNotExist",
+            "java.lang.String",
+            "com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomFunctionWithPrivateConstructor",
+            "com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomFunctionWithNotDefaultConstructor",
+            "com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomFunctionWithConstructorThatThrowsException",
+    })
+    void wrongCustomFunction(String className) {
+        assertThrows(IllegalArgumentException.class, () -> DriverManager.getConnection(TestDataUtils.aerospikeRootUrl + "?custom.function.deserialize=" + className));
     }
 
 
@@ -917,6 +956,33 @@ class PreparedStatementWithComplexTypesTest {
 
         public String getText() {
             return text;
+        }
+    }
+
+    // Class does not have public default constructor
+    static class MyCustomFunctionWithPrivateConstructor implements Function<String, String> {
+        private MyCustomFunctionWithPrivateConstructor() {
+        }
+        @Override
+        public String apply(String s) {
+            return s;
+        }
+    }
+    static class MyCustomFunctionWithNotDefaultConstructor implements Function<String, String> {
+        public MyCustomFunctionWithNotDefaultConstructor(String s) {
+        }
+        @Override
+        public String apply(String s) {
+            return s;
+        }
+    }
+    static class MyCustomFunctionWithConstructorThatThrowsException implements Function<String, String> {
+        public MyCustomFunctionWithConstructorThatThrowsException() {
+            throw new RuntimeException();
+        }
+        @Override
+        public String apply(String s) {
+            return s;
         }
     }
 }

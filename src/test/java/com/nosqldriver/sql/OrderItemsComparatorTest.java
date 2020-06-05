@@ -55,6 +55,11 @@ class OrderItemsComparatorTest {
         assertAnyValue(DESC, null, (byte)1, 1);
     }
 
+    @Test
+    void byteEq() {
+        assertIntValue(ASC, (byte)12, (byte)12, 0);
+        assertAnyValue(DESC, null, null, 0);
+    }
 
     @Test
     void numbersOfDifferentTypes() {
@@ -87,6 +92,12 @@ class OrderItemsComparatorTest {
         assertAnyValue(ASC, true, "false", 1);
         assertAnyValue(DESC, "true", "true", 0);
         assertAnyValue(ASC, "true", true, 0);
+
+        assertAnyValue(DESC, false, 0, 0);
+        assertAnyValue(DESC, true, 1, 0);
+        assertAnyValue(DESC, true, 12345, 0);
+        assertAnyValue(DESC, true, -54321, 0);
+        assertAnyValue(DESC, true, Math.PI, 0);
     }
 
 
@@ -145,12 +156,23 @@ class OrderItemsComparatorTest {
         assertAnyValue(ASC, new Date(now), new Date(now), 0);
         assertAnyValue(DESC, new Date(now), new Date(now), 0);
         assertAnyValue(ASC, new Date(now + 1), new Date(now), 1);
+
+        assertAnyValue(ASC, new Date(now), null, 1);
+        assertAnyValue(ASC, new Date(0), null, 1);
+        assertAnyValue(ASC, null, new Date(now), -1);
+        assertAnyValue(ASC, null, new Date(0), -1);
     }
 
     @Test
     void sqlDates() {
         long now = System.currentTimeMillis();
         assertAnyValue(ASC, new java.sql.Date(now + 1), new java.sql.Date(now), 0);
+        assertAnyValue(ASC, new Date(now), new java.sql.Date(now), 0);
+        assertAnyValue(ASC, new java.sql.Date(now), new Date(now), 0);
+        assertAnyValue(ASC, new Date(now), new java.sql.Time(now), 0);
+        assertAnyValue(ASC, new Date(now), new java.sql.Timestamp(now), 0);
+        assertAnyValue(ASC, new java.sql.Time(now), new Date(now), 0);
+        assertAnyValue(ASC, new java.sql.Timestamp(now), new Date(now), 0);
 
         // Time resolution is seconds, so adding 1 millisecond might change the time if it was the last millisecond of current second or not to change otherwise
         int timeComp = new OrderItemsComparator<>(singletonList(new OrderItem("value", ASC)), (value, name) -> value).compare(new java.sql.Time(now + 1), new java.sql.Time(now));

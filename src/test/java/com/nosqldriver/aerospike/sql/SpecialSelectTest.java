@@ -14,9 +14,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -106,6 +104,10 @@ class SpecialSelectTest {
 
     private String assertSubjectSelection(ResultSet rs, Map<String, Integer> expected) throws SQLException {
         String subject = rs.getString(1);
+        assertEquals(rs.getInt(2), rs.getShort(2));
+        assertEquals(rs.getInt(2), rs.getLong(2));
+        assertEquals(rs.getInt(2), rs.getByte(2));
+        assertEquals(rs.getInt(2), rs.getFloat(2));
         int semester = rs.getInt(2);
         int count = rs.getInt(3);
         String group = subject + "," + semester;

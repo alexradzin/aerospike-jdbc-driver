@@ -130,13 +130,36 @@ class SelectTest {
             "select\n*\nfrom\npeople",
             "select\r\n*\r\nfrom\r\npeople",
             "select * from people;",
+            "select * from people;;",
+            "select * from people;    ;  ",
             "select * from people where PK in (1,2); select * from people where PK in (3,4)",
+            "select * from people where PK in (1,2); select * from people where PK in (3,4);",
+            "select * from people where PK in (1,2); select * from people where PK in (3,4)   ;     ",
             "select * from people where PK in (select id from people)",
             //"select * from people where PK=1; select * from people where PK in (2,3); select * from people where PK=4", //TODO: fix absolute()
     })
     void selectAll(String sql) throws SQLException {
         selectAll(sql, executeQuery);
     }
+
+    @Test
+    void selectAllUsingDifferentTypes() throws SQLException {
+        ResultSet rs = executeQuery.apply("select * from people");
+        String name = "kids_count";
+        while(rs.next()) {
+            byte b = rs.getByte(name);
+            short s = rs.getShort(name);
+            int i = rs.getInt(name);
+            long l = rs.getLong(name);
+            float f = rs.getFloat(name);
+            double d = rs.getDouble(name);
+            assertEquals(b, s);
+            assertEquals(s, i);
+            assertEquals(i, f);
+            assertEquals(f, d);
+        }
+    }
+
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
@@ -866,6 +889,20 @@ class SelectTest {
         assertFalse(rs.next());
     }
 
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select 1 as number minus select 1 as number;minus",
+            "select 1 as number INTERSECT select 1 as number;INTERSECT",
+            "select 1 as number except select 1 as number;EXCEPT",
+    })
+    void selectWithUnsupportedUnionOperation(String param) {
+        String[] parts = param.split("\\s*;\\s*");
+        String sql = parts[0];
+        String op = parts[1].toUpperCase();
+        assertEquals(
+                format("Unsupported chain operation %s. This version supports UNION and UNION ALL only", op),
+                assertThrows(SQLException.class, () -> testConn.createStatement().executeQuery(sql)).getMessage());
+    }
 
 
     @Test
