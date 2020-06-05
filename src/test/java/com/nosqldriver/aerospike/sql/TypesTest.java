@@ -424,17 +424,17 @@ abstract class TypesTest {
 
     @Test
     void functionStrcmpEq() throws SQLException {
-        functionStrcmp("select strcmp('', ''), strcmp('a', 'a'), strcmp('abc', 'abc')", 0);
+        assertFunctionStrcmp("select strcmp('', ''), strcmp('a', 'a'), strcmp('abc', 'abc')", 0);
     }
 
     @Test
     void functionStrcmpLt() throws SQLException {
-        functionStrcmp("select strcmp('', 'a'), strcmp('a', 'b'), strcmp('ab', 'ac'), strcmp('abc', 'abcd')", -1);
+        assertFunctionStrcmp("select strcmp('', 'a'), strcmp('a', 'b'), strcmp('ab', 'ac'), strcmp('abc', 'abcd')", -1);
     }
 
     @Test
     void functionStrcmpGt() throws SQLException {
-        functionStrcmp("select strcmp('a', ''), strcmp('b', 'a'), strcmp('ac', 'ab'), strcmp('abcd', 'abc')", 1);
+        assertFunctionStrcmp("select strcmp('a', ''), strcmp('b', 'a'), strcmp('ac', 'ab'), strcmp('abcd', 'abc')", 1);
     }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
@@ -531,7 +531,7 @@ abstract class TypesTest {
     }
 
 
-    private void functionStrcmp(String sql, int expected) throws SQLException {
+    private void assertFunctionStrcmp(String sql, int expected) throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(sql);
         assertTrue(rs.next());
         int n = rs.getMetaData().getColumnCount();

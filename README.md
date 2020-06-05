@@ -252,13 +252,13 @@ public class Sqrt implements Function<Double, Double> {
 
 This once implemented, compile and added to classpath this function must be registered as following:
 
-```
+```bash
 jdbc:aerospike:localhost/test?custom.function.sqrt=com.company.Sqrt
 ```
 
 Generally the parameter that registers custom function looks like:
 
-```
+```bash
 custom.function.FUNCTION_NAME=FULLY_QUALIFIED_CLASS_NAME
 ```
 Where
@@ -266,7 +266,7 @@ Where
 `FULLY_QUALIFIED_CLASS_NAME` - the fully qualified class name of class that implements the function. One can define as many functions as he wants, e.g.:
 
 
-```
+```bash
 jdbc:aerospike:localhost?custom.function.strlen=com.company.StrlengthCalculator&custom.function.sqrt=com.company.Sqrt
 ```
 
@@ -293,21 +293,19 @@ public class PersonDeserializer implements Function<byte[], Person> {
 ```
 Customizations must be added to classpath of the application that uses driver. The custom function must be configured using configuration parameter supplied in JDBC URL:
 
-```
+```bash
 jdbc:aerospike:localhost/test?custom.function.person=com.company.PersonDeserializer
 ```
 
 This configuration makes function `person()` available for SQL queries.
 
-
 ## Download
 You can download binaries here:
 
-* [aerospike-jdbc-driver-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1BNpN_gA3E4C7CEZSLSuw1jOo2iNHtMBF/view?usp=sharing)
-* [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ti9pQzJArutGnDnGCHMN1EFTMAG-rXyE/view?usp=sharing)
+*   [aerospike-jdbc-driver-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1BNpN_gA3E4C7CEZSLSuw1jOo2iNHtMBF/view?usp=sharing)
+*   [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ti9pQzJArutGnDnGCHMN1EFTMAG-rXyE/view?usp=sharing)
 
 If you are running under Java 11 and highier you need nashorn - java script engine that should be added to the classpath together with the driver. Take the nashorn jar file [here](https://drive.google.com/file/d/1pb_5sxJbw-afxvJWNHuLf0ownvmM0Fjf/view?usp=sharing).
-
 
 ## Configuration of UI clients
 Download [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/file/d/1ti9pQzJArutGnDnGCHMN1EFTMAG-rXyE/view?usp=sharing) to your computer. This jar file contains the driver's binaris together with all dependenciees. 
@@ -316,27 +314,25 @@ Download [aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar](https://drive.google.com/f
 #### Define driver
 Copy `aerospike-jdbc-driver-all-1.0-SNAPSHOT.jar` under `$SQUIREL_SQL_HOME/drivers`.
 Open Squirel SQL application, choose drivers tab at the left pane, press "add" button and fill form:
-* Name: Aerospike
-* Example URL: `jdbc:aerospike:host:3000/test`
-* Class name: `com.nosqldriver.aerospike.sql.AerospikeDriver`
+*   Name: Aerospike
+*   Example URL: `jdbc:aerospike:host:3000/test`
+*   Class name: `com.nosqldriver.aerospike.sql.AerospikeDriver`
 Add the path to jar file to "Extra class path" panel. 
 
 #### Create DB connection
 Choose Aliases tab at the left pane and press add button. 
 Fill form: name, choose driver from list, URL, username and password (if needed)
 
-
-
 ### DBeaver
 #### Define driver
 Choose Database/DriverManager, then press button "New."
 Fill the following data
-* Driver name: Aerospike
-* Class name: `com.nosqldriver.aerospike.sql.AerospikeDriver`
-* URL template: `jdbc:aerospike:{host}[:{port}]/[{database}]`
-* Default port: 3000
+*   Driver name: Aerospike
+*   Class name: `com.nosqldriver.aerospike.sql.AerospikeDriver`
+*   URL template: `jdbc:aerospike:{host}[:{port}]/[{database}]`
+*   Default port: 3000
 
 #### Create DB connection
-* Choose Database/New Database Connection
-* Find just defined Aerospike driver in list and choose it. 
-* Fill form: host, port (if it is not default), Database/Schema (namespace) (if needed); username and password (if needed)
+*   Choose Database/New Database Connection
+*   Find just defined Aerospike driver in list and choose it.
+*   Fill form: host, port (if it is not default), Database/Schema (namespace) (if needed); username and password (if needed)

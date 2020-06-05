@@ -10,7 +10,6 @@ import com.aerospike.client.policy.WritePolicy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -20,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class AerospikePolicyProviderTest {
@@ -73,7 +73,7 @@ class AerospikePolicyProviderTest {
     }
 
     private AerospikePolicyProvider test(String props) throws IOException {
-        IAerospikeClient client = Mockito.mock(IAerospikeClient.class);
+        IAerospikeClient client = mock(IAerospikeClient.class);
         when(client.getReadPolicyDefault()).thenReturn(new Policy());
         when(client.getWritePolicyDefault()).thenReturn(new WritePolicy());
         when(client.getBatchPolicyDefault()).thenReturn(new BatchPolicy());

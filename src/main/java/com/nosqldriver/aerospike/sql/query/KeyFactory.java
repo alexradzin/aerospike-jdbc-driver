@@ -1,7 +1,6 @@
 package com.nosqldriver.aerospike.sql.query;
 
 import com.aerospike.client.Key;
-import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.util.SneakyThrower;
 
 import java.lang.reflect.Array;

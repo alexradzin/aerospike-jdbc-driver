@@ -23,6 +23,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.sql.Types.ARRAY;
 import static java.sql.Types.BIGINT;
@@ -129,7 +130,7 @@ class DelegatingResultSetTest {
         assertEquals(expByte.intValue(), rs.getInt("byte"));
         assertEquals(expByte.longValue(), rs.getLong(1));
         assertEquals(expByte.longValue(), rs.getLong("byte"));
-        assertEquals(String.format("%d cannot be transformed to byte[]", expByte.intValue()), assertThrows(SQLException.class, () -> rs.getBytes(1)).getMessage());
+        assertEquals(format("%d cannot be transformed to byte[]", expByte.intValue()), assertThrows(SQLException.class, () -> rs.getBytes(1)).getMessage());
         assertFalse(rs.wasNull());
 
         assertEquals(simpleRow[1], rs.getShort(2));

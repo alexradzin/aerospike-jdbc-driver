@@ -58,26 +58,29 @@ public class LuaScriptEngineWrapper extends ScriptEngineWrapper {
         fromLuaValue.put(Object.class, luaValue -> luaValue);
     }
 
-    private final Map<Class, Function<Object, LuaValue>> toLuaValue = new HashMap<>();
-    {
-        toLuaValue.put(Double.class, value -> LuaValue.valueOf((double)value));
-        toLuaValue.put(Float.class, value -> LuaValue.valueOf((float)value));
-        toLuaValue.put(Long.class, value -> LuaValue.valueOf((long)value));
-        toLuaValue.put(Integer.class, value -> LuaValue.valueOf((int)value));
-        toLuaValue.put(Short.class, value -> LuaValue.valueOf((short)value));
-        toLuaValue.put(Byte.class, value -> LuaValue.valueOf((byte)value));
-        toLuaValue.put(String.class, value -> LuaValue.valueOf((String)value));
+    private static final Map<Class, Function<Object, LuaValue>> simpleToLuaValue = new HashMap<>();
+    static {
+        simpleToLuaValue.put(Double.class, value -> LuaValue.valueOf((double)value));
+        simpleToLuaValue.put(Float.class, value -> LuaValue.valueOf((float)value));
+        simpleToLuaValue.put(Long.class, value -> LuaValue.valueOf((long)value));
+        simpleToLuaValue.put(Integer.class, value -> LuaValue.valueOf((int)value));
+        simpleToLuaValue.put(Short.class, value -> LuaValue.valueOf((short)value));
+        simpleToLuaValue.put(Byte.class, value -> LuaValue.valueOf((byte)value));
+        simpleToLuaValue.put(String.class, value -> LuaValue.valueOf((String)value));
+    }
+    private final Map<Class, Function<Object, LuaValue>> toLuaValue;
+
+
+    public LuaScriptEngineWrapper() {
+        super("luaj");
+        toLuaValue = new HashMap<>(simpleToLuaValue);
+        // getBindings referenced here is not static, so toLuaValue cannot be static too.
         toLuaValue.put(byte[].class, value -> {
             LuaString luaString = LuaString.valueOf((byte[])value);
             Bindings b = getBindings(ScriptContext.ENGINE_SCOPE);
             b.put(bytesWrapperKey(luaString), "bytes");
             return luaString;
         });
-    }
-
-
-    public LuaScriptEngineWrapper() {
-        super("luaj");
     }
 
     protected String wrapScript(String script) {

@@ -16,7 +16,6 @@ import java.sql.NClob;
 import java.sql.SQLException;
 import java.util.Objects;
 
-import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
 import static java.lang.String.format;
 
 public class StringClob implements NClob {

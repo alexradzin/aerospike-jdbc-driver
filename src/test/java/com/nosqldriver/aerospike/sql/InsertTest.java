@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.Mockito;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -38,7 +37,6 @@ import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
@@ -220,7 +218,7 @@ class InsertTest {
         while (rs.next()) {
             actual.add(rs.getString("text"));
         }
-        assertEquals(new HashSet<>(Arrays.asList("hello", "bye")), actual);
+        assertEquals(new HashSet<>(asList("hello", "bye")), actual);
     }
 
     @Test
@@ -471,11 +469,11 @@ class InsertTest {
         ps.setBlob(3, new ByteArrayInputStream(bytes));
         ps.setBlob(4, new ByteArrayInputStream(bytes), bytes.length);
 
-        InputStream in1 = Mockito.mock(InputStream.class);
+        InputStream in1 = mock(InputStream.class);
         when(in1.read(any(byte[].class), any(int.class), any(int.class))).thenThrow(EOFException.class);
         assertThrows(SQLException.class, () -> ps.setBlob(4, in1, bytes.length));
 
-        InputStream in2 = Mockito.mock(InputStream.class);
+        InputStream in2 = mock(InputStream.class);
         when(in2.read(any(byte[].class), any(int.class), any(int.class))).thenThrow(IOException.class);
         assertThrows(SQLException.class, () -> ps.setBlob(4, in2, bytes.length));
 

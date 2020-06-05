@@ -20,6 +20,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeTestUrl;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.beatles;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
+import static java.lang.String.format;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 class CustomClassWithCustomSerializerTest  {
@@ -58,7 +59,7 @@ class CustomClassWithCustomSerializerTest  {
     }
 
     private static String serialize(Person p) {
-         return String.format("%d,%s,%s,%d,%d", p.getId(), p.getFirstName(), p.getLastName(), p.getYearOfBirth(), p.getKidsCount());
+         return format("%d,%s,%s,%d,%d", p.getId(), p.getFirstName(), p.getLastName(), p.getYearOfBirth(), p.getKidsCount());
     }
 
     private static Person deserialize(String str) {

@@ -51,6 +51,8 @@ import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
+import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -143,7 +145,7 @@ class PreparedStatementWithComplexTypesTest {
         expectedData.put("id", 1L);
         expectedData.put("first_name", "John");
         expectedData.put("last_name", "Lennon");
-        expectedData.put("kids", Arrays.asList("Sean", "Julian"));
+        expectedData.put("kids", asList("Sean", "Julian"));
         assertEquals(expectedData, record.bins);
 
 
@@ -401,13 +403,13 @@ class PreparedStatementWithComplexTypesTest {
 
     @Test
     void insertOneRowWithStringKey() throws SQLException {
-        insertOneRowWithTypedKey("one", new Key("test", "people", "one"));
+        assertInsertOneRowWithTypedKey("one", new Key("test", "people", "one"));
     }
 
 
     @Test
     void insertOneRowWithByteArrayKey() throws SQLException {
-        insertOneRowWithTypedKey("one".getBytes(), new Key("test", "people", "one".getBytes()));
+        assertInsertOneRowWithTypedKey("one".getBytes(), new Key("test", "people", "one".getBytes()));
     }
 
     @Test
@@ -774,11 +776,11 @@ class PreparedStatementWithComplexTypesTest {
         insert.setArray(4, testConn.createArrayOf("varchar", new String[] {"one", "two"}));
         insert.setArray(5, testConn.createArrayOf("varchar", new String[] {"one", "two", "three"}));
         insert.setObject(6, Collections.emptyList());
-        insert.setObject(7, Collections.singletonList("one"));
-        insert.setObject(8, Arrays.asList("one", "two"));
-        insert.setObject(9, Arrays.asList("one", "two", "three"));
+        insert.setObject(7, singletonList("one"));
+        insert.setObject(8, asList("one", "two"));
+        insert.setObject(9, asList("one", "two", "three"));
         insert.setObject(10, Collections.emptyMap());
-        insert.setObject(11, Collections.singletonMap("one", "One"));
+        insert.setObject(11, singletonMap("one", "One"));
         Map<String, String> map2 = new HashMap<>();
         map2.put("one", "One");
         map2.put("two", "Two");
@@ -851,7 +853,7 @@ class PreparedStatementWithComplexTypesTest {
         assertEquals(1, insert.executeUpdate());
     }
 
-    private <T> void insertOneRowWithTypedKey(T id, Key key) throws SQLException {
+    private <T> void assertInsertOneRowWithTypedKey(T id, Key key) throws SQLException {
         PreparedStatement insert = testConn.prepareStatement("insert into people (PK, id, first_name, last_name) values (?, ?, ?, ?, ?)");
         insert.setObject(1, id);
         insert.setInt(2, 1);
@@ -978,7 +980,7 @@ class PreparedStatementWithComplexTypesTest {
     }
     static class MyCustomFunctionWithConstructorThatThrowsException implements Function<String, String> {
         public MyCustomFunctionWithConstructorThatThrowsException() {
-            throw new RuntimeException();
+            throw new IllegalStateException();
         }
         @Override
         public String apply(String s) {

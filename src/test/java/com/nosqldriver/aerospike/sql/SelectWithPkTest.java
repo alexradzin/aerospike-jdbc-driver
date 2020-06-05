@@ -11,7 +11,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -28,6 +27,7 @@ import static java.lang.String.format;
 import static java.sql.Types.BIGINT;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -115,7 +115,7 @@ class SelectWithPkTest {
     void selectByPk(String conf) throws SQLException {
         String[] args = conf.split(";");
         String sql = args[0];
-        Collection<String> expected = args.length > 1 ? new HashSet<>(Arrays.asList(args[1].split(","))) : Collections.emptySet();
+        Collection<String> expected = args.length > 1 ? new HashSet<>(asList(args[1].split(","))) : Collections.emptySet();
         try(ResultSet rs = executeQuery(queryKeyConn, sql,
                 PK.create(NAMESPACE, PEOPLE, "PK", "PK").withType(BIGINT),
                 DATA.create(NAMESPACE, PEOPLE, "id", "id").withType(BIGINT),
@@ -146,7 +146,7 @@ class SelectWithPkTest {
         String[] args = conf.split(";");
         String sql = args[0];
         String fieldName = args[1];
-        Collection<String> expected = args.length > 2 ? new HashSet<>(Arrays.asList(args[2].split(","))) : Collections.emptySet();
+        Collection<String> expected = args.length > 2 ? new HashSet<>(asList(args[2].split(","))) : Collections.emptySet();
         try(ResultSet rs = executeQuery(queryKeyConn, sql,
                 DATA.create(NAMESPACE, PEOPLE, fieldName, null).withType(INTEGER)
         )) {

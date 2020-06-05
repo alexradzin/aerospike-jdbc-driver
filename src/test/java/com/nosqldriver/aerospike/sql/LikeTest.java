@@ -10,7 +10,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -19,6 +18,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.DATA;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
@@ -95,7 +95,7 @@ abstract class LikeTest {
     void selectLike(String queryAndResult) throws SQLException {
         String[] parts = queryAndResult.split(";");
         String sql = parts[0];
-        Collection<String> expected = parts.length == 1 ? Collections.emptySet() : new HashSet<>(Arrays.asList(parts[1].split(",")));
+        Collection<String> expected = parts.length == 1 ? Collections.emptySet() : new HashSet<>(asList(parts[1].split(",")));
 
         ResultSet rs = conn.createStatement().executeQuery(sql);
         Collection<String> actual  = new HashSet<>();

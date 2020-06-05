@@ -155,6 +155,7 @@ class SelectTest {
             double d = rs.getDouble(name);
             assertEquals(b, s);
             assertEquals(s, i);
+            assertEquals(i, l);
             assertEquals(i, f);
             assertEquals(f, d);
         }
@@ -299,15 +300,15 @@ class SelectTest {
 
     @Test
     void preparedStatementPkIsNull() throws SQLException {
-        preparedStatementByPkWrongValue(null, "Filter by null is not supported right now. Use either number or string");
+        assertPreparedStatementByPkWrongValue(null, "Filter by null is not supported right now. Use either number or string");
     }
 
     @Test
     void preparedStatementPkUnsupportedType() throws SQLException {
-        preparedStatementByPkWrongValue(this, "Filter by class com.nosqldriver.aerospike.sql.SelectTest is not supported right now. Use either number or string");
+        assertPreparedStatementByPkWrongValue(this, "Filter by class com.nosqldriver.aerospike.sql.SelectTest is not supported right now. Use either number or string");
     }
 
-    private void preparedStatementByPkWrongValue(Object value, String expectedErrorMessage) throws SQLException {
+    private void assertPreparedStatementByPkWrongValue(Object value, String expectedErrorMessage) throws SQLException {
         PreparedStatement ps = testConn.prepareStatement("select * from people where PK=?");
         ps.setObject(1, value);
         assertEquals(expectedErrorMessage, assertThrows(SQLException.class, ps::executeQuery).getMessage());
@@ -962,7 +963,7 @@ class SelectTest {
             initials.add(rs.getString("initial"));
         }
 
-        assertEquals(stream(beatles).map(p -> p.getFirstName().substring(0, 1)).collect(Collectors.toSet()), initials);
+        assertEquals(stream(beatles).map(p -> p.getFirstName().substring(0, 1)).collect(toSet()), initials);
     }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
@@ -1402,7 +1403,7 @@ class SelectTest {
         List<Long> ids = stream(keys.split("\\s*,\\s*")).map(Long::parseLong).collect(Collectors.toList());
         String[] questions = new String[ids.size()];
         Arrays.fill(questions, "?");
-        PreparedStatement ps = testConn.prepareStatement(format("select * from people where id in (%s)", String.join(",", questions)));
+        PreparedStatement ps = testConn.prepareStatement(format("select * from people where id in (%s)", join(",", questions)));
         for (int i = 0; i < ids.size(); i++) {
             ps.setLong(i + 1, ids.get(i));
         }

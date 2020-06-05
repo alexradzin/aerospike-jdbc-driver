@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static java.util.Collections.singletonMap;
 import static java.util.Comparator.comparingInt;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,7 +23,7 @@ class DataUtilTest {
 
     @Test
     void singletonArray() {
-        assertArrayEquals(new Object[] {"zero"}, dataUtil.toArray(Collections.singletonMap("0",  "zero")));
+        assertArrayEquals(new Object[] {"zero"}, dataUtil.toArray(singletonMap("0",  "zero")));
     }
 
     @Test
