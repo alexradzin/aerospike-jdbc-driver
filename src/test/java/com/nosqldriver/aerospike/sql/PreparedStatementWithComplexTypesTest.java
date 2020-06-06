@@ -542,6 +542,51 @@ class PreparedStatementWithComplexTypesTest {
         assertFalse(rs.next());
     }
 
+    @Test
+    void getFieldsOfNestedMap() throws SQLException {
+        Map<String, Object> map = new TreeMap<>();
+        map.put("number", 123456);
+        String text = "my number is the best one";
+        map.put("text", text);
+
+        Map<String, Object> map2 = new TreeMap<>();
+        map2.put("numeral", 54321);
+        String string = "this number is not bad too";
+        map2.put("string", string);
+
+        map.put("nested", map2);
+
+        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, map) values (?, ?)");
+        insert.setInt(1, 1);
+        insert.setObject(2, map);
+        assertEquals(1, insert.executeUpdate());
+        ResultSet rs = testConn.createStatement().executeQuery(
+                "select map[number], map[text], map[nested.numeral], map[nested.string] from (select map from data)"
+        );
+
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(4, md.getColumnCount());
+        assertEquals("map[number]", md.getColumnName(1));
+        assertEquals("map[text]", md.getColumnName(2));
+        assertEquals("map[nested.numeral]", md.getColumnName(3));
+        assertEquals("map[nested.string]", md.getColumnName(4));
+
+
+        assertTrue(rs.next());
+        assertEquals(123456, rs.getInt(1));
+        assertEquals(123456, rs.getInt("map[number]"));
+        assertEquals(text, rs.getString(2));
+        assertEquals(text, rs.getString("map[text]"));
+
+        assertEquals(54321, rs.getInt(3));
+        assertEquals(54321, rs.getInt("map[nested.numeral]"));
+        assertEquals(string, rs.getString(4));
+        assertEquals(string, rs.getString("map[nested.string]"));
+
+        assertFalse(rs.next());
+    }
+
+
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select struct[number], struct[text] from (select struct from data)",
@@ -552,7 +597,7 @@ class PreparedStatementWithComplexTypesTest {
     void getFieldsSerializableClass(String query) throws SQLException {
         String text = "my number is the best one";
         int n = 123;
-        insertOneRowCustomClass(text, n);
+        insertOneRow("data", "struct", 1, new MySerializableClass(n, text));
         ResultSet rs = testConn.createStatement().executeQuery(query);
 
         ResultSetMetaData md = rs.getMetaData();
@@ -573,12 +618,47 @@ class PreparedStatementWithComplexTypesTest {
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
+            "select struct[number], struct[text], struct[nested.numeral], struct[nested.string] from (select struct from data)",
+    })
+    void getNestedFieldsSerializableClass(String query) throws SQLException {
+        insertOneRow("data", "struct", 1, new MySerializableClass(10, "first", new MySerializableSubClass(20, "second")));
+        ResultSet rs = testConn.createStatement().executeQuery(query);
+
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(4, md.getColumnCount());
+        assertEquals("struct[number]", md.getColumnName(1));
+        assertEquals("struct[text]", md.getColumnName(2));
+        assertEquals(Types.INTEGER, md.getColumnType(1));
+        assertEquals(Types.VARCHAR, md.getColumnType(2));
+
+        assertEquals("struct[nested.numeral]", md.getColumnName(3));
+        assertEquals("struct[nested.string]", md.getColumnName(4));
+        assertEquals(Types.INTEGER, md.getColumnType(3));
+        assertEquals(Types.VARCHAR, md.getColumnType(4));
+
+        assertTrue(rs.next());
+        assertEquals(10, rs.getInt(1));
+        assertEquals(10, rs.getInt("struct[number]"));
+        assertEquals("first", rs.getString(2));
+        assertEquals("first", rs.getString("struct[text]"));
+
+        assertEquals(20, rs.getInt(3));
+        assertEquals(20, rs.getInt("struct[nested.numeral]"));
+        assertEquals("second", rs.getString(4));
+        assertEquals("second", rs.getString("struct[nested.string]"));
+
+        assertFalse(rs.next());
+    }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
             "select struct[number], struct[text] from (select struct from data where PK=0)",
             "select struct[number], struct[text] from (select struct from data where 1=2)",
             "select struct[number], struct[text] from (select struct from data) where struct[number]=321",
     })
     void getFieldsSerializableClassFalseFilter(String query) throws SQLException {
-        insertOneRowCustomClass("my number is the best one", 123);
+        insertOneRow("data", "struct", 1, new MySerializableClass(123, "my number is the best one"));
         ResultSet rs = testConn.createStatement().executeQuery(query);
 
         ResultSetMetaData md = rs.getMetaData();
@@ -596,8 +676,7 @@ class PreparedStatementWithComplexTypesTest {
             "select struct[nothing] from (select struct from data)",
     })
     void getNotExistingFieldsInSelectSerializableClass(String query) throws SQLException {
-        insertOneRowCustomClass("my number is the best one", 123);
-
+        insertOneRow("data", "struct", 1, new MySerializableClass(123, "my number is the best one"));
         ResultSet rs = testConn.createStatement().executeQuery(query);
 
         ResultSetMetaData md = rs.getMetaData();
@@ -612,7 +691,7 @@ class PreparedStatementWithComplexTypesTest {
             "select struct[number] from (select struct from data) where struct[nothing]=321",
     })
     void getNotExistingFieldsInWhereSerializableClass(String query) throws SQLException {
-        insertOneRowCustomClass("my number is the best one", 123);
+        insertOneRow("data", "struct", 1, new MySerializableClass(123, "my number is the best one"));
         ResultSet rs = testConn.createStatement().executeQuery(query);
 
         ResultSetMetaData md = rs.getMetaData();
@@ -843,12 +922,9 @@ class PreparedStatementWithComplexTypesTest {
     }
 
 
-
-    private void insertOneRowCustomClass(String text, int n) throws SQLException {
-        MySerializableClass obj = new MySerializableClass(n, text);
-
-        PreparedStatement insert = testConn.prepareStatement("insert into data (PK, struct) values (?, ?)");
-        insert.setInt(1, 1);
+    private void insertOneRow(String table, String name, int pk, Object obj) throws SQLException {
+        PreparedStatement insert = testConn.prepareStatement(format("insert into %s (PK, %s) values (?, ?)", table, name));
+        insert.setInt(1, pk);
         insert.setObject(2, obj);
         assertEquals(1, insert.executeUpdate());
     }
@@ -946,10 +1022,16 @@ class PreparedStatementWithComplexTypesTest {
     public static class MySerializableClass implements Serializable {
         private final int number;
         private final String text;
+        private final MySerializableSubClass nested;
 
         public MySerializableClass(int number, String text) {
+            this(number, text, null);
+        }
+
+        public MySerializableClass(int number, String text, MySerializableSubClass nested) {
             this.number = number;
             this.text = text;
+            this.nested = nested;
         }
 
         public int getNumber() {
@@ -958,6 +1040,29 @@ class PreparedStatementWithComplexTypesTest {
 
         public String getText() {
             return text;
+        }
+
+        public MySerializableSubClass getNested() {
+            return nested;
+        }
+    }
+
+
+    public static class MySerializableSubClass implements Serializable {
+        private final int numeral;
+        private final String string;
+
+        public MySerializableSubClass(int numeral, String string) {
+            this.numeral = numeral;
+            this.string = string;
+        }
+
+        public int getNumeral() {
+            return numeral;
+        }
+
+        public String getString() {
+            return string;
         }
     }
 

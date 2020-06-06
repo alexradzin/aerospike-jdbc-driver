@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -23,7 +24,6 @@ import static com.nosqldriver.sql.DataColumn.DataColumnRole.role;
 import static com.nosqldriver.sql.SqlLiterals.getSqlType;
 import static java.lang.String.format;
 import static java.sql.Types.OTHER;
-import static java.sql.Types.VARCHAR;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 
@@ -95,10 +95,7 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                             int sqlType = getSqlType(value);
                             c.withType(sqlType);
                             if (value instanceof Map) {
-                                @SuppressWarnings("unchecked")
-                                List<DataColumn> mapColumns = ((Map<String, String>)value).keySet().stream()
-                                        .map(key -> format("%s[%s]", c.getName(), key))
-                                        .map(name -> HIDDEN.create(c.getCatalog(), c.getTable(), name, name).withType(VARCHAR)).collect(Collectors.toList());
+                                Collection<DataColumn> mapColumns = extractFieldTypes(c, ((Map<String, Object>)value));
                                 subColumns.addAll(mapColumns);
                             } else if (sqlType == OTHER) {
                                 subColumns.addAll(extractFieldTypes(c, value.getClass()));
@@ -118,16 +115,49 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
         return subColumns.isEmpty() ? mainColumns : concat(mainColumns.stream(), subColumns.stream()).collect(toList());
     }
 
-
     private Collection<DataColumn> extractFieldTypes(DataColumn column, Class<?> clazz) {
-        return Arrays.stream(clazz.getMethods())
+        Collection<DataColumn> allColumns = new ArrayList<>();
+        return extractFieldTypes(allColumns, column, clazz);
+    }
+
+
+    private Collection<DataColumn> extractFieldTypes(Collection<DataColumn> allColumns, DataColumn column, Class<?> clazz) {
+        Arrays.stream(clazz.getMethods())
                 .filter(getter)
-                .map(g -> {
+                .forEach(g -> {
                     String columnName = DATA.equals(column.getRole()) ? column.getName() : column.getLabel();
-                    String name = format("%s[%s]", columnName, propertyNameRetriever.apply(g));
-                    int type = SqlLiterals.sqlTypes.getOrDefault(g.getReturnType(), OTHER);
-                    return HIDDEN.create(column.getCatalog(), column.getTable(), name, name).withType(type);
-                })
-                .collect(toList());
+                    String propName = propertyNameRetriever.apply(g);
+                    String name = columnName.charAt(columnName.length() - 1) == ']' ? columnName.substring(0, columnName.length() - 1) + "." + propName + "]" : format("%s[%s]", columnName, propName);
+                    Class subType = g.getReturnType();
+                    int type = SqlLiterals.sqlTypes.getOrDefault(subType, OTHER);
+                    DataColumn subColumn = HIDDEN.create(column.getCatalog(), column.getTable(), name, name).withType(type);
+                    allColumns.add(subColumn);
+                    if (type == OTHER && !Object.class.equals(g.getDeclaringClass())) {
+                       extractFieldTypes(allColumns, subColumn, subType);
+                    }
+                });
+        return allColumns;
+    }
+
+    private Collection<DataColumn> extractFieldTypes(DataColumn column, Map<String, Object> map) {
+        Collection<DataColumn> allColumns = new ArrayList<>();
+        return extractFieldTypes(allColumns, column, map);
+    }
+
+    private Collection<DataColumn> extractFieldTypes(Collection<DataColumn> allColumns, DataColumn column, Map<String, Object> map) {
+        for(Map.Entry<String, Object> e : map.entrySet()) {
+            Object value = e.getValue();
+            int type = SqlLiterals.sqlTypes.getOrDefault(Optional.ofNullable(value).map(Object::getClass).orElse(null), OTHER);
+            String propName = e.getKey();
+            String columnName = DATA.equals(column.getRole()) ? column.getName() : column.getLabel();
+            String name = columnName.charAt(columnName.length() - 1) == ']' ? columnName.substring(0, columnName.length() - 1) + "." + propName + "]" : format("%s[%s]", columnName, propName);
+            DataColumn subColumn = HIDDEN.create(column.getCatalog(), column.getTable(), name, name).withType(type);
+            allColumns.add(subColumn);
+            if (value instanceof Map) {
+                @SuppressWarnings("unchecked") Map<String, Object> mapValue = (Map<String, Object>)value;
+                extractFieldTypes(allColumns, subColumn, mapValue);
+            }
+        }
+        return allColumns;
     }
 }

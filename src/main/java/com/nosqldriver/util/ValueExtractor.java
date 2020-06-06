@@ -13,7 +13,7 @@ public class ValueExtractor {
     private static final String[] getterPrefixes = {"get", "is"};
 
     public Object getValue(Object obj, String key) {
-        Collection<String> path = stream(key.replace("]", "").split("\\[")).filter(p -> !"".equals(p)).collect(toList());
+        Collection<String> path = stream(key.replace("]", "").split("[\\[.]")).filter(p -> !"".equals(p)).collect(toList());
 
         Object value = obj;
         for (String p : path) {

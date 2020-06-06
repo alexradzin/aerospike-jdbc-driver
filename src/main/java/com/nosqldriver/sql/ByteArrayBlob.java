@@ -11,7 +11,6 @@ import java.sql.Blob;
 import java.sql.SQLException;
 import java.util.Arrays;
 
-import static com.nosqldriver.util.SneakyThrower.sneakyThrow;
 import static java.lang.String.format;
 
 public class ByteArrayBlob implements Blob {
