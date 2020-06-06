@@ -125,7 +125,8 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
         Arrays.stream(clazz.getMethods())
                 .filter(getter)
                 .forEach(g -> {
-                    String columnName = DATA.equals(column.getRole()) ? column.getName() : column.getLabel();
+                    DataColumn.DataColumnRole role = column.getRole();
+                    String columnName = DATA.equals(role) ? column.getName() : EXPRESSION.equals(role) ? column.getExpression() : column.getLabel();
                     String propName = propertyNameRetriever.apply(g);
                     String name = columnName.charAt(columnName.length() - 1) == ']' ? columnName.substring(0, columnName.length() - 1) + "." + propName + "]" : format("%s[%s]", columnName, propName);
                     Class subType = g.getReturnType();
