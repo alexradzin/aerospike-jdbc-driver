@@ -71,32 +71,32 @@ class IndexTest {
 
     @Test
     void createAndDropStringIndexUsingExecute() throws SQLException, IOException {
-        assertCreateAndDropIndex("people", "first_name", STRING_INDEX_NAME, "STRING", Statement::execute, Assertions::assertTrue);
+        assertCreateAndDropIndex("people", "first_name", STRING_INDEX_NAME, "STRING", Statement::execute, Assertions::assertFalse);
     }
 
     @Test
     void createAndDropNumericIndexUsingExecute() throws SQLException, IOException {
-        assertCreateAndDropIndex("people", "year_of_birth", NUMERIC_INDEX_NAME, "NUMERIC", Statement::execute, Assertions::assertTrue);
+        assertCreateAndDropIndex("people", "year_of_birth", NUMERIC_INDEX_NAME, "NUMERIC", Statement::execute, Assertions::assertFalse);
     }
 
     @Test
     void createAndDropListIndexUsingExecute() throws SQLException, IOException {
-        assertCreateAndDropIndex("data", "list", LIST_INDEX_NAME, "NUMERIC LIST", Statement::execute, Assertions::assertTrue);
+        assertCreateAndDropIndex("data", "list", LIST_INDEX_NAME, "NUMERIC LIST", Statement::execute, Assertions::assertFalse);
     }
 
     @Test
     void createAndDropGeoIndexUsingExecute() throws SQLException, IOException {
-        assertCreateAndDropIndex("data", "location1", GEO_INDEX_NAME, "GEO2DSPHERE", Statement::execute, Assertions::assertTrue);
+        assertCreateAndDropIndex("data", "location1", GEO_INDEX_NAME, "GEO2DSPHERE", Statement::execute, Assertions::assertFalse);
     }
 
     @Test
     void createAndDropStringMapkeysIndexUsingExecute() throws SQLException, IOException {
-        assertCreateAndDropIndex("data", "mapkeys", MAPKEYS_INDEX_NAME, "STRING MAPKEYS", Statement::execute, Assertions::assertTrue);
+        assertCreateAndDropIndex("data", "mapkeys", MAPKEYS_INDEX_NAME, "STRING MAPKEYS", Statement::execute, Assertions::assertFalse);
     }
 
     @Test
     void createAndDropStringMapvalesIndexUsingExecute() throws SQLException, IOException {
-        assertCreateAndDropIndex("data", "mapkeys", MAPVALUES_INDEX_NAME, "STRING MAPVALUES", Statement::execute, Assertions::assertTrue);
+        assertCreateAndDropIndex("data", "mapkeys", MAPVALUES_INDEX_NAME, "STRING MAPVALUES", Statement::execute, Assertions::assertFalse);
     }
 
     @Test

@@ -173,7 +173,7 @@ class InsertTest {
 
     @Test
     void insertSeveralRowsUsingExecute() throws SQLException {
-        assertTrue(testConn.createStatement().execute("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2), (2, 2, 'Paul', 'McCartney', 1942, 5)"));
+        assertFalse(testConn.createStatement().execute("insert into people (PK, id, first_name, last_name, year_of_birth, kids_count) values (1, 1, 'John', 'Lennon', 1940, 2), (2, 2, 'Paul', 'McCartney', 1942, 5)"));
         assertEquals("John", client.get(null, new Key("test", "people", 1)).getString("first_name"));
         assertEquals("Paul", client.get(null, new Key("test", "people", 2)).getString("first_name"));
     }
@@ -697,7 +697,7 @@ class InsertTest {
         PreparedStatement ps = testConn.prepareStatement("insert into data (PK, text) values (?, ?)");
         ps.setInt(1, 1);
         ps.setString(2, "ok");
-        assertTrue(ps.execute());
+        assertFalse(ps.execute());
 
         Record record1 = client.get(null, key1);
         assertEquals("ok", record1.getString("text"));

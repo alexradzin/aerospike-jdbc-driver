@@ -246,7 +246,7 @@ class SelectWithPkTest {
     @Test
     void insertAndSelect() throws SQLException {
         Connection writeConn = DriverManager.getConnection(aerospikeTestUrl + "?policy.write.sendKey=true");
-        assertTrue(writeConn.createStatement().execute("insert into data (PK, val) values ('hello', 'bye')"));
+        assertFalse(writeConn.createStatement().execute("insert into data (PK, val) values ('hello', 'bye')"));
         queryKeyConn.createStatement().executeQuery("select * from data where PK='hello'");
 
         try(ResultSet rs = executeQuery(queryKeyConn, "select * from data where PK='hello'",

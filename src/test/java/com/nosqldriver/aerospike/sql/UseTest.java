@@ -36,7 +36,7 @@ class UseTest {
 
     @Test
     void executeUseStatement() throws SQLException {
-        assertTrue(useStatementValidator(() -> rootConn.createStatement().execute("use test")));
+        assertFalse(useStatementValidator(() -> rootConn.createStatement().execute("use test")));
     }
 
     @Test

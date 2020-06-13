@@ -64,6 +64,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
                 holder.setParameters(statement, null);
                 Function<IAerospikeClient, ResultSet> query = plan.getQuery(statement);
                 statement.set = aqf.getSet();
+                statement.setUpdateCount(-1);
                 return query.apply(statement.client);
             }
 
@@ -84,7 +85,8 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
                 return statement.getUpdateCount();
             }
             boolean execute(AerospikeStatement statement, String sql) throws SQLException {
-                return executeUpdate(statement, sql) > 0;
+                executeUpdate(statement, sql);
+                return false;
             }
         },
         UPDATE {
@@ -105,7 +107,8 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
 
             @Override
             boolean execute(AerospikeStatement statement, String sql) throws SQLException {
-                return executeUpdate(statement, sql) > 0;
+                executeUpdate(statement, sql);
+                return false;
             }
         },
         DELETE(UPDATE),
@@ -113,21 +116,23 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
         USE {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
-                String schema = execute(statement, sql) ? statement.schema.get() : null;
+                String schema = executeUpdate(statement, sql) > 0 ? statement.schema.get() : null;
+                statement.setUpdateCount(-1);
                 return new ListRecordSet(statement, schema, null, emptyList(), emptyList());
             }
 
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
-                return execute(statement, sql) ? 1 :  0;
+                AerospikeQueryFactory aqf = statement.createQueryFactory();
+                aqf.createQueryPlan(sql);
+                statement.schema.set(aqf.getSchema());
+                return statement.schema.get() != null ? 1 : 0;
             }
 
             @Override
             boolean execute(AerospikeStatement statement, String sql) throws SQLException {
-                AerospikeQueryFactory aqf = statement.createQueryFactory();
-                aqf.createQueryPlan(sql);
-                statement.schema.set(aqf.getSchema());
-                return statement.schema.get() != null;
+                executeUpdate(statement, sql);
+                return false;
             }
         },
 
@@ -135,11 +140,13 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
+                statement.setUpdateCount(-1);
                 return new ListRecordSet(statement, statement.schema.get(), statement.set, emptyList(), emptyList());
             }
             @Override
             boolean execute(AerospikeStatement statement, String sql) throws SQLException {
-                return executeUpdate(statement, sql) > 0;
+                executeUpdate(statement, sql);
+                return false;
             }
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
@@ -183,11 +190,13 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
+                statement.setUpdateCount(-1);
                 return new ListRecordSet(statement, statement.schema.get(), statement.set, emptyList(), emptyList());
             }
             @Override
             boolean execute(AerospikeStatement statement, String sql) throws SQLException {
-                return executeUpdate(statement, sql) > 0;
+                executeUpdate(statement, sql);
+                return false;
             }
             @Override
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
@@ -196,6 +205,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
                 aqf.createQueryPlan(sql);
                 String indexName = aqf.getIndexes().iterator().next().split("\\.")[2];
                 statement.client.dropIndex(null, aqf.getSchema(), aqf.getSet(), indexName);
+                statement.setUpdateCount(1);
                 return 1;
             }
         },
@@ -268,8 +278,17 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
             resultSets.add(rs);
             updateCount += n;
         }
-        setUpdateCount(updateCount);
-        return resultSets.size() == 1 ? resultSets.get(0) : new ChainedResultSetWrapper(this, resultSets, true);
+
+        ResultSet rs = resultSets.size() == 1 ? resultSets.get(0) : new ChainedResultSetWrapper(this, resultSets, true);
+        boolean allResultSets = !resultSets.isEmpty();
+        for (ResultSet rs1 : resultSets) {
+            if (rs1.getStatement().getUpdateCount() != -1) {
+                allResultSets = false;
+            }
+        }
+
+        setUpdateCount(allResultSets ? -1 : updateCount);
+        return rs;
     }
 
     @Override

@@ -496,7 +496,7 @@ class PreparedStatementWithComplexTypesTest {
         insert.setObject(1, 1);
         MySerializableClass obj1 = new MySerializableClass(123, "something");
         insert.setObject(2, obj1);
-        assertTrue(insert.execute());
+        assertFalse(insert.execute());
 
         PreparedStatement select = testConn.prepareStatement("select * from data where PK=?");
         select.setObject(1, 1);
@@ -705,7 +705,7 @@ class PreparedStatementWithComplexTypesTest {
         insert.setObject(1, 1);
         MyNotSerializableClass obj1 = new MyNotSerializableClass(123, "something");
         insert.setObject(2, MyNotSerializableClass.serialize(obj1));
-        assertTrue(insert.execute());
+        assertFalse(insert.execute());
 
 
         Connection conn = DriverManager.getConnection(aerospikeTestUrl + "?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");

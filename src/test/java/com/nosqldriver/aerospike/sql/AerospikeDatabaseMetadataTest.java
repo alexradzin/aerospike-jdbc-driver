@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeTestUrl;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.getColumnValues;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static java.sql.Connection.TRANSACTION_NONE;
@@ -28,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AerospikeDatabaseMetadataTest {
     private Connection testConn = getTestConnection();
+
     @Test
     void trivialFlags() throws SQLException {
         DatabaseMetaData md = testConn.getMetaData();
@@ -216,9 +218,19 @@ class AerospikeDatabaseMetadataTest {
 
 
     //TODO implement separate tests with relevant validations for each result set.
-    //TODO remove all indexes before running this test
     @Test
     void resultSets() throws SQLException {
+        DatabaseMetaData md1 = testConn.getMetaData();
+        Collection<String> catalogs1 = new ArrayList<>();
+        catalogs1.add(null);
+        catalogs1.addAll(getColumnValues(md1.getCatalogs(), rs -> rs.getString("TABLE_CAT")));
+        for (String catalog : catalogs1) {
+            ResultSet rs = md1.getIndexInfo(catalog, null, null, true, true);
+            while (rs.next()) {
+                getClient().dropIndex(null, rs.getString("TABLE_CAT"), rs.getString("TABLE_NAME"), rs.getString("INDEX_NAME")).waitTillComplete();
+            }
+        }
+
         DatabaseMetaData md = testConn.getMetaData();
         assertResultSet(md.getSchemas(), false); //namespaces are treated as catalogs
         assertResultSet(md.getCatalogs(), true);

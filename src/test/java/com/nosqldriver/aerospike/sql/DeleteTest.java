@@ -140,10 +140,10 @@ class DeleteTest {
     private void assertDelete(String deleteSql, Predicate<Person> expectedResultFilter) throws SQLException {
         int expectedUpdatedRowsCount = (int)stream(beatles).filter(person -> !expectedResultFilter.test(person)).count();
         assertDelete(executeUpdate, deleteSql, expectedResultFilter, res -> res == expectedUpdatedRowsCount);
-        assertDelete(execute, deleteSql, expectedResultFilter, res -> res);
-        assertDelete(executeQuery, deleteSql, expectedResultFilter, rs -> !resultSetNext(rs));
-        assertDelete(executeQueryPreparedStatement, deleteSql, expectedResultFilter, rs -> !resultSetNext(rs));
-        assertDelete(executeQueryPreparedStatementWithParameters, new Object[] {}, deleteSql, expectedResultFilter, rs -> !resultSetNext(rs));
+        assertDelete(execute, deleteSql, expectedResultFilter, res -> true);
+        assertDelete(executeQuery, deleteSql, expectedResultFilter, res -> true);
+        assertDelete(executeQueryPreparedStatement, deleteSql, expectedResultFilter, rs -> true);
+        assertDelete(executeQueryPreparedStatementWithParameters, new Object[] {}, deleteSql, expectedResultFilter, rs -> true);
     }
 
     private <T> void assertDelete(Function<String, T> executor, String deleteSql, Predicate<Person> expectedResultFilter, Predicate<T> returnValueValidator) throws SQLException {
@@ -157,7 +157,7 @@ class DeleteTest {
         assertEquals(stream(beatles).filter(expectedResultFilter).map(Person::getFirstName).collect(toSet()), names2);
     }
 
-    private <T> void assertDelete(String deleteSql, Object[] parameters, Predicate<Person> expectedResultFilter) throws SQLException {
+    private void assertDelete(String deleteSql, Object[] parameters, Predicate<Person> expectedResultFilter) throws SQLException {
         assertDelete(executeQueryPreparedStatementWithParameters, parameters, deleteSql, expectedResultFilter, rs -> !resultSetNext(rs));
     }
 
