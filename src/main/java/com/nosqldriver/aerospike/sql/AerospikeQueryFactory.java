@@ -203,7 +203,7 @@ public class AerospikeQueryFactory {
                                     SneakyThrower.call(() -> values.add(engine.eval(function.toString())));
                                 }
                             });
-                            System.out.println("visit expressions: " + expressionList);
+                            //System.out.println("visit expressions: " + expressionList);
                         }
                     });
 
@@ -349,7 +349,7 @@ public class AerospikeQueryFactory {
                             @Override
                             protected void visitBinaryExpression(BinaryExpression expr) {
                                 super.visitBinaryExpression(expr);
-                                System.out.println("join visitBinaryExpression " + expr);
+                                //System.out.println("join visitBinaryExpression " + expr);
                                 Optional<Operator> operator = Operator.find(expr.getStringExpression());
 
                                 if (!operator.map(Operator.EQ::equals).orElse(false)) {
@@ -360,7 +360,7 @@ public class AerospikeQueryFactory {
 
                             @Override
                             public void visit(Column column) {
-                                System.out.println("join visit(Column column): " + column);
+                                //System.out.println("join visit(Column column): " + column);
                                 String table = column.getTable().getName();
                                 String columnName = column.getColumnName();
                                 if (Objects.equals(queries.getSetName(), table) || Objects.equals(queries.getSetAlias(), table)) {
@@ -399,18 +399,18 @@ public class AerospikeQueryFactory {
                     where.accept(new ExpressionVisitorAdapter() {
                         @Override
                         public void visit(Between expr) {
-                            System.out.println("visitBinaryExpression " + expr + " START");
+                            //System.out.println("visitBinaryExpression " + expr + " START");
                             between.set(true);
                             super.visit(expr);
                             Operator.BETWEEN.update(queries, operation);
-                            System.out.println("visitBinaryExpression " + expr + " END");
+                            //System.out.println("visitBinaryExpression " + expr + " END");
                             queries.queries(operation.getTable()).addPredExp(predExpOperators.get(operatorKey(lastValueType.get(), "AND")).get());
                             between.set(false);
                             operation.clear();
                         }
 
                         public void visit(InExpression expr) {
-                            System.out.println("visit(InExpression expr) " + expr);
+                            //System.out.println("visit(InExpression expr) " + expr);
                             in.set(true);
                             super.visit(expr);
                             AtomicBoolean inExpression = new AtomicBoolean(false);
@@ -418,12 +418,12 @@ public class AerospikeQueryFactory {
                             expr.getRightItemsList().accept(new ItemsListVisitorAdapter() {
                                 @Override
                                 public void visit(ExpressionList expressionList) {
-                                    System.out.println("visit(ExpressionList expressionList) " + expressionList);
+                                    //System.out.println("visit(ExpressionList expressionList) " + expressionList);
                                     inExpression.set(true);
                                 }
                                 @Override
                                 public void visit(SubSelect subSelect) {
-                                    System.out.println("visit(SubSelect subSelect) " + subSelect);
+                                    //System.out.println("visit(SubSelect subSelect) " + subSelect);
                                     QueryHolder subHolder = new QueryHolder(schema, indexes, policyProvider, functionManager);
                                     SelectBody selectBody = subSelect.getSelectBody();
                                     createSelect(selectBody, subHolder);
@@ -447,7 +447,7 @@ public class AerospikeQueryFactory {
                         @Override
                         protected void visitBinaryExpression(BinaryExpression expr) {
                             super.visitBinaryExpression(expr);
-                            System.out.println("visitBinaryExpression " + expr);
+                            //System.out.println("visitBinaryExpression " + expr);
                             Optional<Operator> operator = Operator.find(expr.getStringExpression());
                             String op = expr.getStringExpression();
 
@@ -484,7 +484,7 @@ public class AerospikeQueryFactory {
 
                         @Override
                         public void visit(Column column) {
-                            System.out.println("visit(Column column): " + column);
+                            //System.out.println("visit(Column column): " + column);
                             if (operation.getColumn() == null) {
                                 String table = ofNullable(column.getTable()).map(Table::getName).orElse(null);
                                 String name = column.getColumnName();
@@ -510,7 +510,7 @@ public class AerospikeQueryFactory {
 
                         @Override
                         public void visit(LongValue value) {
-                            System.out.println("visit(LongValue value): " + value);
+                            //System.out.println("visit(LongValue value): " + value);
                             operation.addValue(value.getValue());
                             if (in.get()) {
                                 return;
@@ -530,7 +530,7 @@ public class AerospikeQueryFactory {
 
                         @Override
                         public void visit(StringValue value) {
-                            System.out.println("visit(StringValue value): " + value);
+                            //System.out.println("visit(StringValue value): " + value);
                             operation.addValue(value.getValue());
                             if (in.get()) {
                                 return;
@@ -542,13 +542,13 @@ public class AerospikeQueryFactory {
 
                         @Override
                         public void visit(DoubleValue value) {
-                            System.out.println("visit(DoubleValue value): " + value);
+                            //System.out.println("visit(DoubleValue value): " + value);
                             SneakyThrower.sneakyThrow(new SQLException("BETWEEN can be applied to integer values only"));
                         }
 
                         @Override
                         public void visit(JdbcParameter parameter) {
-                            System.out.println("visit(JdbcParameter parameter): " + parameter);
+                            //System.out.println("visit(JdbcParameter parameter): " + parameter);
                             queries.queries(operation.getTable()).addPredExp(new ColumnRefPredExp(set, operation.getColumn()));
                             queries.queries(operation.getTable()).addPredExp(new PredExpValuePlaceholder(parameter.getIndex()));
                             isPreparedStatement.set(true);
@@ -873,7 +873,7 @@ public class AerospikeQueryFactory {
         }
 
         public void visit(Between expr) {
-            System.out.println("visit(Between): " + expr);
+            //System.out.println("visit(Between): " + expr);
             super.visit(expr);
             if (!queryValues.isEmpty()) {
                 if (queryValues.stream().anyMatch(p -> !isInt(p))) {
@@ -891,7 +891,7 @@ public class AerospikeQueryFactory {
 
         public void visit(InExpression expr) {
             super.visit(expr);
-            System.out.println("visit(In): " + expr);
+            //System.out.println("visit(In): " + expr);
             if ("PK".equals(column)) {
                 Collection<Key> keys = queryValues.stream().map(v -> createKey(schema, tableName, v)).collect(toSet());
                 keyPredicate = keys::contains;
@@ -901,7 +901,7 @@ public class AerospikeQueryFactory {
             }
         }
         protected void visitBinaryExpression(BinaryExpression expr) {
-            System.out.println("visitBinaryExpression(BinaryExpression expr): " + expr);
+            //System.out.println("visitBinaryExpression(BinaryExpression expr): " + expr);
             super.visitBinaryExpression(expr);
 
             if ("PK".equals(column)) {
