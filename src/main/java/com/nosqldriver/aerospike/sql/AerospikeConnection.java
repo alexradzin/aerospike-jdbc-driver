@@ -160,12 +160,12 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
 
     @Override
     public void setCatalog(String catalog) throws SQLException {
-        // do nothing. Aerospike does not support catalogs
+        this.schema.set(catalog);
     }
 
     @Override
     public String getCatalog() throws SQLException {
-        return null;
+        return schema.get();
     }
 
     @Override
@@ -344,12 +344,12 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
 
     @Override
     public void setSchema(String schema) throws SQLException {
-        this.schema.set(schema);
+        // do nothing. Aerospike's namespace is mapped to catalog
     }
 
     @Override
     public String getSchema() throws SQLException {
-        return schema.get();
+        return null;
     }
 
     @Override

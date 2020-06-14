@@ -832,6 +832,16 @@ class SelectTest {
     }
 
     @Test
+    @DisplayName("select a+b from people where PK=1")
+    void nullPlusNull() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());
+        assertTrue(rs.next());
+        assertEquals(1, rs.getMetaData().getColumnCount());
+        assertEquals(0, rs.getObject(1));
+        assertFalse(rs.next());
+    }
+
+    @Test
     @DisplayName("select 0, 1, 2, -1, 3.14")
     void selectNumberAsBoolean() throws SQLException {
         ResultSet rs = testConn.createStatement().executeQuery(getDisplayName());

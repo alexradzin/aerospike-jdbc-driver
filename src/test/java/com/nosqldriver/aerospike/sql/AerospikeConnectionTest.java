@@ -45,8 +45,13 @@ class AerospikeConnectionTest {
 
         assertNull(conn.getCatalog());
         conn.setCatalog(null);
+        conn.setCatalog("something");
+        assertEquals("something", conn.getCatalog());
+
+        assertNull(conn.getSchema());
+        conn.setCatalog(null);
         conn.setCatalog("something"); // ignored
-        assertNull(conn.getCatalog());
+        assertNull(conn.getSchema());
 
         conn.close();
         assertFalse(conn.isValid(1));
@@ -257,20 +262,24 @@ class AerospikeConnectionTest {
     void noShema() throws SQLException {
         Connection conn = new AerospikeConnection(JDBC_LOCAL, new Properties());
         assertNull(conn.getSchema());
+        assertNull(conn.getCatalog());
     }
 
     @Test
     void shema() throws SQLException {
         Connection conn = new AerospikeConnection(JDBC_LOCAL_TEST, new Properties());
-        assertEquals("test", conn.getSchema());
+        assertEquals("test", conn.getCatalog());
+        assertNull(conn.getSchema());
     }
 
     @Test
     void changeShema() throws SQLException {
         Connection conn = new AerospikeConnection(JDBC_LOCAL_TEST, new Properties());
-        assertEquals("test", conn.getSchema());
+        assertNull(conn.getSchema());
+        assertEquals("test", conn.getCatalog());
         conn.setSchema("test2");
-        assertEquals("test2", conn.getSchema());
+        assertNull(conn.getSchema());
+        assertEquals("test", conn.getCatalog());
     }
 
     @Test

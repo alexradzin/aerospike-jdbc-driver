@@ -399,7 +399,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public String getSchemaTerm() {
-        return "namespace";
+        return "";
     }
 
     @Override
@@ -519,12 +519,12 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public boolean supportsUnion() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean supportsUnionAll() {
-        return false;
+        return true;
     }
 
     @Override

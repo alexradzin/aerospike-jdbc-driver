@@ -96,8 +96,8 @@ class AerospikeDatabaseMetadataTest {
         assertFalse(md.supportsSubqueriesInIns());
         assertFalse(md.supportsSubqueriesInQuantifieds());
         assertFalse(md.supportsCorrelatedSubqueries());
-        assertFalse(md.supportsUnion());
-        assertFalse(md.supportsUnionAll());
+        assertTrue(md.supportsUnion());
+        assertTrue(md.supportsUnionAll());
         assertFalse(md.supportsOpenCursorsAcrossCommit());
         assertFalse(md.supportsOpenCursorsAcrossRollback());
         assertFalse(md.supportsOpenStatementsAcrossCommit());
@@ -176,7 +176,7 @@ class AerospikeDatabaseMetadataTest {
         assertTrue(md.getTimeDateFunctions().contains("now"));
         assertEquals("\\", md.getSearchStringEscape());
         assertEquals("", md.getExtraNameCharacters());
-        assertEquals("namespace", md.getSchemaTerm());
+        assertEquals("", md.getSchemaTerm());
         assertEquals("lua script", md.getProcedureTerm());
         assertEquals("namespace", md.getCatalogTerm());
         assertEquals(".", md.getCatalogSeparator());
