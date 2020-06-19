@@ -45,7 +45,7 @@ class GenericTypeDiscovererTest {
         return getClient().query(new QueryPolicy(), statement);
     };
     private static final Function<KeyRecord, Map<String, Object>> recordDataExtractor = keyRecord -> keyRecord.record.bins;
-    private FunctionManager functionManager = new FunctionManager();
+    private FunctionManager functionManager = new FunctionManager(null);
     private Connection testConn = getTestConnection();
 
     @AfterEach

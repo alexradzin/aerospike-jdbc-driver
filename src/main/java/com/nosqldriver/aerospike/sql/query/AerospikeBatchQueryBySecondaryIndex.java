@@ -12,7 +12,6 @@ import com.nosqldriver.sql.ResultSetWrapper;
 import com.nosqldriver.util.FunctionManager;
 
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.List;
 
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy, Record> {
@@ -43,7 +42,7 @@ public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statemen
                 }
 
                 @Override
-                public java.sql.Statement getStatement() throws SQLException {
+                public java.sql.Statement getStatement() {
                     return statement;
                 }
             };

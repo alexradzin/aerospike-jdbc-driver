@@ -2,6 +2,7 @@ package com.nosqldriver.util;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.sql.DatabaseMetaData;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
@@ -14,12 +15,8 @@ import static java.lang.String.format;
 public class FunctionManager {
     private final Map<String, Object> functions;
 
-    public FunctionManager() {
-        this(StandardFunctions.functions);
-    }
-
-    public FunctionManager(Map<String, Object> functions) {
-        this.functions = functions;
+    public FunctionManager(DatabaseMetaData databaseMetaData) {
+        this.functions = new StandardFunctions(databaseMetaData).getFunctions();
     }
 
     public void addFunction(String name, String className) {

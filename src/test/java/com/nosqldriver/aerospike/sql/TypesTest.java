@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -23,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.Calendar;
 import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
@@ -33,9 +35,11 @@ import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.sql.Types.BIGINT;
 import static java.sql.Types.DOUBLE;
+import static java.sql.Types.OTHER;
 import static java.sql.Types.VARCHAR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,7 +65,7 @@ class LuaConnectionTypesTest extends TypesTest {
 
 abstract class TypesTest {
     private static final String TYPE_TEST_TABLE = "types_test";
-    private Connection testConn;
+    private final Connection testConn;
 
     TypesTest(Connection conn) {
         testConn = conn;
@@ -595,6 +599,34 @@ abstract class TypesTest {
         assertFalse(rs.next());
     }
 
+    @Test
+    void functionVersion() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery("select version()");
+        assertTrue(rs.next());
+        assertTrue(Integer.parseInt(rs.getString(1).split("\\.")[0]) >= 4);
+        assertFalse(rs.next());
+    }
+
+    @Test
+    void functionUser() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery("select user()");
+        assertTrue(rs.next());
+        assertNull(rs.getString(1));
+        assertFalse(rs.next());
+    }
+
+
+    @Test
+    void functionUuid() throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery("select uuid()");
+        assertTrue(rs.next());
+        ResultSetMetaData md = rs.getMetaData();
+        assertEquals(1, md.getColumnCount());
+        assertEquals(OTHER, md.getColumnType(1));
+        UUID actual = (UUID)rs.getObject(1);
+        assertNotNull(actual);
+        assertFalse(rs.next());
+    }
 
     @SafeVarargs
     private final <T> void assertValue(T expected, Callable<T>... getters) throws Exception {

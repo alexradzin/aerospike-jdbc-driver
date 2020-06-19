@@ -53,14 +53,14 @@ class ExpressionAwarePropertyGetterTest {
                         return null;
                     }
                 },
-                holder -> Arrays.stream(Holder.class.getDeclaredFields()).map(Field::getName).collect(toList()), new FunctionManager(), new DriverPolicy()).apply(new Holder(), "pi * e");
+                holder -> Arrays.stream(Holder.class.getDeclaredFields()).map(Field::getName).collect(toList()), new FunctionManager(null), new DriverPolicy()).apply(new Holder(), "pi * e");
 
         assertEquals(Math.PI * Math.E, actual, 0.001);
     }
 
 
     private void assertExpression(Map<String, Object> props, String name, Object expectedResult) {
-        assertEquals(expectedResult, new ExpressionAwarePropertyGetter<Map<String, Object>>(Map::get, Map::keySet, new FunctionManager(), new DriverPolicy()).apply(props, name));
+        assertEquals(expectedResult, new ExpressionAwarePropertyGetter<Map<String, Object>>(Map::get, Map::keySet, new FunctionManager(null), new DriverPolicy()).apply(props, name));
     }
 
 

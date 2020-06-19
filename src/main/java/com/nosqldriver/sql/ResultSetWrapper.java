@@ -1044,6 +1044,9 @@ public class ResultSetWrapper implements ResultSet {
 
 
     private <T> T getValue(int columnIndex, ThrowingFunction<String, T, SQLException> getterByLabel, ThrowingFunction<Integer, T, SQLException> getterByIndex) throws SQLException {
+        if (rs == null) {
+            return null;
+        }
         if (indexByName) {
             String label = getLabel(columnIndex);
             if (label != null) {

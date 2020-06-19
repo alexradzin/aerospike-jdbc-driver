@@ -13,7 +13,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ExpressionAwareResultSetFactoryTest {
-    private final ExpressionAwareResultSetFactory exprFactory = new ExpressionAwareResultSetFactory(new FunctionManager(), new DriverPolicy());
+    private final ExpressionAwareResultSetFactory exprFactory = new ExpressionAwareResultSetFactory(new FunctionManager(null), new DriverPolicy());
 
     @Test
     void emptyExpression() {

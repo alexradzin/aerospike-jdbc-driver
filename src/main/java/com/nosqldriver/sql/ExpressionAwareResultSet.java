@@ -31,6 +31,7 @@ import java.util.function.Function;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 import static java.lang.System.currentTimeMillis;
+import static java.sql.Types.OTHER;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -314,11 +315,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
                 try {
                     Object result = eval(ec.getExpression());
                     if (result != null) {
-                        Class type = TypeTransformer.getMinimalType(result, Integer.class);
-                        Integer sqlType = SqlLiterals.sqlTypes.get(type);
-                        if (sqlType != null) {
-                            ec.withType(sqlType);
-                        }
+                        ec.withType(SqlLiterals.sqlTypes.getOrDefault(TypeTransformer.getMinimalType(result, Integer.class), OTHER));
                     }
                 } catch (Exception e) {
                     // ignore when discovering metadata

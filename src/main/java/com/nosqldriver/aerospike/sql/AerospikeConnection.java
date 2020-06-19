@@ -74,10 +74,9 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
         schema.set(parser.schema(url));
         policyProvider = new AerospikePolicyProvider(client, info);
         keyRecordFetcherFactory = new KeyRecordFetcherFactory(policyProvider.getQueryPolicy());
-        FunctionManager fm = new FunctionManager();
+        FunctionManager fm = new FunctionManager(getMetaData());
         functionManager = init(fm, info);
         registerScript("stats", "distinct", "groupby");
-        getMetaData();
         getPk = Stream.of(policyProvider.getQueryPolicy(), policyProvider.getBatchPolicy(), policyProvider.getScanPolicy()).anyMatch(p -> p.sendKey);
     }
 

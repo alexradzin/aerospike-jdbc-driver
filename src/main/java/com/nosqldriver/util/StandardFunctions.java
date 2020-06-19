@@ -6,6 +6,7 @@ import org.json.simple.parser.JSONParser;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Array;
+import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -17,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
@@ -24,17 +26,18 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static com.nosqldriver.util.DateParser.*;
+import static com.nosqldriver.util.DateParser.date;
 import static java.lang.String.format;
-import static java.util.Base64.*;
+import static java.util.Base64.getEncoder;
 
 // Only functions allow discovering generic types of arguments; lambdas do not allow this.
 @SuppressWarnings({"Convert2Lambda", "Anonymous2MethodRef"})
 @VisibleForPackage
-public class StandardFunctions {
-    private static DataUtil dataUtil = new DataUtil();
+class StandardFunctions {
+    private static final DataUtil dataUtil = new DataUtil();
+    private final Map<String, Object> connectionDependentFunctions;
 
-    private static Function<Object, Date> date = arg -> {
+    private static final Function<Object, Date> date = arg -> {
         if (arg instanceof Date) {
             return (Date)arg;
         }
@@ -50,9 +53,14 @@ public class StandardFunctions {
         return SneakyThrower.sneakyThrow(new SQLException("Wrong argument " + arg + " type: " + (arg.getClass())));
     };
 
-    @VisibleForPackage
-    public static final Map<String, Object> functions = new HashMap<>();
+    private static final Map<String, Object> dataFunctions = new HashMap<>();
     static {
+        dataFunctions.put("uuid", new @TypeGroup({UUID.class}) Supplier<UUID>() {
+            @Override
+            public UUID get() {
+                return UUID.randomUUID();
+            }
+        });
         final Function<Object, Integer> objLength = new @TypeGroup(String.class) Function<Object, Integer>() {
             @Override
             public Integer apply(Object o) {
@@ -71,22 +79,22 @@ public class StandardFunctions {
                 throw new IllegalArgumentException("function length() does not support " + o);
             }
         };
-        functions.put("len", objLength);
-        functions.put("length", objLength);
+        dataFunctions.put("len", objLength);
+        dataFunctions.put("length", objLength);
 
-        functions.put("ascii", new @TypeGroup(String.class) Function<String, Integer>() {
+        dataFunctions.put("ascii", new @TypeGroup(String.class) Function<String, Integer>() {
             @Override
             public Integer apply(String s) {
                 return s.length() > 0 ? (int) s.charAt(0) : null;
             }
         });
-        functions.put("char", new @TypeGroup(String.class) Function<Integer, String>() {
+        dataFunctions.put("char", new @TypeGroup(String.class) Function<Integer, String>() {
             @Override
             public String apply(Integer code) {
                 return code == null ? null : new String(new char[] {(char)code.intValue()});
             }
         });
-        functions.put("locate", new VarargsFunction<Object, Integer>() {
+        dataFunctions.put("locate", new VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 String subStr = (String) args[0];
@@ -95,39 +103,39 @@ public class StandardFunctions {
                 return str.indexOf(subStr) + 1 - offset;
             }
         });
-        functions.put("instr", new @TypeGroup(String.class) BiFunction<String, String, Integer>() {
+        dataFunctions.put("instr", new @TypeGroup(String.class) BiFunction<String, String, Integer>() {
             @Override
             public Integer apply(String str, String subStr) {
                 return str.indexOf(subStr) + 1;
             }
         });
-        functions.put("trim", new @TypeGroup(String.class) Function<String, String>() {
+        dataFunctions.put("trim", new @TypeGroup(String.class) Function<String, String>() {
 
             @Override
             public String apply(String s) {
                 return s == null ? null : s.trim();
             }
         });
-        functions.put("ltrim", new @TypeGroup(String.class) Function<String, String>() {
+        dataFunctions.put("ltrim", new @TypeGroup(String.class) Function<String, String>() {
             @Override
             public String apply(String s) {
                 return s == null ? null : s.replaceFirst("^ *", "");
             }
         });
-        functions.put("rtrim", new @TypeGroup(String.class) Function<String, String>() {
+        dataFunctions.put("rtrim", new @TypeGroup(String.class) Function<String, String>() {
             @Override
             public String apply(String s) {
                 return s == null ? null : s.replaceFirst(" *$", "");
             }
         });
-        functions.put("strcmp", new @TypeGroup(String.class) BiFunction<String, String, Integer>() {
+        dataFunctions.put("strcmp", new @TypeGroup(String.class) BiFunction<String, String, Integer>() {
 
             @Override
             public Integer apply(String s, String s2) {
                 return s.compareTo(s2);
             }
         });
-        functions.put("left", new @TypeGroup(String.class) BiFunction<String, Integer, String>() {
+        dataFunctions.put("left", new @TypeGroup(String.class) BiFunction<String, Integer, String>() {
             @Override
             public String apply(String s, Integer n) {
                 return s.substring(0, n);
@@ -140,8 +148,8 @@ public class StandardFunctions {
                 return s == null ? null : s.toLowerCase();
             }
         };
-        functions.put("lower", toLowerCase);
-        functions.put("lcase", toLowerCase);
+        dataFunctions.put("lower", toLowerCase);
+        dataFunctions.put("lcase", toLowerCase);
 
         Function<String, String> toUpperCase = new @TypeGroup(String.class) Function<String, String>() {
             @Override
@@ -149,149 +157,149 @@ public class StandardFunctions {
                 return s == null ? null : s.toUpperCase();
             }
         };
-        functions.put("upper", toUpperCase);
-        functions.put("ucase", toUpperCase);
+        dataFunctions.put("upper", toUpperCase);
+        dataFunctions.put("ucase", toUpperCase);
 
-        functions.put("str", new @TypeGroup(String.class) Function<Object, String>() {
+        dataFunctions.put("str", new @TypeGroup(String.class) Function<Object, String>() {
             @Override
             public String apply(Object o) {
                 return String.valueOf(o);
             }
         });
-        functions.put("space", new @TypeGroup(String.class) Function<Integer, String>() {
+        dataFunctions.put("space", new @TypeGroup(String.class) Function<Integer, String>() {
             @Override
             public String apply(Integer i) {
                 return i == 0 ? "" : format("%" + i + "c", ' ');
             }
         });
-        functions.put("reverse", new @TypeGroup(String.class) Function<String, String>() {
+        dataFunctions.put("reverse", new @TypeGroup(String.class) Function<String, String>() {
             @Override
             public String apply(String s) {
                 return s == null ? null : new StringBuilder(s).reverse().toString();
             }
         });
-        functions.put("to_base64", new @TypeGroup(String.class) Function<Object, String>() {
+        dataFunctions.put("to_base64", new @TypeGroup(String.class) Function<Object, String>() {
             @Override
             public String apply(Object b) {
                 return b == null ? null : getEncoder().encodeToString(b instanceof String ? ((String)b).getBytes() : (byte[])b);
             }
         });
-        functions.put("from_base64", new @TypeGroup(String.class) Function<String, byte[]>() {
+        dataFunctions.put("from_base64", new @TypeGroup(String.class) Function<String, byte[]>() {
             @Override
             public byte[] apply(String s) {
                 return s == null ? null : java.util.Base64.getDecoder().decode(s);
             }
         });
-        functions.put("substring", new @TypeGroup(String.class) TriFunction<String, Integer, Integer, String>() {
+        dataFunctions.put("substring", new @TypeGroup(String.class) TriFunction<String, Integer, Integer, String>() {
 
             @Override
             public String apply(String s, Integer start, Integer length) {
                 return s.substring(start - 1, length);
             }
         });
-        functions.put("concat", new @TypeGroup(String.class) VarargsFunction<Object, String>() {
+        dataFunctions.put("concat", new @TypeGroup(String.class) VarargsFunction<Object, String>() {
             @Override
             public String apply(Object... args) {
                 return Arrays.stream(args).map(String::valueOf).collect(Collectors.joining());
             }
         });
-        functions.put("concat_ws", new @TypeGroup(String.class) VarargsFunction<Object, String>() {
+        dataFunctions.put("concat_ws", new @TypeGroup(String.class) VarargsFunction<Object, String>() {
             @Override
             public String apply(Object... args) {
                 return Arrays.stream(args).skip(1).map(String::valueOf).collect(Collectors.joining((String)args[0]));
             }
         });
-        functions.put("coalesce", new @TypeGroup(Object.class) VarargsFunction<Object, Object>() {
+        dataFunctions.put("coalesce", new @TypeGroup(Object.class) VarargsFunction<Object, Object>() {
             @Override
             public Object apply(Object... args) {
                 return Arrays.stream(args).filter(e -> e != null).findFirst().orElse(null);
             }
         });
-        functions.put("date", new @TypeGroup(Date.class) VarargsFunction<Object, Date>() {
+        dataFunctions.put("date", new @TypeGroup(Date.class) VarargsFunction<Object, Date>() {
             @Override
             public Date apply(Object... args) {
                 return date.apply(args.length > 0 ? args[0] : null);
             }
         });
-        functions.put("calendar", new @TypeGroup(Date.class) VarargsFunction<Object, Calendar>() {
+        dataFunctions.put("calendar", new @TypeGroup(Date.class) VarargsFunction<Object, Calendar>() {
             @Override
             public Calendar apply(Object... args) {
                 return calendar(args);
             }
         });
-        functions.put("now", new @TypeGroup({Date.class, Number.class}) Supplier<Long>() {
+        dataFunctions.put("now", new @TypeGroup({Date.class, Number.class}) Supplier<Long>() {
             @Override
             public Long get() {
                 return System.currentTimeMillis();
             }
         });
-        functions.put("year", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
+        dataFunctions.put("year", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.YEAR);
             }
         });
-        functions.put("month", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
+        dataFunctions.put("month", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.MONTH) + 1;
             }
         });
-        functions.put("dayofmonth", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
+        dataFunctions.put("dayofmonth", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.DAY_OF_MONTH);
             }
         });
-        functions.put("hour", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
+        dataFunctions.put("hour", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.HOUR_OF_DAY);
             }
         });
-        functions.put("minute", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
+        dataFunctions.put("minute", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.MINUTE);
             }
         });
-        functions.put("second", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
+        dataFunctions.put("second", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.SECOND);
             }
         });
-        functions.put("millisecond", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
+        dataFunctions.put("millisecond", new @TypeGroup(Date.class) VarargsFunction<Object, Integer>() {
             @Override
             public Integer apply(Object... args) {
                 return calendar(args).get(Calendar.MILLISECOND);
             }
         });
-        functions.put("epoch", new @TypeGroup({Date.class, Long.class}) VarargsFunction<Object, Long>() {
+        dataFunctions.put("epoch", new @TypeGroup({Date.class, Long.class}) VarargsFunction<Object, Long>() {
             @Override
             public Long apply(Object... args) {
                 return parse((String)args[0], args.length > 1 ? (String)args[1] : null).getTime();
             }
         });
-        functions.put("millis", new @TypeGroup(Date.class) Function<Date, Long>() {
+        dataFunctions.put("millis", new @TypeGroup(Date.class) Function<Date, Long>() {
             @Override
             public Long apply(Date date) {
                 return date.getTime();
             }
         });
-        functions.put("map", new @TypeGroup({String.class, Map.class}) Function<String, Map<?, ?>>() {
+        dataFunctions.put("map", new @TypeGroup({String.class, Map.class}) Function<String, Map<?, ?>>() {
             @Override
             public Map<?, ?> apply(String json) {
                 return (Map<?, ?>)parseJson(json);
             }
         });
-        functions.put("list", new @TypeGroup({String.class, List.class}) Function<String, List<?>>() {
+        dataFunctions.put("list", new @TypeGroup({String.class, List.class}) Function<String, List<?>>() {
             @Override
             public List<?> apply(String json) {
                 return dataUtil.toList(parseJson(json));
             }
         });
-        functions.put("array", new @TypeGroup({String.class, Array.class})  Function<String, Object[]>() {
+        dataFunctions.put("array", new @TypeGroup({String.class, Array.class})  Function<String, Object[]>() {
             @Override
             public Object[] apply(String json) {
                 return dataUtil.toArray(parseJson(json));
@@ -300,7 +308,7 @@ public class StandardFunctions {
 
 
         // Numeric functions
-        functions.put("abs", new @TypeGroup(Number.class)  Function<Number, Number>() {
+        dataFunctions.put("abs", new @TypeGroup(Number.class)  Function<Number, Number>() {
             @Override
             public Number apply(Number value) {
                 if (value == null) {
@@ -322,67 +330,67 @@ public class StandardFunctions {
             }
         });
 
-        functions.put("acos", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("acos", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number value) {
                 return Math.acos(value.doubleValue());
             }
         });
-        functions.put("asin", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("asin", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number value) {
                 return Math.asin(value.doubleValue());
             }
         });
-        functions.put("atan", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("atan", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number value) {
                 return Math.atan(value.doubleValue());
             }
         });
-        functions.put("atan2", new @TypeGroup(Number.class)  BiFunction<Number, Number, Double>() {
+        dataFunctions.put("atan2", new @TypeGroup(Number.class)  BiFunction<Number, Number, Double>() {
             @Override
             public Double apply(Number y, Number x) {
                 return Math.atan2(y.doubleValue(), x.doubleValue());
             }
         });
-        functions.put("cos", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("cos", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number value) {
                 return Math.cos(value.doubleValue());
             }
         });
-        functions.put("cot", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("cot", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number value) {
                 return 1.0 / Math.tan(value.doubleValue());
             }
         });
-        functions.put("exp", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("exp", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number value) {
                 return Math.exp(value.doubleValue());
             }
         });
-        functions.put("ln", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("ln", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number value) {
                 return Math.log(value.doubleValue());
             }
         });
-        functions.put("log10", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("log10", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number value) {
                 return Math.log10(value.doubleValue());
             }
         });
-        functions.put("log2", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("log2", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number value) {
                 return Math.log(value.doubleValue()) / Math.log(2);
             }
         });
-        functions.put("pi", new @TypeGroup(Number.class) Supplier<Double>() {
+        dataFunctions.put("pi", new @TypeGroup(Number.class) Supplier<Double>() {
             @Override
             public Double get() {
                 return Math.PI;
@@ -394,52 +402,52 @@ public class StandardFunctions {
                 return Math.pow(a.doubleValue(), b.doubleValue());
             }
         };
-        functions.put("pow", pow);
-        functions.put("power", pow);
+        dataFunctions.put("pow", pow);
+        dataFunctions.put("power", pow);
 
-        functions.put("degrees", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("degrees", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number angrad) {
                 return Math.toDegrees(angrad.doubleValue());
             }
         });
-        functions.put("radians", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("radians", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number angdeg) {
                 return Math.toRadians(angdeg.doubleValue());
             }
         });
-        functions.put("sin", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("sin", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number a) {
                 return Math.sin(a.doubleValue());
             }
         });
-        functions.put("tan", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("tan", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number a) {
                 return Math.tan(a.doubleValue());
             }
         });
-        functions.put("ceil", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("ceil", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number a) {
                 return Math.ceil(a.doubleValue());
             }
         });
-        functions.put("floor", new @TypeGroup(Number.class)  Function<Number, Double>() {
+        dataFunctions.put("floor", new @TypeGroup(Number.class)  Function<Number, Double>() {
             @Override
             public Double apply(Number a) {
                 return Math.floor(a.doubleValue());
             }
         });
-        functions.put("round", new @TypeGroup(Number.class)  BiFunction<Number, Integer, Double>() {
+        dataFunctions.put("round", new @TypeGroup(Number.class)  BiFunction<Number, Integer, Double>() {
             @Override
             public Double apply(Number value, Integer places) {
                 return BigDecimal.valueOf(value.doubleValue()).setScale(places, RoundingMode.HALF_UP).doubleValue();
             }
         });
-        functions.put("rand", new VarargsFunction<Object, Double>() {
+        dataFunctions.put("rand", new VarargsFunction<Object, Double>() {
             @Override
             public Double apply(Object... t) {
                 return (t.length > 0 ? new Random(((Number)t[0]).longValue()) : new Random()).nextDouble();
@@ -447,6 +455,10 @@ public class StandardFunctions {
         });
     }
 
+
+    Map<String, Object> getFunctions() {
+        return connectionDependentFunctions;
+    }
 
     private static Date parse(String str, String fmt) {
         try {
@@ -471,5 +483,21 @@ public class StandardFunctions {
         } catch (org.json.simple.parser.ParseException e) {
             return SneakyThrower.sneakyThrow(new SQLException(e));
         }
+    }
+
+    public StandardFunctions(DatabaseMetaData databaseMetaData) {
+        connectionDependentFunctions = new HashMap<>(dataFunctions);
+        connectionDependentFunctions.put("version", new Supplier<String>() {
+            @Override
+            public String get() {
+                return SneakyThrower.get(databaseMetaData::getDatabaseProductVersion);
+            }
+        });
+        connectionDependentFunctions.put("user", new Supplier<String>() {
+            @Override
+            public String get() {
+                return SneakyThrower.get(databaseMetaData::getUserName);
+            }
+        });
     }
 }
