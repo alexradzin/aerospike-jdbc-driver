@@ -23,6 +23,7 @@ import com.nosqldriver.sql.ScriptEngineFactory;
 import com.nosqldriver.sql.JoinType;
 import com.nosqldriver.sql.OrderItem;
 import com.nosqldriver.sql.RecordExpressionEvaluator;
+import com.nosqldriver.util.DateParser;
 import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.SneakyThrower;
 import net.sf.jsqlparser.JSQLParserException;
@@ -79,6 +80,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -93,6 +95,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -630,6 +633,17 @@ public class AerospikeQueryFactory {
 
             AtomicBoolean truncateFlag = new AtomicBoolean(false);
 
+            Pattern truncateWithDate = Pattern.compile("(truncate\\s+table\\s+\\S+)\\s+'(\\S+)'", Pattern.CASE_INSENSITIVE);
+            Matcher m = truncateWithDate.matcher(sql);
+            final Calendar truncateCalendar;
+            if (m.find()) {
+                sql = m.group(1);
+                truncateCalendar = Calendar.getInstance();
+                truncateCalendar.setTime(DateParser.date(m.group(2)));
+            } else {
+                truncateCalendar = null;
+            }
+
             parserManager.parse(new StringReader(sql)).accept(new StatementVisitorAdapter() {
                 @Override
                 public void visit(Delete delete) {
@@ -809,7 +823,7 @@ public class AerospikeQueryFactory {
                 public Function<IAerospikeClient, Integer> getQuery(Statement statement) {
                     return client -> {
                         if (truncateFlag.get()) {
-                            SneakyThrower.sqlCall(() -> truncate(client, schema.get(), tableName.get()));
+                            SneakyThrower.sqlCall(() -> truncate(client, schema.get(), tableName.get(), truncateCalendar));
                             return 0;
                         }
                         AtomicInteger count = new AtomicInteger(0);
@@ -851,7 +865,7 @@ public class AerospikeQueryFactory {
         }
     }
 
-    private void truncate(IAerospikeClient client, String schema, String tableName) throws SQLException {
+    private void truncate(IAerospikeClient client, String schema, String tableName, Calendar calendar) throws SQLException {
         boolean tableExists = false;
         ResultSet rs = statement.getConnection().getMetaData().getTables(schema, null, tableName, null);
         while(rs.next()) {
@@ -864,7 +878,7 @@ public class AerospikeQueryFactory {
         if(!tableExists) {
             SneakyThrower.sneakyThrow(new SQLException(format("Table %s.%s doesn't exist", schema, tableName)));
         }
-        client.truncate(policyProvider.getInfoPolicy(), schema, tableName, null);
+        client.truncate(policyProvider.getInfoPolicy(), schema, tableName, calendar);
 
     }
 

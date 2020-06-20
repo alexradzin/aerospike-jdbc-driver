@@ -57,6 +57,14 @@ class TruncateTest {
     }
 
     @Test
+    void truncateFullTableWithPassedDate() throws SQLException {
+        assertEquals(4, countEntries(PEOPLE));
+        // This date is passed while the data is written now, so nothing will be removed
+        conn.createStatement().execute(format("truncate table %s.%s '2020-06-20'", NAMESPACE, PEOPLE));
+        assertEquals(4, countEntries(PEOPLE));
+    }
+
+    @Test
     void truncateNotExistingTable() {
         assertEquals("Table test.doesnotexist doesn't exist", assertThrows(SQLException.class, () -> testConn.createStatement().execute("truncate table doesnotexist")).getMessage());
     }
