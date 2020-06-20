@@ -135,7 +135,7 @@ The next issue is the export format. CSV format does not hold any schema informa
 ## SQL compliance
 
 ### Supported statements
-*   insert, update, delete, select
+*   insert, update, delete, select, truncate
 *   Complex where clause can be used with update, delete and select. Use special field "PK" to refere to the primary key. Syntanctically there is no difference between referencing to primary key or any data column. Select statement does its best effort to use secondary indexes if defined. 
 *   Nested selects are supported. 
 *   Select can be used with distinct, group by, order by.
@@ -298,6 +298,23 @@ jdbc:aerospike:localhost/test?custom.function.person=com.company.PersonDeseriali
 ```
 
 This configuration makes function `person()` available for SQL queries.
+
+## Truncate statement
+The TRUNCATE TABLE command deletes the data inside a table.
+
+The following SQL truncates the table "Categories": 
+
+```sql
+truncate table mytable
+truncate table mynamespace.mytable
+```
+Additionally to standard SQL syntax the Aerospike can truncate records older than specified in special parameter "beforeLastUpdate":
+```sql
+truncate table mytable '2020-06-20'
+truncate table mytable '2020-06-20 10:20:30.456'
+```
+The date should be specified using format like `yyyy-MM-dd[ HH:mm[:ss[.SSS[ z]]]]`
+
 
 ## Download
 You can download binaries here:
