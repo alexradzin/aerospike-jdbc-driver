@@ -246,7 +246,8 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
 
         @Override
         public boolean test(String sql) {
-            return sql.substring(0, name().length() + 1).toUpperCase().startsWith(name().replace("_", " ") + " ") || pattern.matcher(sql).find();
+            int endIndex = name().length() + 1;
+            return (endIndex <= sql.length() && sql.substring(0, endIndex).toUpperCase().startsWith(name().replace("_", " ") + " ")) || pattern.matcher(sql).find();
         }
 
     }

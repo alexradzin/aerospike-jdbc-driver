@@ -318,7 +318,7 @@ class SelectTest {
     void wrongSyntax() {
         BiConsumer<String, String> startsWithAssert = (expected, actual) -> assertTrue(actual.startsWith(expected));
 
-        assertSQLExceptionMessage("wrong query", "SQL statement wrong query is not supported. SQL should start with one of: [SELECT, INSERT, UPDATE, DELETE, SHOW, USE, CREATE INDEX, DROP INDEX]", Assertions::assertEquals);
+        assertSQLExceptionMessage("wrong query", "SQL statement wrong query is not supported. SQL should start with one of: [SELECT, INSERT, UPDATE, DELETE, TRUNCATE, SHOW, USE, CREATE INDEX, DROP INDEX]", Assertions::assertEquals);
 
         String unexpectedToken = "Encountered unexpected token";
         assertSQLExceptionMessage("select from", unexpectedToken, startsWithAssert);
