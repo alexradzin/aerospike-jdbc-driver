@@ -69,6 +69,7 @@ import net.sf.jsqlparser.statement.select.SetOperation;
 import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.select.SubSelect;
 import net.sf.jsqlparser.statement.select.UnionOp;
+import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.Update;
 
 import javax.script.ScriptEngine;
@@ -627,6 +628,8 @@ public class AerospikeQueryFactory {
 
             AtomicReference<BiFunction<IAerospikeClient, Entry<Key, Record>, Boolean>> worker = new AtomicReference<>((c, e) -> false);
 
+            AtomicBoolean truncateFlag = new AtomicBoolean(false);
+
             parserManager.parse(new StringReader(sql)).accept(new StatementVisitorAdapter() {
                 @Override
                 public void visit(Delete delete) {
@@ -778,6 +781,16 @@ public class AerospikeQueryFactory {
                     }
 
                 }
+
+                @Override
+                public void visit(Truncate truncate) {
+                    Table table = truncate.getTable();
+                    tableName.set(table.getName());
+                    if (table.getSchemaName() != null) {
+                        schema.set(table.getSchemaName());
+                    }
+                    truncateFlag.set(true);
+                }
             });
 
             if (useWhereRecord.get() && whereExpr.get() != null) {
@@ -795,6 +808,10 @@ public class AerospikeQueryFactory {
                 @Override
                 public Function<IAerospikeClient, Integer> getQuery(Statement statement) {
                     return client -> {
+                        if (truncateFlag.get()) {
+                            SneakyThrower.sqlCall(() -> truncate(client, schema.get(), tableName.get()));
+                            return 0;
+                        }
                         AtomicInteger count = new AtomicInteger(0);
                         int limitValue = limit.get();
                         client.scanAll(policyProvider.getScanPolicy(), schema.get(), tableName.get(),
@@ -834,6 +851,22 @@ public class AerospikeQueryFactory {
         }
     }
 
+    private void truncate(IAerospikeClient client, String schema, String tableName) throws SQLException {
+        boolean tableExists = false;
+        ResultSet rs = statement.getConnection().getMetaData().getTables(schema, null, tableName, null);
+        while(rs.next()) {
+            String table = rs.getString("TABLE_NAME");
+            if (tableName.equals(table)) {
+                tableExists = true;
+                break;
+            }
+        }
+        if(!tableExists) {
+            SneakyThrower.sneakyThrow(new SQLException(format("Table %s.%s doesn't exist", schema, tableName)));
+        }
+        client.truncate(policyProvider.getInfoPolicy(), schema, tableName, null);
+
+    }
 
     private void initLimit(Limit statementLimit, AtomicInteger limit) {
         if (statementLimit != null) {

@@ -112,6 +112,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
             }
         },
         DELETE(UPDATE),
+        TRUNCATE(UPDATE),
         SHOW,
         USE {
             @Override
