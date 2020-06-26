@@ -50,6 +50,7 @@ import net.sf.jsqlparser.expression.operators.relational.MultiExpressionList;
 import net.sf.jsqlparser.parser.CCJSqlParserManager;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.ShowStatement;
 import net.sf.jsqlparser.statement.StatementVisitorAdapter;
 import net.sf.jsqlparser.statement.UseStatement;
 import net.sf.jsqlparser.statement.create.index.CreateIndex;
@@ -224,6 +225,11 @@ public class AerospikeQueryFactory {
                 @Override
                 public void visit(UseStatement use) {
                     schema = use.getName();
+                }
+
+                @Override
+                public void visit(ShowStatement show) {
+                    queries.setShowTarget(show.getName());
                 }
 
                 @Override

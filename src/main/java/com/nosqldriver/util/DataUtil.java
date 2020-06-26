@@ -4,8 +4,12 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NavigableMap;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
+
+import static java.lang.Integer.parseInt;
+import static java.util.stream.Collectors.toMap;
 
 public class DataUtil {
     public List<?> toList(Object arg) {
@@ -14,7 +18,7 @@ public class DataUtil {
         }
         @SuppressWarnings("unchecked")
         Map<String, Object> map = (Map<String, Object>)arg;
-        TreeMap<Integer, Object> m2 = map.entrySet().stream().collect(Collectors.toMap(e -> Integer.parseInt(e.getKey()), Map.Entry::getValue, (v1, v2) -> v2, TreeMap::new));
+        NavigableMap<Integer, Object> m2 = map.entrySet().stream().collect(toMap(e -> parseInt(e.getKey()), Entry::getValue, (v1, v2) -> v2, TreeMap::new));
         int n = m2.size();
         if (n != map.size()) {
             SneakyThrower.sneakyThrow(new SQLException("Cannot create list due to duplicate entries"));

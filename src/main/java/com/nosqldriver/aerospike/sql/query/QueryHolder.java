@@ -8,6 +8,7 @@ import com.aerospike.client.query.Filter;
 import com.aerospike.client.query.PredExp;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.aerospike.sql.AerospikeDatabaseMetadata;
 import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
 import com.nosqldriver.aerospike.sql.AerospikeStatement;
 import com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory;
@@ -116,6 +117,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     private ChainOperation chainOperation = null;
     private boolean indexByName = false;
     private final boolean getPk;
+    private String show;
 
     private final FunctionManager functionManager;
     private final ExpressionAwareResultSetFactory expressionResultSetWrappingFactory;
@@ -141,6 +143,9 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     }
 
     public Function<IAerospikeClient, ResultSet> getQuery(java.sql.Statement sqlStatement) {
+        if (show != null) {
+            return show(sqlStatement);
+        }
         if (!subQeueries.isEmpty()) {
             return getQueryWithSubQueries(sqlStatement);
         }
@@ -166,6 +171,24 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         }
 
         return wrap(sqlStatement, createSecondaryIndexQuery(sqlStatement));
+    }
+
+    public Function<IAerospikeClient, ResultSet> show(java.sql.Statement sqlStatement) {
+        return SneakyThrower.get(() -> {
+            AerospikeDatabaseMetadata md = ((AerospikeDatabaseMetadata) sqlStatement.getConnection().getMetaData());
+            String name = show.toUpperCase();
+            if (Arrays.stream(ShowRetriever.values()).noneMatch(r -> r.name().equals(name))) {
+                SneakyThrower.sneakyThrow(
+                        new SQLException(format("You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '%s'", show))
+                );
+            }
+            ShowRetriever retriever = ShowRetriever.valueOf(name);
+            List<String> items = retriever.apply(md, schema);
+            String column = retriever.getColumnName();
+            Iterable<List<?>> rsItems = items.stream().map(Collections::singletonList).collect(toList());
+            ResultSet rs = new ListRecordSet(sqlStatement, schema, null, singletonList(DATA.create(null, null, column, column)), rsItems);
+            return client -> rs;
+        });
     }
 
     private Function<IAerospikeClient, ResultSet> getQueryWithSubQueries(java.sql.Statement sqlStatement) {
@@ -542,6 +565,9 @@ public class QueryHolder implements QueryContainer<ResultSet> {
         this.limit = limit;
     }
 
+    public void setShowTarget(String show) {
+        this.show = show;
+    }
 
     private Function<IAerospikeClient, ResultSet> wrap(java.sql.Statement sqlStatement, Function<IAerospikeClient, ResultSet> nakedQuery) {
         final Function<IAerospikeClient, ResultSet> expressioned;

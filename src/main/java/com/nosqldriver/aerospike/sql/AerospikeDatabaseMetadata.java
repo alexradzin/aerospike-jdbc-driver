@@ -730,7 +730,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         return new ListRecordSet(null, "system", "catalogs", systemColumns(new String[] {"TABLE_CAT"}, new int[] {VARCHAR}), catalogs);
     }
 
-    private List<String> getCatalogNames() {
+    public List<String> getCatalogNames() {
         return Arrays.stream(client.getNodes())
                 .map(node -> Info.request(infoPolicy, node, "namespaces"))
                 .map(str -> str.split(";"))
@@ -830,6 +830,11 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         return new ListRecordSet(null, "system", "primary_keys", systemColumns(columns, sqlTypes), tables);
     }
 
+    public List<String> getTableNames(String catalog) {
+        return getTablesData(catalog).filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
+                .map(p -> p.getProperty("set"))
+                .collect(Collectors.toList());
+    }
 
     private Stream<Properties> getTablesData(String catalog) {
         return getInfo(catalog == null ? "sets" : format("sets/%s", catalog));

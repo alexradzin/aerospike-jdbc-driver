@@ -113,7 +113,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
         },
         DELETE(UPDATE),
         TRUNCATE(UPDATE),
-        SHOW,
+        SHOW(SELECT),
         USE {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {

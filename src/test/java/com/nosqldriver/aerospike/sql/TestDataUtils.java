@@ -65,6 +65,7 @@ public class TestDataUtils {
 
     private static AerospikeClient client;
     private static Connection testConn = null;
+    private static Connection rootConn = null;
 
 
     @VisibleForPackage
@@ -94,6 +95,22 @@ public class TestDataUtils {
             }
         }
         return testConn;
+    }
+
+    @VisibleForPackage
+    static Connection getRootConnection() {
+        if (rootConn == null) {
+            synchronized (TestDataUtils.class) {
+                if (rootConn == null) {
+                    try {
+                        rootConn = DriverManager.getConnection(aerospikeRootUrl);
+                    } catch (SQLException e) {
+                        throw new IllegalStateException("Cannot create connection to DB", e);
+                    }
+                }
+            }
+        }
+        return rootConn;
     }
 
     private static void closeOnShutdown(AutoCloseable c) {
