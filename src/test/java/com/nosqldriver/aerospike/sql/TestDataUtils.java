@@ -13,6 +13,7 @@ import com.aerospike.client.query.IndexType;
 import com.nosqldriver.Person;
 import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.util.SneakyThrower;
 import com.nosqldriver.util.ThrowingFunction;
 
 import java.sql.Connection;
@@ -28,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -64,8 +66,20 @@ public class TestDataUtils {
     static final String aerospikeTestUrlLua = format("jdbc:aerospike:%s:%d/test?policy.driver.script=lua", aerospikeHost, aerospikePort);
 
     private static AerospikeClient client;
-    private static Connection testConn = null;
-    private static Connection rootConn = null;
+    private static final Map<String, Connection> connections = new ConcurrentHashMap<>();
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                // Just to be polite. Open connection should be closed. The connection and client however are static and shared among all tests,
+                // so we cannot close it in "@After" or "@AfterAll" of any test case. So, we do our best and close it at least here.
+                connections.values().forEach(c -> SneakyThrower.sqlCall(c::close));
+                if (client != null) {
+                    SneakyThrower.sqlCall(() -> client.close());
+                }
+            }
+        });
+    }
 
 
     @VisibleForPackage
@@ -74,7 +88,6 @@ public class TestDataUtils {
             synchronized (TestDataUtils.class) {
                 if (client == null) {
                     client = new AerospikeClient(aerospikeHost, aerospikePort);
-                    closeOnShutdown(client);
                 }
             }
         }
@@ -82,50 +95,21 @@ public class TestDataUtils {
     }
 
     @VisibleForPackage
-    static Connection getTestConnection() {
-        if (testConn == null) {
-            synchronized (TestDataUtils.class) {
-                if (testConn == null) {
-                    try {
-                        testConn = DriverManager.getConnection(aerospikeTestUrl);
-                    } catch (SQLException e) {
-                        throw new IllegalStateException("Cannot create connection to DB", e);
-                    }
-                }
-            }
+    static Connection getConnection(String url) {
+        return connections.computeIfAbsent(url, TestDataUtils::createConnection);
+    }
+
+    private static Connection createConnection(String url) {
+        try {
+            return DriverManager.getConnection(url);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Cannot create connection to DB", e);
         }
-        return testConn;
     }
 
     @VisibleForPackage
-    static Connection getRootConnection() {
-        if (rootConn == null) {
-            synchronized (TestDataUtils.class) {
-                if (rootConn == null) {
-                    try {
-                        rootConn = DriverManager.getConnection(aerospikeRootUrl);
-                    } catch (SQLException e) {
-                        throw new IllegalStateException("Cannot create connection to DB", e);
-                    }
-                }
-            }
-        }
-        return rootConn;
-    }
-
-    private static void closeOnShutdown(AutoCloseable c) {
-        // Just to be polite. Open connection should be closed. The connection and client however are static and shared among all tests,
-        // so we cannot close it in "@After" or "@AfterAll" of any test case. So, we do our best and close it at least here.
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                try {
-                    c.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+    static Connection getTestConnection() {
+        return getConnection(aerospikeTestUrl);
     }
 
     public static final Person[] beatles = new Person[] {

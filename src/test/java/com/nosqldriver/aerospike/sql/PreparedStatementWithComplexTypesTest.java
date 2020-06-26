@@ -44,8 +44,8 @@ import java.util.function.Function;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeTestUrl;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
@@ -66,7 +66,7 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 class PreparedStatementWithComplexTypesTest {
     private static final String DATA = "data";
-    private Connection testConn = getTestConnection();
+    private final Connection testConn = getTestConnection();
 
     @BeforeEach
     @AfterEach

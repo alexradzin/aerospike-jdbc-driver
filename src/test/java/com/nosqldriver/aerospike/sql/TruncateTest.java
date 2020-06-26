@@ -5,7 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -13,6 +12,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeRootUrl;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getConnection;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static java.lang.String.format;
@@ -21,14 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TruncateTest {
-    private final Connection testConn;
-    private final Connection conn;
+    private final Connection testConn = getTestConnection();
+    private final Connection conn = getConnection(aerospikeRootUrl);
 
-
-    TruncateTest() throws SQLException {
-        testConn = getTestConnection();
-        conn = DriverManager.getConnection(aerospikeRootUrl);
-    }
 
     @BeforeEach
     void init() {

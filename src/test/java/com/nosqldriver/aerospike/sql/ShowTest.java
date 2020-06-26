@@ -11,8 +11,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeRootUrl;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.getRootConnection;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getConnection;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -21,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ShowTest {
     private static final String DATA = "data";
     private final Connection testConn = getTestConnection();
-    private final Connection rootConn = getRootConnection();
+    private final Connection rootConn = getConnection(aerospikeRootUrl);
 
     @BeforeEach
     @AfterEach
