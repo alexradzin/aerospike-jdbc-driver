@@ -141,11 +141,11 @@ The next issue is the export format. CSV format does not hold any schema informa
 *   Select can be used with distinct, group by, order by.
 *   create/drop index
 *   use `namespace_name` to change active namespace. Useful for interactive mode or scripts. 
+*   show catalogs/schemas/tables/indexes
 
 ### Statements that will be supported in future
 *   drop table
 *   describe
-*   show schemas/tables/indexes
 
 ### Statements that will not be supported
 *   create table. This operation is meaningless applicable to Aerospike that creates set once somebody writes to this set. 
@@ -155,19 +155,27 @@ The next issue is the export format. CSV format does not hold any schema informa
 
 | Function                         | Description                                                              |
 | -------------------------------- | ------------------------------------------------------------------------ |
-| `len(s)`                         | length of string                                                         |
+| `len(s)`, `length(s)`            | length of string, list, map                                              |
 | `ascii(s)`                       | ASCII code of the first character of the given string                    |
 | `char(code)`                     | character by its ASCII code                                              |
-| `charIndex(subStr, str, start)`  | starting position of `subStr` into `str` starting from `start` index     |
+| `locate(subStr, str, [offset=1])`| returns position of subStr into str starting from offset (that is 1 if omitted)|
+| `instr(subStr, str)`             | returns position of `subStr` into `str`                                  |
+| `trim(s)`,`ltrim(s)`, `rtrim(s)` | trims string (removes spaces from both/left/right sides)                 |
+| `strcmp(s1, s2)`                 | compares given strings                                                   |
 | `left(str, n)`                   | n-characters sustring of given string from the beginning                 |
-| `lower(str, n)`                  | converts all characters to loewer case                                   |
-| `upper(str, n)`                  | converts all characters to upper case                                    |
+| `lower(str)`, lcase(str)         | converts all characters to loewer case                                   |
+| `upper(str)`, ucaes(str)         | converts all characters to upper case                                    |
 | `str(n)`                         | converts given number to string                                          |
 | `substring(str, start, length)`  | `length` characters long substring of given string started from `start`  |
 | `space(n)`                       | generates string that consists of `n` spaces                             |
 | `concat(...)`                    | concatenate given strings                                                |
 | `concat(separator, ...)`         | concatenate given strings using separator                                |
 | `reverse(str)`                   | reverses given string                                                    |
+| `to_base64(bytes)`	           | generates Base64 representation of given byte array                      |
+| `from_base64(str)`	           | returns byte array from given Base64                                     |
+| `substr(str, from, to)`	       | returns substring of given string                                        |
+| `concat(str1, str2, ...)`	       | concatenates given strings                                               |
+| `concat_ws(separator, str1, str2, ...)`| concatenates given strings using separator                         |
 | `now()`                          | retrieves current epoch time in milliseconds                             |
 | `year([date])`                   | retrueves year (*)                                                       |
 | `month([date])`                  | retrueves month (*)                                                      | 
@@ -178,6 +186,18 @@ The next issue is the export format. CSV format does not hold any schema informa
 | `millisecond([date])`            | retrueves milliesecond (*)                                               |
 | `date([date])`                   | retrueves date object (*)                                                |
 | `epoch(str, fmt)`                | parses given string representation of date using given format to epoch   |
+| `map(s)`, `list(s)`, `array(s)`  | create map, list and array respectively from their string representation |
+| `sin(x)`, `cos(x)`, `tan(x)`, `cot(x)`| trigonometric functions |
+| `asin(x)`, `acos(x)`, `atan(x)`, `atan2(x)`| inverse trigonometric functions |
+| `degrees(r)`, `radians(d)`       | transforms radians to degrees and vice versa
+| `pi()`                           | returns π | 
+| `abs(x)`                         | returns absolute value |
+| `floor(x)`, `ceil(x)`            | return floor and ceil value of given `x` |
+| `round(x, n)` | rounds given value `x` to scale `n` |
+| `exp(x)`, `ln(x)`, `log10(x)`, `log2(x)` | math functions e<sup>x</sup>, ln(x), lg<sub>10</sub>(x), lg<sub>2</sub>(x)|
+| pow(x, n), power(x, n)           | calculates x<sup>n</sup>  |
+
+
 
 (*) `[date]` is optional argument. If omitted current date is used. Otherwise can be either Date object or epoch or string representation of date parsed using one of the following formats: yyyy-MM-dd HH:mm:ss.SSS z, yyyy-MM-dd HH:mm:ss z, yyyy-MM-dd HH:mm:ss.SSS, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd HH:mm, yyyy-MM-dd
 
