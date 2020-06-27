@@ -935,6 +935,12 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         return new ListRecordSet(null, "system", "index_info", systemColumns(columns, sqlTypes), indexes);
     }
 
+    public List<List<?>> getIndexInfo() {
+        return getInfo("sindex-list:")
+                .map(p -> asList(p.getProperty("set"), p.getProperty("indexname"), p.getProperty("bin"), p.getProperty("type")))
+                .collect(toList());
+    }
+
     private ResultSetMetaData getMetadata(String namespace, String table) {
         return sqlsafe(() -> connection.createStatement().executeQuery(format("select * from %s.%s limit 1", namespace, table)).getMetaData());
     }

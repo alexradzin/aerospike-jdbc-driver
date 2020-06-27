@@ -183,10 +183,12 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                 );
             }
             ShowRetriever retriever = ShowRetriever.valueOf(name);
-            List<String> items = retriever.apply(md, schema);
-            String column = retriever.getColumnName();
-            Iterable<List<?>> rsItems = items.stream().map(Collections::singletonList).collect(toList());
-            ResultSet rs = new ListRecordSet(sqlStatement, schema, null, singletonList(DATA.create(null, null, column, column)), rsItems);
+            ResultSet rs = new ListRecordSet(
+                    sqlStatement,
+                    schema,
+                    null,
+                    retriever.columns(),
+                    retriever.apply(md, schema));
             return client -> rs;
         });
     }
