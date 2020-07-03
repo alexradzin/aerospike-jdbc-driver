@@ -8,6 +8,7 @@ import com.nosqldriver.util.FunctionManager;
 
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -15,6 +16,7 @@ import java.util.function.BiFunction;
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.emptyKeyRecordExtractor;
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordDataExtractor;
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordKeyExtractor;
+import static com.nosqldriver.aerospike.sql.SpecialField.PK;
 
 
 public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
@@ -22,10 +24,10 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
     private Iterator<KeyRecord> it;
     private KeyRecord currentRecord;
 
-    public ResultSetOverAerospikeRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, RecordSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, boolean pk) {
+    public ResultSetOverAerospikeRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, RecordSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, Collection<SpecialField> specialFields) {
         super(statement, schema, table, columns,
-                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(pk ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, pk),
-                pk);
+                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, specialFields),
+                specialFields);
         this.rs = rs;
     }
 

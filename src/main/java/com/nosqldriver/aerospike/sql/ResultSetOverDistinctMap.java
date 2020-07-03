@@ -12,6 +12,7 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,15 +53,15 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     private boolean nextResult = false;
 
 
-    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, boolean pk) {
+    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, Collection<SpecialField> specialFields) {
         super(statement, schema, table, columns, rs, new CompositeTypeDiscoverer(
-                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor, functionManager, pk),
+                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor, functionManager, specialFields),
                 columns1 -> {
                     columns1.stream().filter(c -> c.getName().startsWith("count(")).forEach(c -> c.withType(Types.BIGINT));
                     columns1.stream().filter(c -> !c.getName().contains("count(") && c.getName().contains("(")).forEach(c -> c.withType(Types.DOUBLE));
                     return columns1;
                 }),
-                pk);
+                specialFields);
     }
 
     @Override

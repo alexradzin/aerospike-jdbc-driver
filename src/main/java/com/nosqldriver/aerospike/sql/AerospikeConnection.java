@@ -29,12 +29,12 @@ import java.sql.SQLXML;
 import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.sql.ResultSet.CLOSE_CURSORS_AT_COMMIT;
@@ -62,7 +62,8 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     private final FunctionManager functionManager;
     private static final String CUSTOM_FUNCTION_PREFIX = "custom.function.";
     private static final int CUSTOM_FUNCTION_PREFIX_LENGTH = CUSTOM_FUNCTION_PREFIX.length();
-    private final boolean getPk;
+    //private final boolean getPk;
+    private final Collection<SpecialField> specialFields;
 
     @VisibleForPackage
     AerospikeConnection(String url, Properties props) {
@@ -77,7 +78,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
         FunctionManager fm = new FunctionManager(getMetaData());
         functionManager = init(fm, info);
         registerScript("stats", "distinct", "groupby");
-        getPk = Stream.of(policyProvider.getQueryPolicy(), policyProvider.getBatchPolicy(), policyProvider.getScanPolicy()).anyMatch(p -> p.sendKey);
+        specialFields = SpecialField.specialFields(policyProvider);
     }
 
     private void registerScript(String ... names) {
@@ -254,7 +255,7 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
         validateResultSetParameters(resultSetType, resultSetConcurrency, resultSetHoldability);
-        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql, keyRecordFetcherFactory, functionManager, getPk);
+        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql, keyRecordFetcherFactory, functionManager, specialFields);
     }
 
     @Override

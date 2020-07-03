@@ -7,22 +7,24 @@ import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.query.KeyRecord;
 import com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory;
 import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeRecords;
+import com.nosqldriver.aerospike.sql.SpecialField;
 import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.util.FunctionManager;
 
 import java.sql.ResultSet;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.IntStream;
 
 public class AerospikeBatchQueryByPk extends AerospikeQuery<Key[], BatchPolicy, KeyRecord> {
 
-    public AerospikeBatchQueryByPk(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Key[] keys, BatchPolicy policy, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, boolean pk) {
-        super(sqlStatement, schema, set, columns, keys, policy, keyRecordFetcherFactory, functionManager, pk);
+    public AerospikeBatchQueryByPk(java.sql.Statement sqlStatement, String schema, String set, List<DataColumn> columns, Key[] keys, BatchPolicy policy, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, Collection<SpecialField> specialFields) {
+        super(sqlStatement, schema, set, columns, keys, policy, keyRecordFetcherFactory, functionManager, specialFields);
     }
 
     @Override
     public ResultSet apply(IAerospikeClient client) {
-        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, zip(criteria, client.get(policy, criteria)), keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set), functionManager, pk);
+        return new ResultSetOverAerospikeRecords(statement, schema, set, columns, zip(criteria, client.get(policy, criteria)), keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set), functionManager, specialFields);
     }
 
 

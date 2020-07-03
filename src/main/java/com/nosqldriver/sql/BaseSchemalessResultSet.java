@@ -1,5 +1,6 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.aerospike.sql.SpecialField;
 import com.nosqldriver.util.ThrowingBiFunction;
 import com.nosqldriver.util.ThrowingSupplier;
 
@@ -62,7 +63,7 @@ public abstract class BaseSchemalessResultSet<R> extends WarningsHolder implemen
     private final TypeDiscoverer typeDiscoverer;
     private volatile ResultSetMetaData metadata = null;
     private final List<DataColumn> columnsForMetadata;
-    protected final boolean pk;
+    protected final Collection<SpecialField> specialFields;
 
     private static final Map<Class, Function<Object[], Object[]>> collectionTransformers = new HashMap<>();
     static {
@@ -72,13 +73,13 @@ public abstract class BaseSchemalessResultSet<R> extends WarningsHolder implemen
 
 
 
-    protected BaseSchemalessResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer, boolean pk) {
+    protected BaseSchemalessResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer, Collection<SpecialField> specialFields) {
         this.statement = statement;
         this.schema = schema;
         this.table = table;
         this.columns = Collections.unmodifiableList(columns);
         this.typeDiscoverer = typeDiscoverer;
-        this.pk = pk;
+        this.specialFields = specialFields;
 
         columnsForMetadata = columns.stream().anyMatch(c -> rolesForMetadata.contains(c.getRole())) ?
             columns :

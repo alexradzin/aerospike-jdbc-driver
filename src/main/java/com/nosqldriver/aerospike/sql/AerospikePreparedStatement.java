@@ -39,6 +39,7 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +50,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.emptyKeyRecordExtractor;
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordDataExtractor;
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordKeyExtractor;
+import static com.nosqldriver.aerospike.sql.SpecialField.PK;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.PreparedStatementUtil.parseParameters;
 import static java.lang.String.format;
@@ -64,7 +66,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
     private final TypeDiscoverer discoverer;
     private final FunctionManager functionManager;
 
-    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, boolean pk) throws SQLException {
+    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, Collection<SpecialField> specialFields) throws SQLException {
         super(client, connection, schema, policyProvider, functionManager);
         this.sql = sql;
         int n = parseParameters(sql, 0).getValue();
@@ -75,9 +77,9 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
         this.functionManager = functionManager;
         discoverer = new GenericTypeDiscoverer<>(
                 keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema.get(), set),
-                new CompositeKeyRecordExtractor(pk ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor),
+                new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor),
                 this.functionManager,
-                pk);
+                specialFields);
     }
 
     @Override

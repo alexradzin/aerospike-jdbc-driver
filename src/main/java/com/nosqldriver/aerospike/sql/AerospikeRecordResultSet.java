@@ -9,18 +9,20 @@ import com.nosqldriver.util.ValueExtractor;
 
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.nosqldriver.aerospike.sql.SpecialField.PK;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 
 abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<KeyRecord> {
     private final ValueExtractor valueExtractor = new ValueExtractor();
 
-    protected AerospikeRecordResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer, boolean pk) {
-        super(statement, schema, table, columns, typeDiscoverer, pk);
+    protected AerospikeRecordResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer, Collection<SpecialField> specialFields) {
+        super(statement, schema, table, columns, typeDiscoverer, specialFields);
     }
 
     @Override
@@ -77,7 +79,7 @@ abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<KeyRecor
 
     private Map<String, Object> toMap(KeyRecord record) {
         Map<String, Object> data = record != null && record.record != null && record.record.bins != null ? record.record.bins : new HashMap<>();
-        if (pk) {
+        if (specialFields.contains(PK)) {
             data.put("PK", Optional.ofNullable(record.key.userKey).map(Value::getObject).orElse(null));
         }
         return data;

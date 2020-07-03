@@ -8,29 +8,31 @@ import com.nosqldriver.util.FunctionManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.BiFunction;
 
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.emptyKeyRecordExtractor;
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordDataExtractor;
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordKeyExtractor;
+import static com.nosqldriver.aerospike.sql.SpecialField.PK;
 import static java.util.Arrays.asList;
 
 public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
     private final KeyRecord[] records;
     private int currentIndex = -1;
 
-    public ResultSetOverAerospikeRecords(Statement statement, String schema, String table, List<DataColumn> columns, KeyRecord[] records, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, boolean pk) {
+    public ResultSetOverAerospikeRecords(Statement statement, String schema, String table, List<DataColumn> columns, KeyRecord[] records, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, Collection<SpecialField> specialFields) {
         super(
                 statement,
                 schema,
                 table,
                 columns,
                 Arrays.stream(records).anyMatch(record -> record.record != null) ?
-                        new GenericTypeDiscoverer<>((c, t) -> asList(records), new CompositeKeyRecordExtractor(pk ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, pk) :
-                        new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(pk ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, pk),
+                        new GenericTypeDiscoverer<>((c, t) -> asList(records), new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, specialFields) :
+                        new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, specialFields),
 
-                pk);
+                specialFields);
         this.records = Arrays.stream(records).filter(record -> record.record != null).toArray(KeyRecord[]::new);
     }
 

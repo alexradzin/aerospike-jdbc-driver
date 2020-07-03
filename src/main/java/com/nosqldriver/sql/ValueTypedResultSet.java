@@ -2,13 +2,14 @@ package com.nosqldriver.sql;
 
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
 import java.util.List;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
 
 abstract class ValueTypedResultSet<R> extends BaseSchemalessResultSet<R> {
     protected ValueTypedResultSet(Statement statement, String schema, String table, List<DataColumn> columns, TypeDiscoverer typeDiscoverer) {
-        super(statement, schema, table, columns, typeDiscoverer, false);
+        super(statement, schema, table, columns, typeDiscoverer, Collections.emptySet());
     }
 
     @Override

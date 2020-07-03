@@ -14,6 +14,7 @@ import com.nosqldriver.util.FunctionManager;
 
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -23,6 +24,7 @@ import java.util.function.Function;
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.emptyKeyRecordExtractor;
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordDataExtractor;
 import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordKeyExtractor;
+import static com.nosqldriver.aerospike.sql.SpecialField.PK;
 import static java.util.Collections.emptyMap;
 import static java.util.Optional.ofNullable;
 
@@ -32,13 +34,13 @@ public class ResultSetOverAerospikeScan extends BaseSchemalessResultSet<KeyRecor
     private final BlockingQueue<KeyRecord> queue = new ArrayBlockingQueue<>(10);
     private static final KeyRecord barrier = new KeyRecord(new Key("done", "done", "done"), new Record(emptyMap(), 0, 0));
 
-    public ResultSetOverAerospikeScan(IAerospikeClient client, Statement statement, String schema, String table, List<DataColumn> columns, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, boolean pk) {
+    public ResultSetOverAerospikeScan(IAerospikeClient client, Statement statement, String schema, String table, List<DataColumn> columns, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, Collection<SpecialField> specialFields) {
         super(statement,
                 schema,
                 table,
                 columns,
-                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(pk ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, pk),
-                pk);
+                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, specialFields),
+                specialFields);
         this.callback = (key, record) -> enqueue(new KeyRecord(key, record));
         new Thread(() -> {
             client.scanAll(new ScanPolicy(), schema, table, callback);
@@ -63,7 +65,7 @@ public class ResultSetOverAerospikeScan extends BaseSchemalessResultSet<KeyRecor
 
     @Override
     protected Object getValue(KeyRecord record, String label) {
-        return "PK".equals(label) ? pk ? ofNullable(record.key.userKey).map(Value::getObject).orElse(null) : record.key : record.record.getValue(label);
+        return "PK".equals(label) ? specialFields.contains(PK) ? ofNullable(record.key.userKey).map(Value::getObject).orElse(null) : record.key : record.record.getValue(label);
     }
 
     private <T> T getValue(KeyRecord record, String label, Function<Value, T> keyGetter, BiFunction<Record, String, T> valueGetter) {

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -114,10 +115,10 @@ class GenericTypeDiscovererTest {
 
 
     private TypeDiscoverer createTypeDiscoverer(int limit) {
-        return new GenericTypeDiscoverer<>(recordsFetcher, recordDataExtractor, functionManager, limit, false);
+        return new GenericTypeDiscoverer<>(recordsFetcher, recordDataExtractor, functionManager, limit, emptySet());
     }
 
     private TypeDiscoverer createTypeDiscoverer() {
-        return new GenericTypeDiscoverer<>(recordsFetcher, keyRecord -> keyRecord.record.bins, functionManager, false);
+        return new GenericTypeDiscoverer<>(recordsFetcher, keyRecord -> keyRecord.record.bins, functionManager, emptySet());
     }
 }

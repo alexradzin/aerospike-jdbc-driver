@@ -1,5 +1,6 @@
 package com.nosqldriver.sql;
 
+import com.nosqldriver.aerospike.sql.SpecialField;
 import com.nosqldriver.util.FunctionManager;
 
 import java.lang.reflect.Method;
@@ -28,8 +29,8 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
 
 public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
-    private BiFunction<String, String, Iterable<R>> recordsFetcher;
-    private Function<R, Map<String, Object>> toMap;
+    private final BiFunction<String, String, Iterable<R>> recordsFetcher;
+    private final Function<R, Map<String, Object>> toMap;
     private final FunctionManager functionManager;
 
     private static final Predicate<Method> getter = method -> {
@@ -41,19 +42,19 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
         return name.substring(0, 1).toLowerCase() + name.substring(1);
     };
     private final int limit;
-    private final boolean pk;
+    private final Collection<SpecialField> specialFields;
 
 
-    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap, FunctionManager functionManager, boolean pk) {
-        this(recordsFetcher, toMap, functionManager, 1, pk);
+    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap, FunctionManager functionManager, Collection<SpecialField> specialFields) {
+        this(recordsFetcher, toMap, functionManager, 1, specialFields);
     }
 
-    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap, FunctionManager functionManager, int limit, boolean pk) {
+    public GenericTypeDiscoverer(BiFunction<String, String, Iterable<R>> recordsFetcher, Function<R, Map<String, Object>> toMap, FunctionManager functionManager, int limit, Collection<SpecialField> specialFields) {
         this.recordsFetcher = recordsFetcher;
         this.toMap = toMap;
         this.functionManager = functionManager;
         this.limit = limit;
-        this.pk = pk;
+        this.specialFields = specialFields;
     }
 
     @Override
@@ -64,13 +65,12 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
         List<DataColumn> subColumns = new ArrayList<>();
         Map<String, List<DataColumn>> dataColumnsByTable = columns.stream().collect(Collectors.groupingBy(c -> c.getCatalog() + "." + c.getTable()));
         Map<String, List<DataColumn>> columnsByTable = new HashMap<>(dataColumnsByTable);
-        if (pk && all) {
+        if (specialFields.contains(SpecialField.PK) && all) {
             int nColumns = dataColumnsByTable.size();
             Map<String, List<DataColumn>> pkColumnsByTable = dataColumnsByTable.keySet().stream().map(catalogAndTable -> catalogAndTable.split("\\."))
                     .map(catalogAndTable -> PK.create(catalogAndTable[0], catalogAndTable[1], "PK", nColumns == 1 ? "PK" : catalogAndTable[1] + ".PK"))
                     .collect(Collectors.groupingBy(c -> c.getCatalog() + "." + c.getTable()));
             columnsByTable.putAll(pkColumnsByTable);
-
         }
         for (Map.Entry<String, List<DataColumn>> ctd : columnsByTable.entrySet()) {
             String[] ct = ctd.getKey().split("\\.");
