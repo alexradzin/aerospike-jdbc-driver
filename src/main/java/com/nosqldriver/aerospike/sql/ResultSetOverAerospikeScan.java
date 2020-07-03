@@ -39,7 +39,7 @@ public class ResultSetOverAerospikeScan extends BaseSchemalessResultSet<KeyRecor
                 schema,
                 table,
                 columns,
-                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, specialFields),
+                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(KeyRecordFetcherFactory.extractors(specialFields)), functionManager, specialFields),
                 specialFields);
         this.callback = (key, record) -> enqueue(new KeyRecord(key, record));
         new Thread(() -> {

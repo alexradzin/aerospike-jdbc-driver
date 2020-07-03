@@ -105,11 +105,15 @@ Policy related parameters look like: `policy.POLICY_TYPE.PROPERTY_NAME=PROPERTY_
 Some policies have the same properties. For example `socketTimeout`, `totalTimeout`, `replica` etc. are relevant for most policies. If you want to set  the same value for specific property of all policies use `*` instead of policy type: `policy.*.socketTimeout=15000`
 
 ## Primary Key (PK)
-Primary key in relational database is a constraint applied to "regular" data column or several columns. Primary key (or just a key) in no-sql databases like Aerospike is special entity that is treated separately from the data. Aerospike JDBC driver hides these differences as much as it is possible emulating behavior of a relational DB. However there are some limitations that should be taking into account. 
+Primary key in a relational database is a constraint applied to "regular" data column or several columns. Primary key (or just a key) in no-sql databases like Aerospike is special entity that is treated separately from the data. Aerospike JDBC driver hides these differences as much as it is possible emulating behavior of a relational DB. However there are some limitations that should be taking into account. 
 
 Aerospike does not operate with key itself but with its digest that is always calculated. By default the key value is not stored in the DB at all and therefore cannot be retrieved later. If you want to store key in Aerospike set `sendKey` property of `WritePolicy` to `true` (it is `false` by default). The corresponding property of this driver is `policy.write.sendKey=true`. If you want to retrieve key from the DB you have to use the same property to one of `ReadPolicy`, `QueryPolicy`, `ScanPolicy` or `BatchPolicy` depending on the API you are using. This driver hides from you details of the API used under the hood, if you always want to read the keys set property `sendKey=true` to all policies used for reading (read, query, scan, batch). 
 
 If keys should be always available the easiest way is to supply property `policy.*.sendKey=true`. This statement will be applied to all relevant policies, so the key will be always stored to and retrieved from the DB. 
+
+### Primary Key Digest (PK_DIGEST)
+Even if we do not store or retrieve primary key we can read its digest. Use special field `PK_DIGEST` for this purpose.
+This feature can be enabled via parameter `policy.driver.sendKeyDigest=true`.   
 
 ## Database schema
 Relational databases hold meta-data that describe the database structure (catalogs, schemas, tables, columns etc). Aerospike is a schema-less DB. Its tables are called sets and columns are called bins. Set holds any nuber of rows. Each row can hold any number of bins of any name and type. However very often people just hold the DB schema in the application layer and in fact each row has the same bins.

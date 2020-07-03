@@ -1,6 +1,5 @@
 package com.nosqldriver.aerospike.sql;
 
-import com.aerospike.client.Value;
 import com.aerospike.client.query.KeyRecord;
 import com.nosqldriver.sql.BaseSchemalessResultSet;
 import com.nosqldriver.sql.DataColumn;
@@ -13,9 +12,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.nosqldriver.aerospike.sql.SpecialField.PK;
+import static com.nosqldriver.aerospike.sql.SpecialField.PK_DIGEST;
 import static com.nosqldriver.sql.TypeTransformer.cast;
 
 abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<KeyRecord> {
@@ -79,8 +78,13 @@ abstract class AerospikeRecordResultSet extends BaseSchemalessResultSet<KeyRecor
 
     private Map<String, Object> toMap(KeyRecord record) {
         Map<String, Object> data = record != null && record.record != null && record.record.bins != null ? record.record.bins : new HashMap<>();
-        if (specialFields.contains(PK)) {
-            data.put("PK", Optional.ofNullable(record.key.userKey).map(Value::getObject).orElse(null));
+        if (record != null) {
+            if (specialFields.contains(PK) && record.key.userKey != null) {
+                data.put("PK", record.key.userKey.getObject());
+            }
+            if (specialFields.contains(PK_DIGEST)) {
+                data.put("PK_DIGEST", record.key.digest);
+            }
         }
         return data;
     }

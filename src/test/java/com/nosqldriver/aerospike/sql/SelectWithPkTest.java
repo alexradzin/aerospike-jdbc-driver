@@ -1,5 +1,6 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.aerospike.client.Key;
 import com.aerospike.client.policy.WritePolicy;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -25,9 +26,11 @@ import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.PK;
 import static java.lang.String.format;
 import static java.sql.Types.BIGINT;
+import static java.sql.Types.BLOB;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,6 +38,10 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
 
 class SelectWithPkTest {
     private static Connection queryKeyConn;
+    private static Connection testConn;
+    private static Connection writeKeyConn;
+    private static Connection queryKeyDigestConn;
+
     @BeforeAll
     static void init() throws SQLException {
         dropAll();
@@ -43,6 +50,9 @@ class SelectWithPkTest {
         TestDataUtils.writeBeatles(p);
         TestDataUtils.writeMainPersonalInstruments(p);
         queryKeyConn = DriverManager.getConnection(aerospikeTestUrl + "?policy.query.sendKey=true");
+        writeKeyConn = DriverManager.getConnection(aerospikeTestUrl + "?policy.write.sendKey=true");
+        queryKeyDigestConn = DriverManager.getConnection(aerospikeTestUrl + "?policy.driver.sendKeyDigest=true");
+        testConn = getTestConnection();
     }
 
     static void dropAll() {
@@ -178,7 +188,7 @@ class SelectWithPkTest {
             "select PK, id, first_name, last_name, year_of_birth, kids_count from people limit 0",
     })
     void metadataOneTableWithUnknownPk(String sql) throws SQLException {
-        executeQuery(getTestConnection(), sql,
+        executeQuery(testConn, sql,
                 PK.create(NAMESPACE, PEOPLE, "PK", "PK"),
                 DATA.create(NAMESPACE, PEOPLE, "id", "id").withType(BIGINT),
                 DATA.create(NAMESPACE, PEOPLE, "first_name", "first_name").withType(VARCHAR),
@@ -245,8 +255,7 @@ class SelectWithPkTest {
 
     @Test
     void insertAndSelect() throws SQLException {
-        Connection writeConn = DriverManager.getConnection(aerospikeTestUrl + "?policy.write.sendKey=true");
-        assertFalse(writeConn.createStatement().execute("insert into data (PK, val) values ('hello', 'bye')"));
+        assertFalse(writeKeyConn.createStatement().execute("insert into data (PK, val) values ('hello', 'bye')"));
         queryKeyConn.createStatement().executeQuery("select * from data where PK='hello'");
 
         try(ResultSet rs = executeQuery(queryKeyConn, "select * from data where PK='hello'",
@@ -260,6 +269,39 @@ class SelectWithPkTest {
         }
     }
 
+    @Test
+    void keyDigestWriteRead() throws SQLException {
+        keyDigest("wr_key", writeKeyConn, queryKeyDigestConn, new Key(NAMESPACE, TestDataUtils.DATA, "wr_key").digest);
+    }
+
+    @Test
+    void keyDigestWriteNotRead() throws SQLException {
+        keyDigest("w_key", writeKeyConn, testConn, null);
+    }
+
+    @Test
+    void keyDigestNotWriteNotRead() throws SQLException {
+        keyDigest("key", testConn, testConn, null);
+    }
+
+    @Test
+    void keyDigestNotWriteRead() throws SQLException {
+        keyDigest("r_key", testConn, queryKeyDigestConn, new Key(NAMESPACE, TestDataUtils.DATA, "r_key").digest);
+    }
+
+   void keyDigest(String key, Connection writeConn, Connection readConn, byte[] expectedDigest) throws SQLException {
+        assertFalse(writeConn.createStatement().execute(format("insert into data (PK, val) values ('%s', 'bye')", key)));
+        int keyType = expectedDigest == null ? 0 : BLOB;
+        try(ResultSet rs = executeQuery(readConn, format("select PK_DIGEST, val from data where PK='%s'", key),
+                PK.create(NAMESPACE, TestDataUtils.DATA, "PK_DIGEST", "PK_DIGEST").withType(keyType),
+                DATA.create(NAMESPACE, TestDataUtils.DATA, "val", "val").withType(VARCHAR)
+        )) {
+            assertTrue(rs.next());
+            assertArrayEquals(expectedDigest, rs.getBytes("PK_DIGEST"));
+            assertEquals("bye", rs.getString("val"));
+            assertFalse(rs.next());
+        }
+    }
 
     private void metadataAllFieldsOneTableWithPk(Connection conn, String sql) throws SQLException {
         executeQuery(conn, sql,

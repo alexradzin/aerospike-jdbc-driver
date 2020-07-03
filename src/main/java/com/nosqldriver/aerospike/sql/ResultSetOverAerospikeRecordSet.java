@@ -13,11 +13,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiFunction;
 
-import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.emptyKeyRecordExtractor;
-import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordDataExtractor;
-import static com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory.keyRecordKeyExtractor;
-import static com.nosqldriver.aerospike.sql.SpecialField.PK;
-
 
 public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
     private final RecordSet rs;
@@ -26,7 +21,7 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
 
     public ResultSetOverAerospikeRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, RecordSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, Collection<SpecialField> specialFields) {
         super(statement, schema, table, columns,
-                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, specialFields),
+                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(KeyRecordFetcherFactory.extractors(specialFields)), functionManager, specialFields),
                 specialFields);
         this.rs = rs;
     }

@@ -29,7 +29,7 @@ public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
                 table,
                 columns,
                 Arrays.stream(records).anyMatch(record -> record.record != null) ?
-                        new GenericTypeDiscoverer<>((c, t) -> asList(records), new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, specialFields) :
+                        new GenericTypeDiscoverer<>((c, t) -> asList(records), new CompositeKeyRecordExtractor(KeyRecordFetcherFactory.extractors(specialFields)), functionManager, specialFields) :
                         new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, specialFields),
 
                 specialFields);

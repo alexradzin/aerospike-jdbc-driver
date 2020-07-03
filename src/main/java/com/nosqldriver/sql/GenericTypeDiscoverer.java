@@ -16,6 +16,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.DATA;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
@@ -65,12 +66,8 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
         List<DataColumn> subColumns = new ArrayList<>();
         Map<String, List<DataColumn>> dataColumnsByTable = columns.stream().collect(Collectors.groupingBy(c -> c.getCatalog() + "." + c.getTable()));
         Map<String, List<DataColumn>> columnsByTable = new HashMap<>(dataColumnsByTable);
-        if (specialFields.contains(SpecialField.PK) && all) {
-            int nColumns = dataColumnsByTable.size();
-            Map<String, List<DataColumn>> pkColumnsByTable = dataColumnsByTable.keySet().stream().map(catalogAndTable -> catalogAndTable.split("\\."))
-                    .map(catalogAndTable -> PK.create(catalogAndTable[0], catalogAndTable[1], "PK", nColumns == 1 ? "PK" : catalogAndTable[1] + ".PK"))
-                    .collect(Collectors.groupingBy(c -> c.getCatalog() + "." + c.getTable()));
-            columnsByTable.putAll(pkColumnsByTable);
+        if (all) {
+            Stream.of(SpecialField.PK, SpecialField.PK_DIGEST).filter(specialFields::contains).forEach(f -> addSpecialColumn(dataColumnsByTable, columnsByTable, f));
         }
         for (Map.Entry<String, List<DataColumn>> ctd : columnsByTable.entrySet()) {
             String[] ct = ctd.getKey().split("\\.");
@@ -113,6 +110,15 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
         }
 
         return subColumns.isEmpty() ? mainColumns : concat(mainColumns.stream(), subColumns.stream()).collect(toList());
+    }
+
+    private void addSpecialColumn(Map<String, List<DataColumn>> dataColumnsByTable, Map<String, List<DataColumn>> columnsByTable, SpecialField specialField) {
+        int nColumns = dataColumnsByTable.size();
+        String name = specialField.name();
+        Map<String, List<DataColumn>> pkColumnsByTable = dataColumnsByTable.keySet().stream().map(catalogAndTable -> catalogAndTable.split("\\."))
+                .map(catalogAndTable -> PK.create(catalogAndTable[0], catalogAndTable[1], name, nColumns == 1 ? name : catalogAndTable[1] + "." + name))
+                .collect(Collectors.groupingBy(c -> c.getCatalog() + "." + c.getTable()));
+        columnsByTable.putAll(pkColumnsByTable);
     }
 
     private Collection<DataColumn> extractFieldTypes(DataColumn column, Class<?> clazz) {

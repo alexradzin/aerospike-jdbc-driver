@@ -83,12 +83,15 @@ public class TypeTransformer {
 
         typeTransformers.put(URL.class, o -> {
             try {
-                return o instanceof URL ? o : new URL((String)o);
+                return o == null ? null : o instanceof URL ? o : new URL((String)o);
             } catch (MalformedURLException e) {
                 return SneakyThrower.sneakyThrow(new SQLException(e.getMessage(), e));
             }
         });
         typeTransformers.put(byte[].class, o -> {
+            if (o == null) {
+                return null;
+            }
             if (o instanceof String) {
                 return ((String)o).getBytes();
             }

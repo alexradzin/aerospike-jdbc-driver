@@ -77,7 +77,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
         this.functionManager = functionManager;
         discoverer = new GenericTypeDiscoverer<>(
                 keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema.get(), set),
-                new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor),
+                new CompositeKeyRecordExtractor(KeyRecordFetcherFactory.extractors(specialFields)),
                 this.functionManager,
                 specialFields);
     }
