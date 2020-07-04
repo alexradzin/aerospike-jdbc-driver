@@ -3,6 +3,7 @@ package com.nosqldriver.util;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -13,7 +14,7 @@ public class ValueExtractor {
     private static final String[] getterPrefixes = {"get", "is"};
 
     public Object getValue(Object obj, String key) {
-        Collection<String> path = stream(key.replace("]", "").split("[\\[.]")).filter(p -> !"".equals(p)).collect(toList());
+        Collection<String> path = "".equals(key) ? Collections.singleton("") : stream(key.replace("]", "").split("[\\[.]")).filter(p -> !"".equals(p)).collect(toList());
 
         Object value = obj;
         for (String p : path) {

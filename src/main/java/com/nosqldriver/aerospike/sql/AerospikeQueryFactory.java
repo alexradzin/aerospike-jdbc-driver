@@ -109,6 +109,7 @@ import static com.nosqldriver.sql.PreparedStatementUtil.PS_PLACEHOLDER_PREFIX;
 import static com.nosqldriver.sql.PreparedStatementUtil.parseParameters;
 import static com.nosqldriver.sql.SqlLiterals.operatorKey;
 import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
+import static com.nosqldriver.util.IOUtils.stripQuotes;
 import static java.lang.String.format;
 import static java.util.Collections.singletonMap;
 import static java.util.Optional.ofNullable;
@@ -153,11 +154,11 @@ public class AerospikeQueryFactory {
                     queries.setSkipDuplicates(insert.isModifierIgnore());
                     Table table = insert.getTable();
                     if (table.getSchemaName() != null) {
-                        queries.setSchema(table.getSchemaName());
+                        queries.setSchema(stripQuotes(table.getSchemaName()));
                     }
-                    queries.setSetName(table.getName(), ofNullable(table.getAlias()).map(Alias::getName).orElse(null));
-                    set = table.getName();
-                    insert.getColumns().forEach(column -> queries.addName(column.getColumnName()));
+                    queries.setSetName(stripQuotes(table.getName()), ofNullable(table.getAlias()).map(a -> stripQuotes(a.getName())).orElse(null));
+                    set = stripQuotes(table.getName());
+                    insert.getColumns().forEach(column -> queries.addName(stripQuotes(column.getColumnName())));
 
                     // Trick to support both single and multi expression list.
                     // The row data is accumulated in values. queries.addData() copies collection of values to other list
@@ -236,7 +237,7 @@ public class AerospikeQueryFactory {
                 public void visit(CreateIndex createIndex) {
                     createIndex.getIndex().getColumnsNames();
                     String columnName = createIndex.getIndex().getColumnsNames().get(0); // todo : assert if length is not  1
-                    set = createIndex.getTable().getName();
+                    set = stripQuotes(createIndex.getTable().getName());
                     String fullIndexName = format("%s.%s.%s.%s.%s", createIndex.getIndex().getType(), schema, set, columnName, createIndex.getIndex().getName());
                     indexes.add(fullIndexName);
                 }
@@ -244,7 +245,7 @@ public class AerospikeQueryFactory {
                 @Override
                 public void visit(Drop drop) {
                     set = drop.getName().getSchemaName();
-                    String fullIndexName = format("%s.%s.%s", schema, set, drop.getName().getName());
+                    String fullIndexName = format("%s.%s.%s", schema, set, stripQuotes(drop.getName().getName()));
                     indexes.add(fullIndexName);
                 }
             });
@@ -306,8 +307,8 @@ public class AerospikeQueryFactory {
                                  if (tableName.getSchemaName() != null) {
                                      queries.setSchema(tableName.getSchemaName());
                                  }
-                                 queries.setSetName(tableName.getName(), ofNullable(tableName.getAlias()).map(Alias::getName).orElse(null));
-                                 set = tableName.getName();
+                                 queries.setSetName(stripQuotes(tableName.getName()), ofNullable(tableName.getAlias()).map(a -> stripQuotes(a.getName())).orElse(null));
+                                 set = stripQuotes(tableName.getName());
                              }
 
                              @Override
@@ -341,10 +342,10 @@ public class AerospikeQueryFactory {
                                     @Override
                                     public void visit(Table tableName) {
                                         if (tableName.getSchemaName() != null) {
-                                            currentJoin.setSchema(tableName.getSchemaName());
+                                            currentJoin.setSchema(stripQuotes(tableName.getSchemaName()));
                                         }
-                                        String joinedSetAlias = ofNullable(tableName.getAlias()).map(Alias::getName).orElse(null);
-                                        updateJoinedQuery(queries, currentJoin, tableName.getName(), joinedSetAlias);
+                                        String joinedSetAlias = ofNullable(tableName.getAlias()).map(a -> stripQuotes(a.getName())).orElse(null);
+                                        updateJoinedQuery(queries, currentJoin, stripQuotes(tableName.getName()), joinedSetAlias);
                                     }
                                 });
                             } else if (joinFrom instanceof SubSelect) {
@@ -371,8 +372,8 @@ public class AerospikeQueryFactory {
                             @Override
                             public void visit(Column column) {
                                 //System.out.println("join visit(Column column): " + column);
-                                String table = column.getTable().getName();
-                                String columnName = column.getColumnName();
+                                String table = stripQuotes(column.getTable().getName());
+                                String columnName = stripQuotes(column.getColumnName());
                                 if (Objects.equals(queries.getSetName(), table) || Objects.equals(queries.getSetAlias(), table)) {
                                     queries.getColumnType(column).addColumn(column, null, false, null, null);
                                     currentJoin.addPredExp(new ValueRefPredExp(table, columnName));
@@ -496,8 +497,8 @@ public class AerospikeQueryFactory {
                         public void visit(Column column) {
                             //System.out.println("visit(Column column): " + column);
                             if (operation.getColumn() == null) {
-                                String table = ofNullable(column.getTable()).map(Table::getName).orElse(null);
-                                String name = column.getColumnName();
+                                String table = ofNullable(column.getTable()).map(t -> stripQuotes(t.getName())).orElse(null);
+                                String name = stripQuotes(column.getColumnName());
                                 if (table == null) {
                                     // assume name is actually alias and try to retrieve real table and column name
                                     Optional<DataColumn> dc = queries.getColumnByAlias(name);
@@ -511,7 +512,7 @@ public class AerospikeQueryFactory {
                                 operation.setColumn(name);
                                 predExpsEmpty.set(queries.queries(operation.getTable()).getPredExps().isEmpty());
                             } else {
-                                operation.addValue(column.getColumnName());
+                                operation.addValue(stripQuotes(column.getColumnName()));
                                 lastValueType.set(String.class);
                                 queries.queries(operation.getTable()).addPredExp(PredExp.stringBin(operation.getColumn()));
                                 queries.queries(operation.getTable()).addPredExp(PredExp.stringValue(column.getColumnName()));
@@ -584,7 +585,7 @@ public class AerospikeQueryFactory {
                 }
 
                 if (plainSelect.getGroupBy() != null) {
-                    plainSelect.getGroupBy().getGroupByExpressions().forEach(e -> queries.addGroupField(((Column) e).getColumnName()));
+                    plainSelect.getGroupBy().getGroupByExpressions().forEach(e -> queries.addGroupField(stripQuotes(((Column) e).getColumnName())));
                 }
 
                 if (plainSelect.getHaving() != null) {
@@ -655,9 +656,9 @@ public class AerospikeQueryFactory {
                 public void visit(Delete delete) {
                     Table table = delete.getTable();
                     if (table != null) {
-                        tableName.set(table.getName());
+                        tableName.set(stripQuotes(table.getName()));
                         if (table.getSchemaName() != null) {
-                            schema.set(table.getSchemaName());
+                            schema.set(stripQuotes(table.getSchemaName()));
                         }
                     }
 
@@ -680,16 +681,16 @@ public class AerospikeQueryFactory {
                 @Override
                 public void visit(Update update) {
                     Table table = update.getTable();
-                    tableName.set(table.getName());
+                    tableName.set(stripQuotes(table.getName()));
                     if (table.getSchemaName() != null) {
-                        schema.set(table.getSchemaName());
+                        schema.set(stripQuotes(table.getSchemaName()));
                     }
 
                     List<String> columns = new ArrayList<>();
                     ExpressionVisitorAdapter columnNamesVisitor = new ExpressionVisitorAdapter() {
                         @Override
                         public void visit(Column column) {
-                            columns.add(column.getColumnName());
+                            columns.add(stripQuotes(column.getColumnName()));
                         }
                     };
                     update.getColumns().forEach(c -> c.accept(columnNamesVisitor));
@@ -754,7 +755,7 @@ public class AerospikeQueryFactory {
 
                             @Override
                             public void visit(Column column) {
-                                extractorRef.compareAndSet(null, record -> record.getValue(column.getColumnName()));
+                                extractorRef.compareAndSet(null, record -> record.getValue(stripQuotes(column.getColumnName())));
                             }
 
                             @Override
@@ -805,9 +806,9 @@ public class AerospikeQueryFactory {
                 @Override
                 public void visit(Truncate truncate) {
                     Table table = truncate.getTable();
-                    tableName.set(table.getName());
+                    tableName.set(stripQuotes(table.getName()));
                     if (table.getSchemaName() != null) {
-                        schema.set(table.getSchemaName());
+                        schema.set(stripQuotes(table.getSchemaName()));
                     }
                     truncateFlag.set(true);
                 }
@@ -967,7 +968,7 @@ public class AerospikeQueryFactory {
         }
 
         public void visit(Column col) {
-            column = col.getColumnName();
+            column = stripQuotes(col.getColumnName());
         }
         public void visit(LongValue value) {
             queryValues.add(value.getValue());

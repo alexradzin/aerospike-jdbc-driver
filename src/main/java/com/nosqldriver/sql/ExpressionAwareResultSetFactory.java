@@ -1,6 +1,7 @@
 package com.nosqldriver.sql;
 
 import com.nosqldriver.util.FunctionManager;
+import com.nosqldriver.util.IOUtils;
 
 import java.sql.ResultSet;
 import java.util.Arrays;
@@ -33,9 +34,10 @@ public class ExpressionAwareResultSetFactory {
     public Collection<String> getVariableNames(String expr) {
         return Arrays.stream(EXPRESSION_DELIMITERS.split(NUMBER.matcher(QUOTES.matcher(expr).replaceAll("")).replaceAll(" ")))
                 .filter(w -> !NUMBER.matcher(w).matches())
-                .filter(w -> !((w.startsWith("\"") && w.endsWith("\"")) || (w.startsWith("'") && w.endsWith("'"))))
+                .filter(w -> !(w.startsWith("'") && w.endsWith("'")))
                 .filter(w -> !functionNames.contains(w))
                 .filter(w -> !w.isEmpty())
+                .map(IOUtils::stripQuotes)
                 .collect(toCollection(LinkedHashSet::new));
     }
 

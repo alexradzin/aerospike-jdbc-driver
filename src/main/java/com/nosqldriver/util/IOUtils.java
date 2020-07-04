@@ -27,4 +27,8 @@ public class IOUtils {
         }
         return writer.toString();
     }
+
+    public static String stripQuotes(String s) {
+        return s == null ? null : s.replaceAll("^\"?(.*?)\"?$", "$1");
+    }
 }

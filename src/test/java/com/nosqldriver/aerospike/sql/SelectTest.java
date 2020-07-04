@@ -93,7 +93,7 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
  * For performance reasons the data is filled in the beginning of the test case.
  */
 class SelectTest {
-    private Connection testConn = getTestConnection();
+    private final Connection testConn = getTestConnection();
 
     @AfterEach
     void clean() {
@@ -578,11 +578,15 @@ class SelectTest {
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
     @ValueSource(strings = {
             "select first_name, year_of_birth from people",
+            "select \"first_name\", \"year_of_birth\" from \"people\"",
             "select people.first_name, people.year_of_birth from people",
             "select first_name, year_of_birth from people as p",
+            "select first_name, year_of_birth from people as \"p\"",
             "select p.first_name, year_of_birth from people as p",
             "select first_name, p.year_of_birth from people as p",
             "select p.first_name, p.year_of_birth from people as p",
+            "select \"x-y\".first_name, \"x-y\".year_of_birth from people as \"x-y\"",
+            "select \"first_name\", \"x-y\".\"year_of_birth\" from people as \"x-y\"",
             "select p.first_name, p.year_of_birth from people as p",
             "select * from (select first_name, year_of_birth from people)",
             "select first_name, year_of_birth from (select * from people)",
@@ -643,7 +647,7 @@ class SelectTest {
 
     @VisibleForPackage // visible for tests
     @SuppressWarnings("unused") // referenced from annotation VariableSource
-    private static Stream<Arguments> orderBy = Stream.of(
+    private static final Stream<Arguments> orderBy = Stream.of(
             Arguments.of("select * from people order by first_name", new String[] {"George", "John", "Paul", "Ringo"}),
             Arguments.of("select * from people order by year_of_birth, kids_count", new String[] {"John", "Ringo", "Paul", "George"}),
             Arguments.of("select * from people order by year_of_birth, kids_count desc", new String[] {"Ringo", "John", "Paul", "George"}),
@@ -664,7 +668,7 @@ class SelectTest {
 
     @VisibleForPackage // visible for tests
     @SuppressWarnings("unused") // referenced from annotation VariableSource
-    private static Stream<Arguments> notEqual = Stream.of(
+    private static final Stream<Arguments> notEqual = Stream.of(
             Arguments.of("select * from people where first_name != 'John'", new String[] {"George", "Paul", "Ringo"}),
             Arguments.of("select * from people where first_name <> 'John'", new String[] {"George", "Paul", "Ringo"}),
             Arguments.of("select * from people where id!=1", new String[] {"George", "Paul", "Ringo"}),
@@ -687,7 +691,7 @@ class SelectTest {
 
     @VisibleForPackage // visible for tests
     @SuppressWarnings("unused") // referenced from annotation VariableSource
-    private static Stream<Arguments> like = Stream.of(
+    private static final Stream<Arguments> like = Stream.of(
             Arguments.of("select * from people where first_name like 'John'", new String[] {"John"}),
             //Arguments.of("select * from people where id like '1'", new String[] {"John"}),    // works with JS and does not with Lua because Lua is more sensitive to variable type
             Arguments.of("select * from people where first_name like '%John'", new String[] {"John"}),
@@ -768,6 +772,23 @@ class SelectTest {
         assertEquals(1942, selectedPeople.get("Paul").intValue());
         assertEquals(1943, selectedPeople.get("George").intValue());
         assertEquals(1940, selectedPeople.get("Ringo").intValue());
+    }
+
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select concat(first_name, ' ', last_name) from people",
+            "select concat(first_name, ' ', last_name) from \"people\"",
+            "select concat(first_name, ' ', \"last_name\") from people",
+    })
+    void concatColumns(String sql) throws SQLException {
+        ResultSet rs = testConn.createStatement().executeQuery(sql);
+        Collection<String> expecteds = stream(beatles).map(p -> p.getFirstName() + " " + p.getLastName()).collect(Collectors.toSet());
+        Collection<String> actuals = new HashSet<>();
+        while (rs.next()) {
+            actuals.add(rs.getString(1));
+        }
+        assertEquals(expecteds, actuals);
     }
 
     @Test
@@ -1218,7 +1239,7 @@ class SelectTest {
 
     @VisibleForPackage // visible for tests
     @SuppressWarnings("unused") // referenced from annotation VariableSource
-    private static Stream<Arguments> selectByPk = Stream.of(
+    private static final Stream<Arguments> selectByPk = Stream.of(
             Arguments.of("select * from people where PK=?", new int[] {2}),
             Arguments.of("select * from people where PK!=?", new int[] {1, 3, 4}),
             Arguments.of("select * from people where PK<>?", new int[] {1, 3, 4})

@@ -148,12 +148,32 @@ The next issue is the export format. CSV format does not hold any schema informa
 *   show catalogs/schemas/tables/indexes
 
 ### Statements that will be supported in future
-*   drop table
 *   describe
 
 ### Statements that will not be supported
 *   create table. This operation is meaningless applicable to Aerospike that creates set once somebody writes to this set. 
 *   create/drop schema just cannot be implemented for Aerospike that requires static definition of namespaces using `aerospike.conf`.
+
+### Identifiers
+SQL identifier should follow the following rules: consist of Latin letters, digits and underscores (_) starting from a letter. If your identifier does not follow these rules wrap it with quotes. 
+
+For example:
+```sql
+slect name1 from data
+```
+Neither `name1` nor `data` should not be quoted. However:
+```sql
+slect "first name" from "100"
+```
+Here `first name` is quoted because  it contains space while `100` is quoted because it starts with a digit. 
+
+Even empty identifiers can be used:
+```sql
+insert into data_table (PK, "") values (1, 3.1415925)
+slect "" from data_table
+slect sin("") from data_table
+```
+Consequent double quotes in the example above indicate empty identifier. 
 
 ### Built-in Functions
 

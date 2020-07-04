@@ -32,7 +32,7 @@ class ScriptEngineWrapperTest {
         assertEquals("result", wrapped.eval("script", context));
         verify(engine, times(1)).eval("script", context);
         verify(wrapped, times(1)).unwrapResult("result");
-        verify(wrapped, times(1)).wrapScript("script");
+        verify(wrapped, times(1)).fixScript("script");
     }
 
     @Test
@@ -41,7 +41,7 @@ class ScriptEngineWrapperTest {
         assertEquals("result", wrapped.eval("script"));
         verify(engine, times(1)).eval("script");
         verify(wrapped, times(1)).unwrapResult("result");
-        verify(wrapped, times(1)).wrapScript("script");
+        verify(wrapped, times(1)).fixScript("script");
     }
 
     @Test
@@ -51,7 +51,7 @@ class ScriptEngineWrapperTest {
         assertEquals("result", wrapped.eval(reader, context));
         verify(engine, times(1)).eval("script", context);
         verify(wrapped, times(1)).unwrapResult("result");
-        verify(wrapped, times(1)).wrapScript("script");
+        verify(wrapped, times(1)).fixScript("script");
     }
 
     @Test
@@ -61,7 +61,7 @@ class ScriptEngineWrapperTest {
         assertEquals("result", wrapped.eval(reader));
         verify(engine, times(1)).eval("script");
         verify(wrapped, times(1)).unwrapResult("result");
-        verify(wrapped, times(1)).wrapScript("script");
+        verify(wrapped, times(1)).fixScript("script");
     }
 
     @Test
@@ -70,7 +70,7 @@ class ScriptEngineWrapperTest {
         assertEquals("result", wrapped.eval("script", bindings));
         verify(engine, times(1)).eval("script", bindings);
         verify(wrapped, times(1)).unwrapResult("result");
-        verify(wrapped, times(1)).wrapScript("script");
+        verify(wrapped, times(1)).fixScript("script");
     }
 
     @Test
@@ -80,7 +80,7 @@ class ScriptEngineWrapperTest {
         assertEquals("result", wrapped.eval(reader, bindings));
         verify(engine, times(1)).eval("script", bindings);
         verify(wrapped, times(1)).unwrapResult("result");
-        verify(wrapped, times(1)).wrapScript("script");
+        verify(wrapped, times(1)).fixScript("script");
     }
 
     @Test

@@ -83,8 +83,8 @@ public class LuaScriptEngineWrapper extends ScriptEngineWrapper {
         });
     }
 
-    protected String wrapScript(String script) {
-        return "return " + script;
+    protected String fixScript(String script) {
+        return "return " + super.fixScript(script);
     }
 
     protected Object unwrapResult(Object obj) {

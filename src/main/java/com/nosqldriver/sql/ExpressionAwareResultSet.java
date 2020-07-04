@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import static com.nosqldriver.sql.TypeTransformer.cast;
+import static com.nosqldriver.util.ScriptEngineWrapper.EMPTY_COLUMN_PLACEHOLDER;
 import static java.lang.System.currentTimeMillis;
 import static java.sql.Types.OTHER;
 import static java.util.Optional.ofNullable;
@@ -305,7 +306,7 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
                             break; // do nothing
                     }
                     if (value != null) {
-                        bindings.put(name, value);
+                        bindings.put(bindingName(name), value);
                     }
                 }
             }
@@ -331,8 +332,9 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
         columns.stream().filter(c -> !DataColumn.DataColumnRole.EXPRESSION.equals(c.getRole())).map(DataColumn::getName).forEach(name -> {
             try {
-                bindings.put(name, rs.getObject(name));
-                bound.add(name);
+                String bindingName = bindingName(name);
+                bindings.put(bindingName, rs.getObject(name));
+                bound.add(bindingName);
             } catch (SQLException e) {
                 // ignore exception thrown by specific field
             }
@@ -398,5 +400,9 @@ class ExpressionAwareResultSet extends ResultSetWrapper {
 
     private <T> T getValue(Optional<T> value, ThrowingSupplier<T, SQLException> superGetter) throws SQLException {
         return wasNull(value.isPresent() ? value.get() : superGetter.get());
+    }
+
+    private String bindingName(String name) {
+        return "".equals(name) ? EMPTY_COLUMN_PLACEHOLDER : name;
     }
 }

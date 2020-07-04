@@ -79,6 +79,7 @@ import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.PK;
 import static com.nosqldriver.sql.SqlLiterals.operatorKey;
 import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
+import static com.nosqldriver.util.IOUtils.stripQuotes;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.String.format;
@@ -117,7 +118,6 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     private boolean skipIfMissing;
     private ChainOperation chainOperation = null;
     private boolean indexByName = false;
-    //private final boolean getPk;
     private final Collection<SpecialField> specialFields;
     private String show;
 
@@ -635,7 +635,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
 
                     @Override
                     protected String getTable(Expression expr) {
-                        String table = ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(set);
+                        String table = ofNullable(((Column) expr).getTable()).map(t -> stripQuotes(t.getName())).orElse(set);
                         // resolve alias
                         if (Objects.equals(table, setAlias)) {
                             return set;
@@ -646,7 +646,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
 
                     @Override
                     protected String getText(Expression expr) {
-                        return ((Column) expr).getColumnName();
+                        return stripQuotes(((Column) expr).getColumnName());
                     }
 
                     @Override
@@ -717,7 +717,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
 
                     @Override
                     protected String getTable(Expression expr) {
-                        return ofNullable(((Column) expr).getTable()).map(Table::getName).orElse(null);
+                        return ofNullable(((Column) expr).getTable()).map(t -> stripQuotes(t.getName())).orElse(null);
                     }
 
                     @Override

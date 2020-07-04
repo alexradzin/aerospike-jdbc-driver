@@ -1,8 +1,11 @@
 package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.Bin;
+import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
+import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.WritePolicy;
+import com.nosqldriver.sql.DataColumn;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -14,10 +17,13 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.nosqldriver.TestUtils.getDisplayName;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.DATA;
@@ -27,12 +33,16 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SELECT_ALL;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SUBJECT_SELECTION;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.getTestConnection;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.write;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeBeatles;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeData;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeMainPersonalInstruments;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeSubjectSelection;
+import static java.lang.String.format;
+import static java.sql.Types.DOUBLE;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -46,7 +56,7 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
  * test must clean all data.
   */
 class SpecialSelectTest {
-    private Connection testConn = getTestConnection();
+    private final Connection testConn = getTestConnection();
 
     @BeforeAll
     static void dropAll() {
@@ -186,5 +196,39 @@ class SpecialSelectTest {
 
         assertEquals(expected, actual);
         rs.close();
+    }
+
+    @Test
+    void emptyColumnName() throws SQLException {
+        double value = Math.PI / 4.0;
+        assertFalse(testConn.createStatement().execute(format("insert into data (PK, \"\") values (1, %s)", value)));
+        IAerospikeClient client = getClient();
+        Key key1 = new Key(NAMESPACE, DATA, 1);
+        Key key2 = new Key(NAMESPACE, DATA, 2);
+        client.put(new WritePolicy(), new Key(NAMESPACE, DATA, 2), new Bin("", Math.E));
+
+        Map<String,Object> record1 = client.get(new Policy(), key1).bins;
+        assertEquals(1, record1.size());
+        assertEquals(value, record1.get(""));
+
+        Map<String,Object> record2 = client.get(new Policy(), key2).bins;
+        assertEquals(1, record2.size());
+        assertEquals(Math.E, record2.get(""));
+
+        Map<Double, Double> actuals = new HashMap<>();
+        try(ResultSet rs = executeQuery(testConn, "select \"\", sin(\"\") as sin_empty from data",
+                DataColumn.DataColumnRole.DATA.create(NAMESPACE, TestDataUtils.DATA, "", "").withType(DOUBLE),
+                DataColumn.DataColumnRole.DATA.create(NAMESPACE, TestDataUtils.DATA, "sin(\"\")", "sin_empty").withType(DOUBLE)
+        )) {
+            while(rs.next()) {
+                double vi1 = rs.getDouble(1);
+                double vn1 = rs.getDouble("");
+                assertEquals(vi1, vn1);
+                double vi2 = rs.getDouble(2);
+                actuals.put(vi1, vi2);
+            }
+        }
+        Map<Double, Double> expecteds = Stream.of(value, Math.E).collect(Collectors.toMap(v -> v, Math::sin));
+        assertEquals(expecteds, actuals);
     }
 }

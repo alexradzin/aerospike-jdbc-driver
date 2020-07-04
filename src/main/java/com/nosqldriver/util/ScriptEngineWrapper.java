@@ -8,8 +8,15 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import java.io.IOException;
 import java.io.Reader;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 public class ScriptEngineWrapper implements ScriptEngine {
+    public static final String EMPTY_COLUMN_PLACEHOLDER = "__EMPTY_COLUMN__";
     private final ScriptEngine engine;
 
     public ScriptEngineWrapper(String engineName) {
@@ -22,32 +29,32 @@ public class ScriptEngineWrapper implements ScriptEngine {
 
     @Override
     public Object eval(String script, ScriptContext context) throws ScriptException {
-        return unwrapResult(engine.eval(wrapScript(script), context));
+        return unwrapResult(engine.eval(fixScript(script), context));
     }
 
     @Override
     public Object eval(Reader reader, ScriptContext context) throws ScriptException {
-        return unwrapResult(engine.eval(wrapScript(read(reader)), context));
+        return unwrapResult(engine.eval(fixScript(read(reader)), context));
     }
 
     @Override
     public Object eval(String script) throws ScriptException {
-        return unwrapResult(engine.eval(wrapScript(script)));
+        return unwrapResult(engine.eval(fixScript(script)));
     }
 
     @Override
     public Object eval(Reader reader) throws ScriptException {
-        return unwrapResult(engine.eval(wrapScript(read(reader))));
+        return unwrapResult(engine.eval(fixScript(read(reader))));
     }
 
     @Override
     public Object eval(String script, Bindings n) throws ScriptException {
-        return unwrapResult(engine.eval(wrapScript(script), n));
+        return unwrapResult(engine.eval(fixScript(script), n));
     }
 
     @Override
     public Object eval(Reader reader, Bindings n) throws ScriptException {
-        return unwrapResult(engine.eval(wrapScript(read(reader)), n));
+        return unwrapResult(engine.eval(fixScript(read(reader)), n));
     }
 
     @Override
@@ -90,8 +97,20 @@ public class ScriptEngineWrapper implements ScriptEngine {
         return engine.getFactory();
     }
 
-    protected String wrapScript(String script) {
-        return script;
+    protected String fixScript(String script) {
+        Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+        if (bindings == null) {
+            return script;
+        }
+        AtomicReference<String> fixedScript = new AtomicReference<>(script);
+        bindings.entrySet().stream().filter(e -> !isFunction(e.getValue())).map(Map.Entry::getKey)
+                .forEach(name -> fixedScript.getAndUpdate(s -> s == null ? null : s.replace("\"" + name + "\"", name)));
+
+        return fixedScript.get().replace("\"\"", EMPTY_COLUMN_PLACEHOLDER);
+    }
+
+    private boolean isFunction(Object obj) {
+        return obj instanceof Function || obj instanceof BiFunction || obj instanceof Predicate || obj instanceof Supplier || obj instanceof TriFunction || obj instanceof VarargsFunction;
     }
 
     protected Object unwrapResult(Object obj) {
