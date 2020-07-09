@@ -117,6 +117,10 @@ public class SqlLiterals {
     }
 
     public static int getSqlType(Object value) {
-        return value == null ? NULL : sqlTypes.getOrDefault(value.getClass(), OTHER);
+        return value == null ? NULL : getSqlType(value.getClass());
+    }
+
+    public static int getSqlType(Class clazz) {
+        return clazz == null ? NULL : sqlTypes.getOrDefault(clazz, OTHER);
     }
 }

@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Function;
 
@@ -989,14 +990,32 @@ class PreparedStatementWithComplexTypesTest {
             return text;
         }
 
-        public static byte[] serialize(MyNotSerializableClass obj) throws IOException {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DataOutputStream dos = new DataOutputStream(baos);
-            dos.writeInt(obj.number);
-            dos.writeUTF(obj.text);
-            dos.flush();
-            dos.close();
-            return baos.toByteArray();
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            MyNotSerializableClass that = (MyNotSerializableClass) o;
+            return number == that.number &&
+                    Objects.equals(text, that.text);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(number, text);
+        }
+
+        public static byte[] serialize(MyNotSerializableClass obj) {
+            try {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                DataOutputStream dos = new DataOutputStream(baos);
+                dos.writeInt(obj.number);
+                dos.writeUTF(obj.text);
+                dos.flush();
+                dos.close();
+                return baos.toByteArray();
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         public static MyNotSerializableClass deserialize(byte[] bytes) throws IOException {
@@ -1044,6 +1063,21 @@ class PreparedStatementWithComplexTypesTest {
 
         public MySerializableSubClass getNested() {
             return nested;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            MySerializableClass that = (MySerializableClass) o;
+            return number == that.number &&
+                    Objects.equals(text, that.text) &&
+                    Objects.equals(nested, that.nested);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(number, text, nested);
         }
     }
 

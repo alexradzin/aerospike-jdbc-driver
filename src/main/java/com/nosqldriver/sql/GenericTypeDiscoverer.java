@@ -99,7 +99,10 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                             }
                         } else if (EXPRESSION.equals(c.getRole())) {
                             String functionName = c.getExpression().replaceFirst("\\(.*", "");
-                            functionManager.getFunctionReturnType(functionName).map(clazz -> subColumns.addAll(extractFieldTypes(c, clazz)));
+                            functionManager.getFunctionReturnType(functionName).map(clazz -> {
+                                c.withType(getSqlType(clazz));
+                                return subColumns.addAll(extractFieldTypes(c, clazz));
+                            });
                         }
                         if (c.getLabel() == null) {
                             c.withLabel(c.getName());
@@ -136,9 +139,8 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
                     if (columnName == null && EXPRESSION.equals(role)) {
                         columnName = column.getExpression();
                     }
-
                     String propName = propertyNameRetriever.apply(g);
-                    String name = columnName.charAt(columnName.length() - 1) == ']' ? columnName.substring(0, columnName.length() - 1) + "." + propName + "]" : format("%s[%s]", columnName, propName);
+                    String name = getClearName(columnName, propName);
                     Class subType = g.getReturnType();
                     int type = SqlLiterals.sqlTypes.getOrDefault(subType, OTHER);
                     DataColumn subColumn = HIDDEN.create(column.getCatalog(), column.getTable(), name, name).withType(type);
@@ -161,7 +163,7 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
             int type = SqlLiterals.sqlTypes.getOrDefault(Optional.ofNullable(value).map(Object::getClass).orElse(null), OTHER);
             String propName = e.getKey();
             String columnName = DATA.equals(column.getRole()) ? column.getName() : column.getLabel();
-            String name = columnName.charAt(columnName.length() - 1) == ']' ? columnName.substring(0, columnName.length() - 1) + "." + propName + "]" : format("%s[%s]", columnName, propName);
+            String name = getClearName(columnName, propName);
             DataColumn subColumn = HIDDEN.create(column.getCatalog(), column.getTable(), name, name).withType(type);
             allColumns.add(subColumn);
             if (value instanceof Map) {
@@ -170,5 +172,9 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
             }
         }
         return allColumns;
+    }
+
+    private String getClearName(String columnName, String propName) {
+        return "".equals(columnName) ? columnName : columnName.charAt(columnName.length() - 1) == ']' ? columnName.substring(0, columnName.length() - 1) + "." + propName + "]" : format("%s[%s]", columnName, propName);
     }
 }

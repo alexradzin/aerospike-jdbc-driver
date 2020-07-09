@@ -5,6 +5,8 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Key;
 import com.aerospike.client.policy.Policy;
 import com.aerospike.client.policy.WritePolicy;
+import com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest.MyNotSerializableClass;
+import com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest.MySerializableClass;
 import com.nosqldriver.sql.DataColumn;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -14,24 +16,27 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.TestUtils.getDisplayName;
-import static com.nosqldriver.aerospike.sql.TestDataUtils.DATA;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.INSTRUMENTS;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SELECT_ALL;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.SUBJECT_SELECTION;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.aerospikeTestUrl;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.deleteAllRecords;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.executeQuery;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.getClient;
@@ -43,6 +48,7 @@ import static com.nosqldriver.aerospike.sql.TestDataUtils.writeMainPersonalInstr
 import static com.nosqldriver.aerospike.sql.TestDataUtils.writeSubjectSelection;
 import static java.lang.String.format;
 import static java.sql.Types.DOUBLE;
+import static java.sql.Types.OTHER;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -63,7 +69,7 @@ class SpecialSelectTest {
         deleteAllRecords(NAMESPACE, PEOPLE);
         deleteAllRecords(NAMESPACE, INSTRUMENTS);
         deleteAllRecords(NAMESPACE, SUBJECT_SELECTION);
-        deleteAllRecords(NAMESPACE, DATA);
+        deleteAllRecords(NAMESPACE, TestDataUtils.DATA);
     }
 
     @AfterEach
@@ -180,8 +186,8 @@ class SpecialSelectTest {
     @Test
     void groupByDouble() throws SQLException {
         WritePolicy writePolicy = new WritePolicy();
-        write(writePolicy, new Key(NAMESPACE, DATA, "pi"), new Bin("name", "PI"), new Bin("value", 3.14));
-        write(writePolicy, new Key(NAMESPACE, DATA, "e"), new Bin("name", "EXP"), new Bin("value", 2.7));
+        write(writePolicy, new Key(NAMESPACE, TestDataUtils.DATA, "pi"), new Bin("name", "PI"), new Bin("value", 3.14));
+        write(writePolicy, new Key(NAMESPACE, TestDataUtils.DATA, "e"), new Bin("name", "EXP"), new Bin("value", 2.7));
 
         ResultSet rs = testConn.createStatement().executeQuery("select value, count(*) from data group by value");
 
@@ -203,9 +209,9 @@ class SpecialSelectTest {
         double value = Math.PI / 4.0;
         assertFalse(testConn.createStatement().execute(format("insert into data (PK, \"\") values (1, %s)", value)));
         IAerospikeClient client = getClient();
-        Key key1 = new Key(NAMESPACE, DATA, 1);
-        Key key2 = new Key(NAMESPACE, DATA, 2);
-        client.put(new WritePolicy(), new Key(NAMESPACE, DATA, 2), new Bin("", Math.E));
+        Key key1 = new Key(NAMESPACE, TestDataUtils.DATA, 1);
+        Key key2 = new Key(NAMESPACE, TestDataUtils.DATA, 2);
+        client.put(new WritePolicy(), new Key(NAMESPACE, TestDataUtils.DATA, 2), new Bin("", Math.E));
 
         Map<String,Object> record1 = client.get(new Policy(), key1).bins;
         assertEquals(1, record1.size());
@@ -231,4 +237,34 @@ class SpecialSelectTest {
         Map<Double, Double> expecteds = Stream.of(value, Math.E).collect(Collectors.toMap(v -> v, Math::sin));
         assertEquals(expecteds, actuals);
     }
+
+    @Test
+    void emptyColumnNameMapValue() throws SQLException {
+        emptyColumnNameAnyValue(testConn, Collections.singletonMap("hello", "bye"), v->v, "select \"\" as empty from data", "");
+    }
+
+    @Test
+    void emptyColumnNameSerializableClass() throws SQLException {
+        emptyColumnNameAnyValue(testConn, new MySerializableClass(123, "one hundred and twenty four"), v->v, "select \"\" as empty from data", "");
+    }
+
+    @Test
+    void emptyColumnNameNotSerializableClass() throws SQLException {
+        Connection conn = DriverManager.getConnection(aerospikeTestUrl + "?custom.function.deserialize=com.nosqldriver.aerospike.sql.PreparedStatementWithComplexTypesTest$MyCustomDeserializer");
+        MyNotSerializableClass obj = new MyNotSerializableClass(456, "two hundred and fifty six");
+        emptyColumnNameAnyValue(conn, obj, v -> MyNotSerializableClass.serialize(obj), "select deserialize(\"\") as empty from data", "deserialize(\"\")");
+    }
+
+
+    void emptyColumnNameAnyValue(Connection conn, Object value, Function<Object, Object> serializer, String select, String fieldName) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement("insert into data (PK, \"\") values (1, ?)");
+        ps.setObject(1, serializer.apply(value));
+        assertFalse(ps.execute());
+        try(ResultSet rs = executeQuery(conn, select, DataColumn.DataColumnRole.DATA.create(NAMESPACE, TestDataUtils.DATA, fieldName, "empty").withType(OTHER))) {
+            assertTrue(rs.next());
+            assertEquals(value, rs.getObject(1));
+            assertFalse(rs.next());
+        }
+    }
+
 }
