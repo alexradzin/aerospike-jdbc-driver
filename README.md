@@ -186,8 +186,8 @@ Consequent double quotes in the example above indicate empty identifier.
 | `instr(subStr, str)`             | returns position of `subStr` into `str`                                  |
 | `trim(s)`,`ltrim(s)`, `rtrim(s)` | trims string (removes spaces from both/left/right sides)                 |
 | `strcmp(s1, s2)`                 | compares given strings                                                   |
-| `left(str, n)`                   | n-characters substring of given string from the beginning                 |
-| `lower(str)`, lcase(str)         | converts all characters to lower case                                   |
+| `left(str, n)`                   | n-characters substring of given string from the beginning                |
+| `lower(str)`, lcase(str)         | converts all characters to lower case                                    |
 | `upper(str)`, ucaes(str)         | converts all characters to upper case                                    |
 | `str(n)`                         | converts given number to string                                          |
 | `substring(str, start, length)`  | `length` characters long substring of given string started from `start`  |
@@ -207,19 +207,19 @@ Consequent double quotes in the example above indicate empty identifier.
 | `hour([date])`                   | retrieves hour (*)                                                       |
 | `minute([date])`                 | retrieves minute (*)                                                     |
 | `second([date])`                 | retrieves second (*)                                                     |
-| `millisecond([date])`            | retrieves millisecond (*)                                               |
+| `millisecond([date])`            | retrieves millisecond (*)                                                |
 | `date([date])`                   | retrieves date object (*)                                                |
 | `epoch(str, fmt)`                | parses given string representation of date using given format to epoch   |
-| `map(s)`, `list(s)`, `array(s)`  | create map, list and array respectively from their string representation |
-| `sin(x)`, `cos(x)`, `tan(x)`, `cot(x)`| trigonometric functions |
-| `asin(x)`, `acos(x)`, `atan(x)`, `atan2(x)`| inverse trigonometric functions |
-| `degrees(r)`, `radians(d)`       | transforms radians to degrees and vice versa
-| `pi()`                           | returns π | 
-| `abs(x)`                         | returns absolute value |
-| `floor(x)`, `ceil(x)`            | return floor and ceil value of given `x` |
-| `round(x, n)` | rounds given value `x` to scale `n` |
-| `exp(x)`, `ln(x)`, `log10(x)`, `log2(x)` | math functions e<sup>x</sup>, ln(x), lg<sub>10</sub>(x), lg<sub>2</sub>(x)|
-| pow(x, n), power(x, n)           | calculates x<sup>n</sup>  |
+| `map(s)`, `list(s)`, `array(s)`            | create map, list and array respectively from their string representation |
+| `sin(x)`, `cos(x)`, `tan(x)`, `cot(x)`     | trigonometric functions                                        |
+| `asin(x)`, `acos(x)`, `atan(x)`, `atan2(x)`| inverse trigonometric functions                                |
+| `degrees(r)`, `radians(d)`                 | transforms radians to degrees and vice versa                   |                 
+| `pi()`                                     | returns π                                                      | 
+| `abs(x)`                                   | returns absolute value                                         |
+| `floor(x)`, `ceil(x)`                      | return floor and ceil value of given `x`                       |
+| `round(x, n)` | rounds given value `x` to scale `n`                                                         |
+| `exp(x)`, `ln(x)`, `log10(x)`, `log2(x)`   | math functions e<sup>x</sup>, ln(x), lg<sub>10</sub>(x), lg<sub>2</sub>(x)|
+| pow(x, n), power(x, n)                     | calculates x<sup>n</sup>                                       |
 
 
 
