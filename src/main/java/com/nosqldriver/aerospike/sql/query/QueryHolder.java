@@ -77,6 +77,7 @@ import static com.nosqldriver.sql.DataColumn.DataColumnRole.EXPRESSION;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.GROUP;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.HIDDEN;
 import static com.nosqldriver.sql.DataColumn.DataColumnRole.PK;
+import static com.nosqldriver.sql.DataColumn.DataColumnRole.PK_DIGEST;
 import static com.nosqldriver.sql.SqlLiterals.operatorKey;
 import static com.nosqldriver.sql.SqlLiterals.predExpOperators;
 import static com.nosqldriver.util.IOUtils.stripQuotes;
@@ -416,7 +417,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     }
 
     private String[] getNames() {
-        return columns.stream().filter(c -> c.getName() != null && !"PK".equals(c.getName())).map(DataColumn::getName).toArray(String[]::new);
+        return columns.stream().filter(c -> c.getName() != null && !SpecialField.isSpecialField(c.getName())).map(DataColumn::getName).toArray(String[]::new);
     }
 
     public void setSchema(String schema) {
@@ -652,12 +653,19 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                     @Override
                     public void addColumn(Expression expr, String alias, boolean visible, String catalog, String table) {
                         String name = getText(expr);
-                        DataColumn.DataColumnRole role = visible ? "PK".equals(name) ? PK : DATA : HIDDEN;
+                        DataColumn.DataColumnRole role = getColumnRole(name, visible);
                         if (PK.equals(role)) {
                             name = expr.toString();
                         }
                         columns.add(role.create(getCatalog(expr), getTable(expr), name, alias));
                         statement.setBinNames(getNames());
+                    }
+
+                    private DataColumn.DataColumnRole getColumnRole(String name, boolean visible) {
+                        if (!visible) {
+                            return HIDDEN;
+                        }
+                        return PK.name().equals(name) ? PK : PK_DIGEST.name().equals(name) ? PK_DIGEST : DATA;
                     }
                 },
 

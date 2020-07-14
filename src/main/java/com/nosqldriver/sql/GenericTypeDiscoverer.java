@@ -119,7 +119,7 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
         int nColumns = dataColumnsByTable.size();
         String name = specialField.name();
         Map<String, List<DataColumn>> pkColumnsByTable = dataColumnsByTable.keySet().stream().map(catalogAndTable -> catalogAndTable.split("\\."))
-                .map(catalogAndTable -> PK.create(catalogAndTable[0], catalogAndTable[1], name, nColumns == 1 ? name : catalogAndTable[1] + "." + name))
+                .map(catalogAndTable -> DataColumn.DataColumnRole.valueOf(name).create(catalogAndTable[0], catalogAndTable[1], name, nColumns == 1 ? name : catalogAndTable[1] + "." + name))
                 .collect(Collectors.groupingBy(c -> c.getCatalog() + "." + c.getTable()));
         columnsByTable.putAll(pkColumnsByTable);
     }

@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nosqldriver.TestUtils.getDisplayName;
+import static com.nosqldriver.aerospike.sql.TestDataUtils.DATA;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.INSTRUMENTS;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -53,6 +54,7 @@ import static java.sql.Types.BLOB;
 import static java.sql.Types.DOUBLE;
 import static java.sql.Types.OTHER;
 import static java.sql.Types.VARCHAR;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -262,30 +264,44 @@ class SpecialSelectTest {
 
     @Test
     void selectPKSendPk() throws SQLException {
-        selectPk(getConnection(aerospikeTestUrl + "?" + "policy.*.sendKey=true"), new Object[] {"one", "two", "three"}, true);
+        selectPkData(getConnection(aerospikeTestUrl + "?" + "policy.*.sendKey=true"), new Object[] {"one", "two", "three"}, true, "field");
     }
 
     @Test
     void selectPKNotSendPk() throws SQLException {
-        selectPk(testConn, new Object[] {"one", "two", "three"}, false);
+        selectPkData(testConn, new Object[] {"one", "two", "three"}, false, "field");
     }
 
-    void selectPk(Connection conn, Object[] values, boolean sendPk) throws SQLException {
-        writeValues(conn, values);
-        int count = 0;
+    @Test
+    void selectPKSendPkEmptyFieldName() throws SQLException {
+        selectPkData(getConnection(aerospikeTestUrl + "?" + "policy.*.sendKey=true"), new Object[] {"one", "two", "three"}, true, "");
+    }
+
+    @Test
+    void selectPKNotSendPkEmptyFieldName() throws SQLException {
+        selectPkData(testConn, new Object[] {"one", "two", "three"}, false, "");
+    }
+
+    void selectPkData(Connection conn, Object[] values, boolean sendPk, String fieldName) throws SQLException {
+        writeValues(conn, values, fieldName);
         int pkType = sendPk ? BIGINT : 0;
-        String select = "select PK, field from data";
+        int count = 0;
+        String select = format("select PK, %s from data", wrapNameIfNeeded(fieldName));
         try(ResultSet rs = executeQuery(conn, select,
                 DataColumn.DataColumnRole.PK.create(NAMESPACE, TestDataUtils.DATA, "PK", "PK").withType(pkType),
-                DataColumn.DataColumnRole.DATA.create(NAMESPACE, TestDataUtils.DATA, "field", "field").withType(VARCHAR))) {
+                DataColumn.DataColumnRole.DATA.create(NAMESPACE, TestDataUtils.DATA, fieldName, fieldName).withType(VARCHAR))) {
             while (rs.next()) {
-                assertEquals(rs.getObject("PK"), rs.getObject(1));
-                if (sendPk) {
-                    assertNotNull(rs.getObject("PK"));
-                } else {
-                    assertNull(rs.getObject("PK"));
-                }
-                assertEquals(rs.getObject(2), rs.getObject("field"));
+                assertSpecialField(sendPk, "PK", 1, rs);
+                assertEquals(rs.getObject(2), rs.getObject(fieldName));
+                count++;
+            }
+        }
+        assertEquals(values.length, count);
+
+        count = 0;
+        try(ResultSet rs = executeQuery(conn, "select PK from data", DataColumn.DataColumnRole.PK.create(NAMESPACE, TestDataUtils.DATA, "PK", "PK").withType(pkType))) {
+            while (rs.next()) {
+                assertSpecialField(sendPk, "PK", 1, rs);
                 count++;
             }
         }
@@ -294,57 +310,118 @@ class SpecialSelectTest {
 
     @Test
     void selectPKAndDigestSendPkAndDigest() throws SQLException {
-        selectPkDigest(getConnection(aerospikeTestUrl + "?" + "policy.*.sendKey=true&policy.driver.sendKeyDigest=true"), new Object[] {"one", "two", "three"}, true, true);
+        selectPkDigestData(getConnection(aerospikeTestUrl + "?" + "policy.*.sendKey=true&policy.driver.sendKeyDigest=true"), new Object[] {"one", "two", "three"}, true, true, "field");
     }
 
     @Test
     void selectPKAndDigestSendPk() throws SQLException {
-        selectPkDigest(getConnection(aerospikeTestUrl + "?" + "policy.*.sendKey=true"), new Object[] {"one", "two", "three"}, true, false);
+        selectPkDigestData(getConnection(aerospikeTestUrl + "?" + "policy.*.sendKey=true"), new Object[] {"one", "two", "three"}, true, false, "field");
     }
 
     @Test
     void selectPKAndDigestSendDigest() throws SQLException {
-        selectPkDigest(getConnection(aerospikeTestUrl + "?" + "policy.driver.sendKeyDigest=true"), new Object[] {"one", "two", "three"}, false, true);
+        selectPkDigestData(getConnection(aerospikeTestUrl + "?" + "policy.driver.sendKeyDigest=true"), new Object[] {"one", "two", "three"}, false, true, "field");
     }
 
-    void selectPkDigest(Connection conn, Object[] values, boolean sendPk, boolean sendPkDigest) throws SQLException {
-        writeValues(conn, values);
-        int count = 0;
+    @Test
+    void selectPKAndDigestSendPkAndDigestEmptyFieldName() throws SQLException {
+        selectPkDigestData(getConnection(aerospikeTestUrl + "?" + "policy.*.sendKey=true&policy.driver.sendKeyDigest=true"), new Object[] {"one", "two", "three"}, true, true, "");
+    }
+
+    @Test
+    void selectPKAndDigestSendPkEmptyFieldName() throws SQLException {
+        selectPkDigestData(getConnection(aerospikeTestUrl + "?" + "policy.*.sendKey=true"), new Object[] {"one", "two", "three"}, true, false, "");
+    }
+
+    @Test
+    void selectPKAndDigestSendDigestEmptyFieldName() throws SQLException {
+        selectPkDigestData(getConnection(aerospikeTestUrl + "?" + "policy.driver.sendKeyDigest=true"), new Object[] {"one", "two", "three"}, false, true, "");
+    }
+
+    void selectPkDigestData(Connection conn, Object[] values, boolean sendPk, boolean sendPkDigest, String fieldName) throws SQLException {
+        writeValues(conn, values, fieldName);
         int pkType = sendPk ? BIGINT : 0;
         int pkDigestType = sendPkDigest ? BLOB : 0;
-        String select = "select PK, PK_DIGEST, field from data";
+        int count = 0;
+        String select = format("select PK, PK_DIGEST, %s from data", wrapNameIfNeeded(fieldName));
         try(ResultSet rs = executeQuery(conn, select,
                 DataColumn.DataColumnRole.PK.create(NAMESPACE, TestDataUtils.DATA, "PK", "PK").withType(pkType),
-                DataColumn.DataColumnRole.PK.create(NAMESPACE, TestDataUtils.DATA, "PK_DIGEST", "PK_DIGEST").withType(pkDigestType),
-                DataColumn.DataColumnRole.DATA.create(NAMESPACE, TestDataUtils.DATA, "field", "field").withType(VARCHAR))) {
+                DataColumn.DataColumnRole.PK_DIGEST.create(NAMESPACE, TestDataUtils.DATA, "PK_DIGEST", "PK_DIGEST").withType(pkDigestType),
+                DataColumn.DataColumnRole.DATA.create(NAMESPACE, TestDataUtils.DATA, fieldName, fieldName).withType(VARCHAR))) {
             while (rs.next()) {
-                assertEquals(rs.getObject("PK"), rs.getObject(1));
-                if (sendPk) {
-                    assertNotNull(rs.getObject("PK"));
-                } else {
-                    assertNull(rs.getObject("PK"));
+                Long pk = assertSpecialField(sendPk, "PK", 1, rs);
+                byte[] digest = assertSpecialField(sendPkDigest, "PK_DIGEST", 2, rs);
+                if (sendPk && sendPkDigest) {
+                    assertArrayEquals(new Key(NAMESPACE, DATA, pk).digest, digest);
                 }
-                assertEquals(rs.getObject("PK_DIGEST"), rs.getObject(2));
-                if (sendPkDigest) {
-                    assertNotNull(rs.getObject("PK_DIGEST"));
-                } else {
-                    assertNull(rs.getObject("PK_DIGEST"));
-                }
-                assertEquals(rs.getObject(3), rs.getObject("field"));
+                assertEquals(rs.getObject(3), rs.getObject(fieldName));
                 count++;
             }
         }
         assertEquals(values.length, count);
+
+        count = 0;
+        try(ResultSet rs = executeQuery(conn, "select PK, PK_DIGEST from data",
+                DataColumn.DataColumnRole.PK.create(NAMESPACE, TestDataUtils.DATA, "PK", "PK").withType(pkType),
+                DataColumn.DataColumnRole.PK_DIGEST.create(NAMESPACE, TestDataUtils.DATA, "PK_DIGEST", "PK_DIGEST").withType(pkDigestType))) {
+            while (rs.next()) {
+                assertSpecialField(sendPk, "PK", 1, rs);
+                assertSpecialField(sendPkDigest, "PK_DIGEST", 2, rs);
+                count++;
+            }
+        }
+        assertEquals(values.length, count);
+
+        count = 0;
+        try(ResultSet rs = executeQuery(conn, "select PK from data",
+                DataColumn.DataColumnRole.PK.create(NAMESPACE, TestDataUtils.DATA, "PK", "PK").withType(pkType))) {
+            while (rs.next()) {
+                assertSpecialField(sendPk, "PK", 1, rs);
+                count++;
+            }
+        }
+        assertEquals(values.length, count);
+
+
+        count = 0;
+        try(ResultSet rs = executeQuery(conn, "select PK_DIGEST from data",
+                DataColumn.DataColumnRole.PK_DIGEST.create(NAMESPACE, TestDataUtils.DATA, "PK_DIGEST", "PK_DIGEST").withType(pkDigestType))) {
+            while (rs.next()) {
+                assertSpecialField(sendPkDigest, "PK_DIGEST", 1, rs);
+                count++;
+            }
+        }
+        assertEquals(values.length, count);
+
+
     }
 
-    private void writeValues(Connection conn, Object[] values) throws SQLException {
-        PreparedStatement ps = conn.prepareStatement("insert into data (PK, field) values (?, ?)");
+
+
+
+    private void writeValues(Connection conn, Object[] values, String fieldName) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement(format("insert into data (PK, %s) values (?, ?)", wrapNameIfNeeded(fieldName)));
         int n = values.length;
         for (int i = 0; i < n; i++) {
             ps.setObject(1, i);
             ps.setObject(2, values[i]);
             assertFalse(ps.execute());
         }
+    }
+
+    private <T> T assertSpecialField(boolean sendSpecialField, String specialFieldName, int specialFieldIndex, ResultSet rs) throws SQLException {
+        assertEquals(rs.getObject(specialFieldName), rs.getObject(specialFieldIndex));
+        if (sendSpecialField) {
+            assertNotNull(rs.getObject(specialFieldName));
+        } else {
+            assertNull(rs.getObject(specialFieldName));
+        }
+        //noinspection unchecked
+        return (T)rs.getObject(specialFieldIndex);
+    }
+
+    private String wrapNameIfNeeded(String name) {
+        return "".equals(name) || name.contains(" ") || name.contains("-") || name.charAt(0) == '_' || Character.isLetter(name.charAt(0)) ? "\"" + name + "\"" : name;
     }
 
     void emptyColumnNameAnyValue(Connection conn, Object value, Function<Object, Object> serializer, String select, String fieldName) throws SQLException {

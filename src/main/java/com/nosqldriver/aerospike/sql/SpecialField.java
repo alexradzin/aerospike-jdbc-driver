@@ -5,7 +5,9 @@ import com.nosqldriver.sql.DriverPolicy;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Collections.emptySet;
@@ -18,6 +20,7 @@ public enum SpecialField {
     EXPIRATION(p -> p.sendExpiration),
     ;
 
+    private static Map<String, SpecialField> nameToField = Arrays.stream(SpecialField.values()).collect(Collectors.toMap(Enum::name, f -> f));
     private final Function<DriverPolicy, Boolean> enabled;
 
     SpecialField(Function<DriverPolicy, Boolean> enabled) {
@@ -38,4 +41,7 @@ public enum SpecialField {
         return configuredSpecialFields.isEmpty() ? emptySet() : EnumSet.copyOf(configuredSpecialFields);
     }
 
+    public static boolean isSpecialField(String name) {
+        return nameToField.containsKey(name);
+    }
 }
