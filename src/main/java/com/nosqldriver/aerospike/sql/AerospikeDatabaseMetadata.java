@@ -4,7 +4,6 @@ import com.aerospike.client.IAerospikeClient;
 import com.aerospike.client.Info;
 import com.aerospike.client.policy.InfoPolicy;
 import com.nosqldriver.sql.DataColumn;
-import com.nosqldriver.sql.DriverPolicy;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.SimpleWrapper;
 import com.nosqldriver.util.FunctionManager;
@@ -70,7 +69,6 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     private final Connection connection;
     private final InfoPolicy infoPolicy;
     private final FunctionManager functionManager;
-    private final DriverPolicy driverPolicy;
     private static final String newLine = System.lineSeparator();
 
 
@@ -81,7 +79,6 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         this.connection = connection;
         infoPolicy = policyProvider.getInfoPolicy();
         this.functionManager = functionManager;
-        driverPolicy = policyProvider.getDriverPolicy();
         manifest = manifest();
         dbInfo = new HashMap<>();
         Arrays.stream(client.getNodes()).forEach(node -> dbInfo.putAll(Info.request(infoPolicy, node)));
