@@ -94,7 +94,10 @@ public class BinaryOperation {
                 if (!operation.values.isEmpty() && !subSelect) {
                     Object value = operation.values.get(0);
                     if ("PK".equals(operation.column)) {
-                        final Key key = createKey(value, queries);
+                        final Key key = createKey(value, queries, false);
+                        queries.createPkQuery(operation.statement, key);
+                    } else if ("PK_DIGEST".equals(operation.column)) {
+                        final Key key = createKey(value, queries, true);
                         queries.createPkQuery(operation.statement, key);
                     } else {
                         queries.setFilter(createEqFilter(value, operation.column), operation.column);
@@ -201,7 +204,7 @@ public class BinaryOperation {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
                 if ("PK".equals(operation.column) && operation.values.stream().noneMatch(v -> v instanceof QueryHolder)) {
-                    queries.createPkBatchQuery(operation.statement, operation.values.stream().map(v -> createKey(v, queries)).toArray(Key[]::new));
+                    queries.createPkBatchQuery(operation.statement, operation.values.stream().map(v -> createKey(v, queries, false)).toArray(Key[]::new));
                 } else {
                     int nValues = operation.values.size(); // nValues cannot be 0: in() is syntactically wrong. Probably this may be a case with sub select "... in(select x from t)"
                     QueryHolder qh = queries.queries(operation.getTable());
@@ -276,8 +279,8 @@ public class BinaryOperation {
             return requiresColumn;
         }
 
-        protected Key createKey(Object value, QueryHolder queries) {
-            return KeyFactory.createKey(queries.getSchema(), queries.getSetName(), value);
+        protected Key createKey(Object value, QueryHolder queries, boolean digest) {
+            return KeyFactory.createKey(queries.getSchema(), queries.getSetName(), value, digest);
         }
 
         public String operator() {
@@ -300,7 +303,7 @@ public class BinaryOperation {
         }
 
         protected Predicate<ResultSet> createPkPredicate(Object value, QueryHolder queries) {
-            return queries.isPkQuerySupported() ? new ComparableEqualityPredicate<>((Comparable<?>)value, eq) : new PrimaryKeyEqualityPredicate(createKey(value, queries), false);
+            return queries.isPkQuerySupported() ? new ComparableEqualityPredicate<>((Comparable<?>)value, eq) : new PrimaryKeyEqualityPredicate(createKey(value, queries, false), false);
         }
 
     }

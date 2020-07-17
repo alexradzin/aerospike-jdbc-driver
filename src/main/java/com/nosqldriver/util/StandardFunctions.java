@@ -25,6 +25,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.nosqldriver.util.DateParser.date;
 import static java.lang.String.format;
@@ -163,6 +164,10 @@ class StandardFunctions {
         dataFunctions.put("str", new @TypeGroup(String.class) Function<Object, String>() {
             @Override
             public String apply(Object o) {
+                if (o instanceof byte[]) {
+                    byte[] bytes = (byte[])o;
+                    return IntStream.range(0, bytes.length).mapToObj(i -> String.format("%02X", bytes[i])).collect(Collectors.joining(" "));
+                }
                 return String.valueOf(o);
             }
         });

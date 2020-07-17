@@ -34,6 +34,9 @@ public class ValueHolderPredExp<T> extends FakePredExp {
         if (factory != null) {
             return factory.apply(val);
         }
+        if (val instanceof byte[]) {
+            return new ValueHolderPredExp<>((byte[])val);
+        }
         if (val.getClass().isArray()) {
             return new ValueHolderPredExp<>((Object[])val);
         }

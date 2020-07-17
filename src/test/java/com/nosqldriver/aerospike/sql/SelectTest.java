@@ -1,11 +1,14 @@
 package com.nosqldriver.aerospike.sql;
 
+import com.aerospike.client.Key;
 import com.aerospike.client.query.IndexType;
 import com.nosqldriver.Person;
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.aerospike.sql.query.KeyFactory;
 import com.nosqldriver.sql.DataColumnBasedResultSetMetaData;
 import com.nosqldriver.sql.SqlLiterals;
 import com.nosqldriver.util.ThrowingConsumer;
+import com.nosqldriver.util.ThrowingSupplier;
 import com.nosqldriver.util.VariableSource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -31,6 +34,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
@@ -94,6 +98,8 @@ import static org.junit.jupiter.params.ParameterizedTest.ARGUMENTS_PLACEHOLDER;
  */
 class SelectTest {
     private final Connection testConn = getTestConnection();
+    private static final byte[][] pkDigest = IntStream.range(0, 5).mapToObj(i -> new Key(NAMESPACE, PEOPLE, i).digest).collect(Collectors.toList()).toArray(new byte[0][]);
+    private static final String[] pkDigiestBase64 = stream(pkDigest).map(b -> Base64.getEncoder().encodeToString(b)).collect(Collectors.toList()).toArray(new String[0]);
 
     @AfterEach
     void clean() {
@@ -270,9 +276,15 @@ class SelectTest {
             "select * from people limit 0",
             "select * from people offset 4",
             "select * from people where id in (select 0)",
-    })
+            "select * from people where PK=0",
+     })
     void selectEmpty(String sql) throws SQLException {
         assertFalse(testConn.createStatement().executeQuery(sql).next());
+    }
+
+    @Test
+    void selectEmptyWithDigest() throws SQLException {
+        assertFalse(testConn.createStatement().executeQuery(format("select * from people where PK_DIGEST=from_base64('%s')", pkDigiestBase64[0])).next());
     }
 
     @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
@@ -561,6 +573,39 @@ class SelectTest {
         rs.close();
         assertTrue(rs.isClosed());
 
+    }
+
+    @Test
+    void selectByDigest() throws SQLException {
+        selectOneRow(() -> {
+            PreparedStatement ps = testConn.prepareStatement("select id, first_name, last_name from people where PK_DIGEST=?");
+            byte[] digest = KeyFactory.createKey(NAMESPACE, PEOPLE, 1, false).digest;
+            ps.setBytes(1, digest);
+            return ps.executeQuery();
+        });
+    }
+
+    @Test
+    void selectByDigestBase64() throws SQLException {
+        byte[] bytes = new byte[]{10, 20, 30};
+        //Stream.of(bytes).map(b -> Integer.toHexString(b));
+        String xxx = IntStream.range(0, bytes.length).mapToObj(i -> String.format("%02X", bytes[i])).collect(Collectors.joining(" "));
+
+
+
+        selectOneRow(() -> {
+            String digest1 = Base64.getEncoder().encodeToString(KeyFactory.createKey(NAMESPACE, PEOPLE, 1, false).digest);
+            return testConn.createStatement().executeQuery(format("select id, first_name, last_name from people where PK_DIGEST=from_base64('%s')", digest1));
+        });
+    }
+
+    private void selectOneRow(ThrowingSupplier<ResultSet, SQLException> rsSupplier) throws SQLException {
+        ResultSet rs = rsSupplier.get();
+        assertTrue(rs.next());
+        assertEquals(1, rs.getInt(1));
+        assertEquals("John", rs.getString(2));
+        assertEquals("Lennon", rs.getString(3));
+        assertFalse(rs.next());
     }
 
 

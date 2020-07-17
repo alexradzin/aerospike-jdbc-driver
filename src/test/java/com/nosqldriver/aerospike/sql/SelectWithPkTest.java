@@ -10,11 +10,14 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.INSTRUMENTS;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
@@ -314,4 +317,20 @@ class SelectWithPkTest {
         ).close();
     }
 
+    @Test
+    void byteArrayToString() throws SQLException {
+        PreparedStatement ps = testConn.prepareStatement(format("insert into %s (PK, bytes) values (?, ?)", TestDataUtils.DATA));
+        ps.setInt(1, 1);
+        ps.setBytes(2, new byte[] {1, 2, 3});
+        ps.execute();
+
+        ResultSet rs = queryKeyDigestConn.createStatement().executeQuery(format("select str(PK_DIGEST) as digest, str(bytes) as data from %s", TestDataUtils.DATA));
+        assertTrue(rs.next());
+
+        byte[] digest = new Key(NAMESPACE, TestDataUtils.DATA, 1).digest;
+        String digestStr = IntStream.range(0, digest.length).mapToObj(i -> String.format("%02X", digest[i])).collect(Collectors.joining(" "));
+        assertEquals(digestStr, rs.getString(1));
+        assertEquals("01 02 03", rs.getString(2));
+        assertFalse(rs.next());
+    }
 }

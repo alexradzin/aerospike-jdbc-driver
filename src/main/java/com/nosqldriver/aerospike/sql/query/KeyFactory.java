@@ -11,8 +11,14 @@ import static java.lang.String.format;
 
 public class KeyFactory {
     public static Key createKey(String schema, String table, Object value) {
+        return createKey(schema, table, value, false);
+    }
+
+    public static Key createKey(String schema, String table, Object value, boolean digest) {
         Key key;
-        if (value instanceof Byte) {
+        if (digest && value instanceof byte[]) {
+            key = new Key(schema, (byte[])value, table, null);
+        } else if (value instanceof Byte) {
             key = new Key(schema, table, ((Byte) value).intValue());
         } else if (value instanceof Short) {
             key = new Key(schema, table, ((Short) value).intValue());
@@ -32,21 +38,21 @@ public class KeyFactory {
         return key;
     }
 
-    public static Key[] createKeys(String schema, String table, Object value) {
+    public static Key[] createKeys(String schema, String table, Object value, boolean digest) {
         if (value == null) {
             return SneakyThrower.sneakyThrow(new SQLException("Filter by null value is not supported right now"));
         }
         if (value.getClass().isArray()) {
-            return createKeysFromArray(schema, table, value);
+            return createKeysFromArray(schema, table, value, digest);
         }
         if (value instanceof java.sql.Array) {
-            return SneakyThrower.get(() -> createKeysFromArray(schema, table, ((java.sql.Array) value).getArray()));
+            return SneakyThrower.get(() -> createKeysFromArray(schema, table, ((java.sql.Array) value).getArray(), digest));
         }
-        return createKeysFromArray(schema, table, new Object[] {value});
+        return createKeysFromArray(schema, table, new Object[] {value}, digest);
     }
 
-    private static Key[] createKeysFromArray(String schema, String table, Object value) {
+    private static Key[] createKeysFromArray(String schema, String table, Object value, boolean digest) {
         int n = Array.getLength(value);
-        return IntStream.range(0, n).boxed().map(i -> Array.get(value, i)).map(v -> createKey(schema, table, v)).toArray(Key[]::new);
+        return IntStream.range(0, n).boxed().map(i -> Array.get(value, i)).map(v -> createKey(schema, table, v, digest)).toArray(Key[]::new);
     }
 }

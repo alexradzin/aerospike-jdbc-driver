@@ -189,7 +189,7 @@ Consequent double quotes in the example above indicate empty identifier.
 | `left(str, n)`                   | n-characters substring of given string from the beginning                |
 | `lower(str)`, lcase(str)         | converts all characters to lower case                                    |
 | `upper(str)`, ucaes(str)         | converts all characters to upper case                                    |
-| `str(n)`                         | converts given number to string                                          |
+| `str(v)`                         | converts given value to string. Implements special support for byte arrays.|
 | `substring(str, start, length)`  | `length` characters long substring of given string started from `start`  |
 | `space(n)`                       | generates string that consists of `n` spaces                             |
 | `concat(...)`                    | concatenate given strings                                                |

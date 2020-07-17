@@ -284,7 +284,12 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                     if ("PK".equals(binName)) {
                         String op = predExps.stream().skip(i).filter(exp -> exp instanceof OperatorRefPredExp).findFirst().map(exp -> ((OperatorRefPredExp) exp).getOp()).orElseThrow(() -> new IllegalStateException("Cannot find operation"));
                         createQuery(sqlStatement, parameter, op);
-                        indexesToRemove.addAll(asList(i - 1, i, i +1 ));
+                        indexesToRemove.addAll(asList(i - 1, i, i + 1));
+                    } else if ("PK_DIGEST".equals(binName)) {
+                        type = byte[].class;
+                        String op = predExps.stream().skip(i).filter(exp -> exp instanceof OperatorRefPredExp).findFirst().map(exp -> ((OperatorRefPredExp) exp).getOp()).orElseThrow(() -> new IllegalStateException("Cannot find operation"));
+                        createQuery(sqlStatement, parameter, op, true);
+                        indexesToRemove.addAll(asList(i - 1, i, i + 1));
                     } else {
                         type = placeholder.updatePreExp(predExps, i, parameter);
                     }
@@ -303,7 +308,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
             }
 
             if (predExp instanceof OperatorRefPredExp) {
-                if (paramType == null) {
+                if (paramType == null && parameters != null) {
                     SneakyThrower.sneakyThrow(new SQLException("Cannot retrieve type of parameter of prepared statement"));
                 }
                 predExps.set(i, predExpOperators.get(operatorKey(type, ((OperatorRefPredExp)predExp).getOp())).get());
@@ -390,16 +395,20 @@ public class QueryHolder implements QueryContainer<ResultSet> {
     }
 
     private void createQuery(java.sql.Statement sqlStatement, Object parameter, String op) {
+            createQuery(sqlStatement, parameter, op, false);
+    }
+
+    private void createQuery(java.sql.Statement sqlStatement, Object parameter, String op, boolean digest) {
         switch(op) {
             case "=":
-                createPkQuery(sqlStatement, createKey(getSchema(), getSetName(), parameter));
+                createPkQuery(sqlStatement, createKey(getSchema(), getSetName(), parameter, digest));
                 break;
             case "IN":
-                createPkBatchQuery(sqlStatement, createKeys(getSchema(), getSetName(), parameter));
+                createPkBatchQuery(sqlStatement, createKeys(getSchema(), getSetName(), parameter, digest));
                 break;
             case "!=":
             case "<>":
-                createScanQuery(sqlStatement, new PrimaryKeyEqualityPredicate(createKey(getSchema(), getSetName(), parameter), false));
+                createScanQuery(sqlStatement, new PrimaryKeyEqualityPredicate(createKey(getSchema(), getSetName(), parameter, digest), false));
                 break;
             default:
                 SneakyThrower.sneakyThrow(new SQLException("Unsupported PK operation " + op));

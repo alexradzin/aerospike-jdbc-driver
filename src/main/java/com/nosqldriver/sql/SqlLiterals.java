@@ -105,6 +105,7 @@ public class SqlLiterals {
         for (Class type : new Class[] {byte[].class, int[].class, long[].class, Byte[].class, Integer[].class, Long[].class, Array.class, BasicArray.class}) {
             predExpOperators.put(operatorKey(type, "IN"), () -> new OperatorRefPredExp("IN"));
         }
+        predExpOperators.put(operatorKey(byte[].class, "="), () -> new OperatorRefPredExp("="));
 
         // null is for prepared statement when type of value is unknown during parsing of expression.
         asList("=", "<>", "!=", "<", "<=", ">", ">=", "LIKE").forEach(op -> predExpOperators.put(operatorKey(null, op), () -> new OperatorRefPredExp(op)));
