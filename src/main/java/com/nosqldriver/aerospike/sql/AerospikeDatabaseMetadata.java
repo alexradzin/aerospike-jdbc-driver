@@ -707,7 +707,6 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
                         .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
                         .filter(p -> tableNameRegex == null || tableNameRegex.matcher(p.getProperty("set")).matches())
                         .map(p -> asList("".equals(tableNamePattern) ? "" : p.getProperty("ns"), null, p.getProperty("set"), "TABLE", null, null, null, null, null, null))
-                        .distinct()
                         .collect(toList());
 
         String[] columns = new String[] {"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "TABLE_TYPE", "REMARKS", "TYPE_CAT", "TYPE_SCHEM", "TYPE_NAME", "SELF_REFERENCING_COL_NAME", "REF_GENERATION"};
@@ -847,7 +846,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
                 .map(s -> {
                     Properties props = new Properties();
                     return iosafe(() -> {props.load(new StringReader(s)); return props;});
-                });
+                }).distinct();
     }
 
     @Override
