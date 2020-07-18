@@ -588,11 +588,6 @@ class SelectTest {
     @Test
     void selectByDigestBase64() throws SQLException {
         byte[] bytes = new byte[]{10, 20, 30};
-        //Stream.of(bytes).map(b -> Integer.toHexString(b));
-        String xxx = IntStream.range(0, bytes.length).mapToObj(i -> String.format("%02X", bytes[i])).collect(Collectors.joining(" "));
-
-
-
         selectOneRow(() -> {
             String digest1 = Base64.getEncoder().encodeToString(KeyFactory.createKey(NAMESPACE, PEOPLE, 1, false).digest);
             return testConn.createStatement().executeQuery(format("select id, first_name, last_name from people where PK_DIGEST=from_base64('%s')", digest1));
