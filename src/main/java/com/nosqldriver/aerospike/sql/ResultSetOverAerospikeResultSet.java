@@ -4,6 +4,7 @@ import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.ResultSet;
 import com.nosqldriver.sql.BaseSchemalessResultSet;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.DriverPolicy;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.sql.TypeDiscoverer;
 import com.nosqldriver.util.FunctionManager;
@@ -40,7 +41,7 @@ public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map
     }
 
 
-    public ResultSetOverAerospikeResultSet(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, Collection<SpecialField> specialFields) {
+    public ResultSetOverAerospikeResultSet(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, DriverPolicy driverPolicy, Collection<SpecialField> specialFields) {
         super(statement, schema, table, columns,
                 columns1 -> {
                             Collection<DataColumn> referencedFields = new HashSet<>();
@@ -68,7 +69,7 @@ public class ResultSetOverAerospikeResultSet extends BaseSchemalessResultSet<Map
                                 }).collect(toList());
                                 Collection<DataColumn> uniqueSpecialColumns = new TreeSet<>(Comparator.comparing(DataColumn::getName));
                                 uniqueSpecialColumns.addAll(specialFunctions);
-                                new GenericTypeDiscoverer<>(keyRecordsFetcher, KeyRecordFetcherFactory.keyRecordDataExtractor, functionManager, specialFields).discoverType(Stream.concat(regularColumns, specialFunctions.stream()).collect(toList()));
+                                new GenericTypeDiscoverer<>(keyRecordsFetcher, KeyRecordFetcherFactory.keyRecordDataExtractor, functionManager, driverPolicy.discoverMetadataLines, specialFields).discoverType(Stream.concat(regularColumns, specialFunctions.stream()).collect(toList()));
                                 Map<String, DataColumn> name2SpecialColumn = uniqueSpecialColumns.stream().collect(toMap(DataColumn::getName, c -> c));
 
                                 for (DataColumn c : referencedFields) {

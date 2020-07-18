@@ -116,9 +116,9 @@ Even if we do not store or retrieve primary key we can read its digest. Use spec
 This feature can be enabled via parameter `policy.driver.sendKeyDigest=true`.   
 
 ## Database schema
-Relational databases hold meta-data that describe the database structure (catalogs, schemas, tables, columns etc). Aerospike is a schema-less DB. Its tables are called sets and columns are called bins. Set holds any nuber of rows. Each row can hold any number of bins of any name and type. However very often people just hold the DB schema in the application layer and in fact each row has the same bins.
+Relational databases hold meta-data that describe the database structure (catalogs, schemas, tables, columns etc). Aerospike is a schema-less DB. Its tables are called sets and columns are called bins. Set holds any number of rows. Each row can hold any number of bins of any name and type. However, very often people just hold the DB schema in the application layer and in fact each row has the same bins.
 
-The Aerospike JDBC driver discovers schema dynamically using the first rows of the set. This means that if other rows have additional bins they could be ignored when reading data using `select` statement. 
+The Aerospike JDBC driver discovers schema dynamically using the first `N` rows of the set. This means that if other rows have additional bins they could be ignored when reading data using `select` statement. Number of rows used for the schema discovery can be configured using property `policy.driver.discoverMetadataLines`. Its default value is 1.  
 
 ## Export/Import
 The driver does not implement import and export functionality. However, various tools (e.g. [DBeaver](https://dbeaver.io/)) does this. Tools typically perform export using query like the following: 

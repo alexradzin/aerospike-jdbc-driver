@@ -68,6 +68,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     private final IAerospikeClient client;
     private final Connection connection;
     private final InfoPolicy infoPolicy;
+    private final int discoverMetadataLines;
     private final FunctionManager functionManager;
     private static final String newLine = System.lineSeparator();
 
@@ -78,6 +79,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         this.client = client;
         this.connection = connection;
         infoPolicy = policyProvider.getInfoPolicy();
+        discoverMetadataLines = policyProvider.getDriverPolicy().discoverMetadataLines;
         this.functionManager = functionManager;
         manifest = manifest();
         dbInfo = new HashMap<>();
@@ -233,7 +235,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         return getFunctions(String.class);
     }
 
-    private String getFunctions(Class type) {
+    private String getFunctions(Class<?> type) {
         return functionManager.getFunctionNames().stream()
                 .filter(name -> Optional.ofNullable(functionManager.getFunction(name).getClass().getAnnotation(TypeGroup.class))
                     .map(g -> Arrays.asList(g.value()).contains(type)).orElse(false)).collect(Collectors.joining(","));
@@ -871,7 +873,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     }
 
     @Override
-    public ResultSet getTypeInfo() throws SQLException {
+    public ResultSet getTypeInfo() {
         String[] columns = new String[] {
                 "TYPE_NAME", "DATA_TYPE", "PRECISION", "LITERAL_PREFIX", "LITERAL_SUFFIX", "CREATE_PARAMS", "NULLABLE",
                 "CASE_SENSITIVE", "SEARCHABLE", "UNSIGNED_ATTRIBUTE", "FIXED_PREC_SCALE", "AUTO_INCREMENT", "LOCAL_TYPE_NAME",
@@ -938,7 +940,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     }
 
     private ResultSetMetaData getMetadata(String namespace, String table) {
-        return sqlsafe(() -> connection.createStatement().executeQuery(format("select * from %s.%s limit 1", namespace, table)).getMetaData());
+        return sqlsafe(() -> connection.createStatement().executeQuery(format("select * from %s.%s limit %d", namespace, table, discoverMetadataLines)).getMetaData());
     }
 
     @Override

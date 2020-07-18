@@ -5,10 +5,12 @@ import com.aerospike.client.Record;
 import com.aerospike.client.policy.QueryPolicy;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.aerospike.sql.AerospikePolicyProvider;
 import com.nosqldriver.aerospike.sql.KeyRecordFetcherFactory;
 import com.nosqldriver.aerospike.sql.ResultSetOverAerospikeRecordSet;
 import com.nosqldriver.aerospike.sql.SpecialField;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.DriverPolicy;
 import com.nosqldriver.sql.ResultSetWrapper;
 import com.nosqldriver.util.FunctionManager;
 
@@ -17,9 +19,11 @@ import java.util.Collection;
 import java.util.List;
 
 public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statement, QueryPolicy, Record> {
+    private final DriverPolicy driverPolicy;
     @VisibleForPackage
-    AerospikeBatchQueryBySecondaryIndex(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, QueryPolicy policy, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, Collection<SpecialField> specialFields) {
-        super(sqlStatement, schema, statement.getSetName(), columns, statement, policy, keyRecordFetcherFactory, functionManager, specialFields);
+    AerospikeBatchQueryBySecondaryIndex(java.sql.Statement sqlStatement, String schema, List<DataColumn> columns, Statement statement, AerospikePolicyProvider policyProvider, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, Collection<SpecialField> specialFields) {
+        super(sqlStatement, schema, statement.getSetName(), columns, statement, policyProvider.getQueryPolicy(), keyRecordFetcherFactory, functionManager, specialFields);
+        driverPolicy = policyProvider.getDriverPolicy();
     }
 
     @Override
@@ -49,6 +53,6 @@ public class AerospikeBatchQueryBySecondaryIndex extends AerospikeQuery<Statemen
                 }
             };
         }
-        return new ResultSetOverAerospikeRecordSet(statement, schema, set, columns, client.query(policy, criteria), keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set), functionManager, specialFields);
+        return new ResultSetOverAerospikeRecordSet(statement, schema, set, columns, client.query(policy, criteria), keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema, set), functionManager, driverPolicy, specialFields);
     }
 }

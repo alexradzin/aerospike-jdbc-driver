@@ -12,6 +12,7 @@ public class DriverPolicy extends Policy {
     public boolean sendKeyDigest;
     public boolean sendGeneration;
     public boolean sendExpiration;
+    public int discoverMetadataLines = 1;
 
     public Script getScript() {
         return script;

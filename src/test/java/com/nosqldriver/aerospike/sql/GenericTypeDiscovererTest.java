@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,8 +45,8 @@ class GenericTypeDiscovererTest {
         return getClient().query(new QueryPolicy(), statement);
     };
     private static final Function<KeyRecord, Map<String, Object>> recordDataExtractor = keyRecord -> keyRecord.record.bins;
-    private FunctionManager functionManager = new FunctionManager(null);
-    private Connection testConn = getTestConnection();
+    private final FunctionManager functionManager = new FunctionManager(null);
+    private final Connection testConn = getTestConnection();
 
     @AfterEach
     void dropAll() {
@@ -119,6 +118,6 @@ class GenericTypeDiscovererTest {
     }
 
     private TypeDiscoverer createTypeDiscoverer() {
-        return new GenericTypeDiscoverer<>(recordsFetcher, keyRecord -> keyRecord.record.bins, functionManager, emptySet());
+        return new GenericTypeDiscoverer<>(recordsFetcher, keyRecord -> keyRecord.record.bins, functionManager, 1, emptySet());
     }
 }

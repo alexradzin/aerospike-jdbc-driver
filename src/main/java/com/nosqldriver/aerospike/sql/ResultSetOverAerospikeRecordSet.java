@@ -3,6 +3,7 @@ package com.nosqldriver.aerospike.sql;
 import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.RecordSet;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.DriverPolicy;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.util.FunctionManager;
 
@@ -19,9 +20,9 @@ public class ResultSetOverAerospikeRecordSet extends AerospikeRecordResultSet {
     private Iterator<KeyRecord> it;
     private KeyRecord currentRecord;
 
-    public ResultSetOverAerospikeRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, RecordSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, Collection<SpecialField> specialFields) {
+    public ResultSetOverAerospikeRecordSet(Statement statement, String schema, String table, List<DataColumn> columns, RecordSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, DriverPolicy driverPolicy, Collection<SpecialField> specialFields) {
         super(statement, schema, table, columns,
-                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(KeyRecordFetcherFactory.extractors(specialFields)), functionManager, specialFields),
+                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(KeyRecordFetcherFactory.extractors(specialFields)), functionManager, driverPolicy.discoverMetadataLines, specialFields),
                 specialFields);
         this.rs = rs;
     }

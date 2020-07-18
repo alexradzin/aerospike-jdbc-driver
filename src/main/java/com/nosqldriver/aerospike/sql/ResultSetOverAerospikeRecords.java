@@ -2,6 +2,7 @@ package com.nosqldriver.aerospike.sql;
 
 import com.aerospike.client.query.KeyRecord;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.DriverPolicy;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.util.FunctionManager;
 
@@ -22,15 +23,15 @@ public class ResultSetOverAerospikeRecords extends AerospikeRecordResultSet {
     private final KeyRecord[] records;
     private int currentIndex = -1;
 
-    public ResultSetOverAerospikeRecords(Statement statement, String schema, String table, List<DataColumn> columns, KeyRecord[] records, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, Collection<SpecialField> specialFields) {
+    public ResultSetOverAerospikeRecords(Statement statement, String schema, String table, List<DataColumn> columns, KeyRecord[] records, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, Collection<SpecialField> specialFields, DriverPolicy driverPolicy) {
         super(
                 statement,
                 schema,
                 table,
                 columns,
                 Arrays.stream(records).anyMatch(record -> record.record != null) ?
-                        new GenericTypeDiscoverer<>((c, t) -> asList(records), new CompositeKeyRecordExtractor(KeyRecordFetcherFactory.extractors(specialFields)), functionManager, specialFields) :
-                        new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, specialFields),
+                        new GenericTypeDiscoverer<>((c, t) -> asList(records), new CompositeKeyRecordExtractor(KeyRecordFetcherFactory.extractors(specialFields)), functionManager, driverPolicy.discoverMetadataLines, specialFields) :
+                        new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(specialFields.contains(PK) ? keyRecordKeyExtractor : emptyKeyRecordExtractor, keyRecordDataExtractor), functionManager, driverPolicy.discoverMetadataLines, specialFields),
 
                 specialFields);
         this.records = Arrays.stream(records).filter(record -> record.record != null).toArray(KeyRecord[]::new);

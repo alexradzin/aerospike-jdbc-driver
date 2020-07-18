@@ -9,6 +9,7 @@ import com.aerospike.client.policy.ScanPolicy;
 import com.aerospike.client.query.KeyRecord;
 import com.nosqldriver.sql.BaseSchemalessResultSet;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.DriverPolicy;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.util.FunctionManager;
 
@@ -34,12 +35,12 @@ public class ResultSetOverAerospikeScan extends BaseSchemalessResultSet<KeyRecor
     private final BlockingQueue<KeyRecord> queue = new ArrayBlockingQueue<>(10);
     private static final KeyRecord barrier = new KeyRecord(new Key("done", "done", "done"), new Record(emptyMap(), 0, 0));
 
-    public ResultSetOverAerospikeScan(IAerospikeClient client, Statement statement, String schema, String table, List<DataColumn> columns, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, Collection<SpecialField> specialFields) {
+    public ResultSetOverAerospikeScan(IAerospikeClient client, Statement statement, String schema, String table, List<DataColumn> columns, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, DriverPolicy driverPolicy, Collection<SpecialField> specialFields) {
         super(statement,
                 schema,
                 table,
                 columns,
-                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(KeyRecordFetcherFactory.extractors(specialFields)), functionManager, specialFields),
+                new GenericTypeDiscoverer<>(keyRecordsFetcher, new CompositeKeyRecordExtractor(KeyRecordFetcherFactory.extractors(specialFields)), functionManager, driverPolicy.discoverMetadataLines, specialFields),
                 specialFields);
         this.callback = (key, record) -> enqueue(new KeyRecord(key, record));
         new Thread(() -> {

@@ -79,6 +79,7 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
                 keyRecordFetcherFactory.createKeyRecordsFetcher(client, schema.get(), set),
                 new CompositeKeyRecordExtractor(KeyRecordFetcherFactory.extractors(specialFields)),
                 this.functionManager,
+                policyProvider.getDriverPolicy().discoverMetadataLines,
                 specialFields);
     }
 

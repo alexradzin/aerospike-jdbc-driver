@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -62,7 +63,7 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
     public List<DataColumn> discoverType(List<DataColumn> columns) {
         boolean all = columns.size() == 1 && "*".equals(columns.get(0).getName());
 
-        List<DataColumn> mainColumns = all ? new ArrayList<>() : columns;
+        Collection<DataColumn> mainColumns = all ? new LinkedHashSet<>() : columns;
         List<DataColumn> subColumns = new ArrayList<>();
         Map<String, List<DataColumn>> dataColumnsByTable = columns.stream().collect(Collectors.groupingBy(c -> c.getCatalog() + "." + c.getTable()));
         Map<String, List<DataColumn>> columnsByTable = new HashMap<>(dataColumnsByTable);
@@ -112,7 +113,7 @@ public class GenericTypeDiscoverer<R> implements TypeDiscoverer {
             }
         }
 
-        return subColumns.isEmpty() ? mainColumns : concat(mainColumns.stream(), subColumns.stream()).collect(toList());
+        return subColumns.isEmpty() ? new ArrayList<>(mainColumns) : concat(mainColumns.stream(), subColumns.stream()).collect(toList());
     }
 
     private void addSpecialColumn(Map<String, List<DataColumn>> dataColumnsByTable, Map<String, List<DataColumn>> columnsByTable, SpecialField specialField) {

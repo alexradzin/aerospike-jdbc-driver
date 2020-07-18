@@ -4,6 +4,7 @@ import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.ResultSet;
 import com.nosqldriver.sql.CompositeTypeDiscoverer;
 import com.nosqldriver.sql.DataColumn;
+import com.nosqldriver.sql.DriverPolicy;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.util.FunctionManager;
 
@@ -53,9 +54,9 @@ public class ResultSetOverDistinctMap extends ResultSetOverAerospikeResultSet {
     private boolean nextResult = false;
 
 
-    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, Collection<SpecialField> specialFields) {
+    public ResultSetOverDistinctMap(Statement statement, String schema, String table, List<DataColumn> columns, ResultSet rs, BiFunction<String, String, Iterable<KeyRecord>> keyRecordsFetcher, FunctionManager functionManager, DriverPolicy driverPolicy, Collection<SpecialField> specialFields) {
         super(statement, schema, table, columns, rs, new CompositeTypeDiscoverer(
-                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor, functionManager, specialFields),
+                new GenericTypeDiscoverer<>(keyRecordsFetcher, keyRecordDataExtractor, functionManager, driverPolicy.discoverMetadataLines, specialFields),
                 columns1 -> {
                     columns1.stream().filter(c -> c.getName().startsWith("count(")).forEach(c -> c.withType(Types.BIGINT));
                     columns1.stream().filter(c -> !c.getName().contains("count(") && c.getName().contains("(")).forEach(c -> c.withType(Types.DOUBLE));
