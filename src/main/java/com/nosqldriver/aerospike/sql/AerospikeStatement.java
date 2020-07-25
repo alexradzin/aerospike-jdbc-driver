@@ -12,6 +12,8 @@ import com.nosqldriver.sql.ChainedResultSetWrapper;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.PreparedStatementUtil;
 import com.nosqldriver.sql.SimpleWrapper;
+import com.nosqldriver.sql.StatementEvent;
+import com.nosqldriver.sql.StatementEventListener;
 import com.nosqldriver.sql.WarningsHolder;
 import com.nosqldriver.util.FunctionManager;
 import com.nosqldriver.util.SneakyThrower;
@@ -44,6 +46,7 @@ import static java.util.Optional.ofNullable;
 public class AerospikeStatement extends WarningsHolder implements java.sql.Statement, SimpleWrapper {
     protected final IAerospikeClient client;
     private final Connection connection;
+    private final StatementEventListener statementEventListener;
     protected final AtomicReference<String> schema;
     protected String set;
     private int maxRows = Integer.MAX_VALUE;
@@ -54,8 +57,8 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
     private int updateCount;
     private final FunctionManager functionManager;
 
-    protected enum StatementType implements Predicate<String> {
-        SELECT {
+    private enum AerospikeStatementType implements Predicate<String> {
+        SELECT(StatementEvent.StatementType.SELECT) {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 AerospikeQueryFactory aqf = statement.createQueryFactory();
@@ -74,7 +77,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
                 return true;
             }
         },
-        INSERT {
+        INSERT(StatementEvent.StatementType.INSERT) {
             int executeUpdate(AerospikeStatement statement, String sql) throws SQLException {
                 AerospikeQueryFactory aqf = statement.createQueryFactory();
                 Function<IAerospikeClient, ResultSet> insert = aqf.createQueryPlan(sql).getQuery(statement);
@@ -89,7 +92,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
                 return false;
             }
         },
-        UPDATE {
+        UPDATE(StatementEvent.StatementType.UPDATE) {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
@@ -111,10 +114,10 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
                 return false;
             }
         },
-        DELETE(UPDATE),
-        TRUNCATE(UPDATE),
-        SHOW(SELECT),
-        USE {
+        DELETE(StatementEvent.StatementType.DELETE, UPDATE),
+        TRUNCATE(StatementEvent.StatementType.TRUNCATE, UPDATE),
+        SHOW(StatementEvent.StatementType.SHOW, SELECT),
+        USE(StatementEvent.StatementType.USE) {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 String schema = executeUpdate(statement, sql) > 0 ? statement.schema.get() : null;
@@ -137,7 +140,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
             }
         },
 
-        CREATE_INDEX {
+        CREATE_INDEX(StatementEvent.StatementType.CREATE_INDEX) {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
@@ -187,7 +190,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
             }
         },
 
-        DROP_INDEX {
+        DROP_INDEX(StatementEvent.StatementType.DROP_INDEX) {
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 executeUpdate(statement, sql);
@@ -212,13 +215,16 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
         },
         ;
 
-        private final StatementType prototype;
+        private final StatementEvent.StatementType statementType;
+        private final AerospikeStatementType prototype;
         private final Pattern pattern;
 
-        StatementType() {
-            this(null);
+        AerospikeStatementType(StatementEvent.StatementType statementType) {
+            this(statementType, null);
         }
-        StatementType(StatementType prototype) {
+
+        AerospikeStatementType(StatementEvent.StatementType statementType, AerospikeStatementType prototype) {
+            this.statementType = statementType;
             this.prototype = prototype;
             pattern = Pattern.compile("^\\s*" + name().replace('_', ' ') + "\\b", Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.MULTILINE);
         }
@@ -259,9 +265,10 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
 
 
 
-    public AerospikeStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, FunctionManager functionManager) {
+    public AerospikeStatement(IAerospikeClient client, Connection connection, StatementEventListener statementEventListener, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, FunctionManager functionManager) {
         this.client = client;
         this.connection = connection;
+        this.statementEventListener = statementEventListener;
         this.schema = schema;
         this.policyProvider = policyProvider;
         indexes = new ConnectionParametersParser().indexesParser(Info.request(client.getNodes()[0], "sindex"), "ns", "set", "bin");
@@ -275,7 +282,9 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
         List<ResultSet> resultSets = new ArrayList<>();
         int updateCount = 0;
         for (String s : PreparedStatementUtil.splitQueries(sql)) {
-            ResultSet rs = getStatementType(sql).executeQuery(this, s);
+            AerospikeStatementType type = getStatementType(sql);
+            ResultSet rs = type.executeQuery(this, s);
+            statementEventListener.queried(new StatementEvent(type.statementType, sql));
             int n = rs.getStatement().getUpdateCount();
             resultSets.add(rs);
             updateCount += n;
@@ -297,7 +306,9 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
     public int executeUpdate(String sql) throws SQLException {
         int result = 0;
         for (String s : PreparedStatementUtil.splitQueries(sql)) {
-            int n = getStatementType(sql).executeUpdate(this, s);
+            AerospikeStatementType type = getStatementType(sql);
+            int n = type.executeUpdate(this, s);
+            statementEventListener.updated(new StatementEvent(type.statementType, sql));
             result += n;
         }
         return result;
@@ -358,7 +369,9 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
         Boolean result = null;
         int updateCount = 0;
         for (String s : PreparedStatementUtil.splitQueries(sql)) {
-            boolean r = getStatementType(sql).execute(this, s);
+            AerospikeStatementType type = getStatementType(sql);
+            boolean r = type.execute(this, s);
+            statementEventListener.executed(new StatementEvent(type.statementType, sql));
             int n = getUpdateCount();
             updateCount += n;
             if (result == null) {
@@ -517,12 +530,12 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
         return false;
     }
 
-    protected static StatementType getStatementType(String sql) throws SQLException {
+    protected static AerospikeStatementType getStatementType(String sql) throws SQLException {
         String sqlUp = sql.trim().toUpperCase();
-        Optional<StatementType> type = Arrays.stream(StatementType.values()).filter(t -> t.test(sqlUp)).findFirst();
+        Optional<AerospikeStatementType> type = Arrays.stream(AerospikeStatementType.values()).filter(t -> t.test(sqlUp)).findFirst();
 
         if (!type.isPresent()) {
-            throw new SQLSyntaxErrorException(format("SQL statement %s is not supported. SQL should start with one of: %s", sql, Arrays.toString(Arrays.stream(StatementType.values()).map(Enum::name).map(name -> name.replace("_", " ")).toArray())));
+            throw new SQLSyntaxErrorException(format("SQL statement %s is not supported. SQL should start with one of: %s", sql, Arrays.toString(Arrays.stream(AerospikeStatementType.values()).map(Enum::name).map(name -> name.replace("_", " ")).toArray())));
         }
         return type.get();
     }

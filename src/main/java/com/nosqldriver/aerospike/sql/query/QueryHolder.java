@@ -40,7 +40,6 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.SignedExpression;
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
 
 import java.lang.reflect.Array;
 import java.sql.ResultSet;
@@ -640,7 +639,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
 
                     @Override
                     protected String getCatalog(Expression expr) {
-                        return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(schema);
+                        return ofNullable(((Column) expr).getTable()).map(t -> stripQuotes(t.getSchemaName())).orElse(schema);
                     }
 
                     @Override
@@ -729,7 +728,7 @@ public class QueryHolder implements QueryContainer<ResultSet> {
                 new ColumnType(e -> e instanceof String && ((String) e).startsWith("distinct")) {
                     @Override
                     protected String getCatalog(Expression expr) {
-                        return ofNullable(((Column) expr).getTable()).map(Table::getSchemaName).orElse(null);
+                        return ofNullable(((Column) expr).getTable()).map(t -> stripQuotes(t.getSchemaName())).orElse(null);
                     }
 
                     @Override

@@ -7,6 +7,7 @@ import com.nosqldriver.sql.DataColumn;
 import com.nosqldriver.sql.DataColumnBasedResultSetMetaData;
 import com.nosqldriver.sql.GenericTypeDiscoverer;
 import com.nosqldriver.sql.SimpleParameterMetaData;
+import com.nosqldriver.sql.StatementEventListener;
 import com.nosqldriver.sql.StringClob;
 import com.nosqldriver.sql.TypeDiscoverer;
 import com.nosqldriver.util.FunctionManager;
@@ -66,8 +67,8 @@ public class AerospikePreparedStatement extends AerospikeStatement implements Pr
     private final TypeDiscoverer discoverer;
     private final FunctionManager functionManager;
 
-    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, Collection<SpecialField> specialFields) throws SQLException {
-        super(client, connection, schema, policyProvider, functionManager);
+    public AerospikePreparedStatement(IAerospikeClient client, Connection connection, StatementEventListener statementEventListener, AtomicReference<String> schema, AerospikePolicyProvider policyProvider, String sql, KeyRecordFetcherFactory keyRecordFetcherFactory, FunctionManager functionManager, Collection<SpecialField> specialFields) throws SQLException {
+        super(client, connection, statementEventListener, schema, policyProvider, functionManager);
         this.sql = sql;
         int n = parseParameters(sql, 0).getValue();
         parameterValues = new Object[n];

@@ -18,9 +18,19 @@ import com.aerospike.client.query.KeyRecord;
 import com.aerospike.client.query.RecordSet;
 import com.aerospike.client.query.Statement;
 import com.nosqldriver.VisibleForPackage;
+import com.nosqldriver.util.SneakyThrower;
+import com.nosqldriver.util.ThrowingSupplier;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.io.StringReader;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.stream.Stream;
 
 import static com.nosqldriver.aerospike.sql.TestDataUtils.NAMESPACE;
 import static com.nosqldriver.aerospike.sql.TestDataUtils.PEOPLE;
@@ -262,6 +272,67 @@ cluster_size=1;cluster_key=C91AC4780FA5;cluster_generation=1;cluster_principal=B
         Node node = client.getNodes()[0];
         System.out.println(command + ": " + Info.request(node, command));
     }
+
+//    @Test
+    void request() {
+//        writeToBar();
+//        writeBeatles();
+//        client.createIndex(new Policy(), "bar", "people", "bar_people_id", "id", IndexType.NUMERIC);
+
+
+//        long t1 = System.currentTimeMillis();
+        Node node = client.getNodes()[0];
+//        long t2 = System.currentTimeMillis();
+//        System.out.println("request=" + Info.request(new InfoPolicy(), node));
+//        long t3 = System.currentTimeMillis();
+//        System.out.println((t3-t2) + ", " + (t2 - t1));
+
+
+
+
+
+
+        InfoPolicy infoPolicy = new InfoPolicy();
+
+//        Map<String, String> all = Info.request(infoPolicy, node);
+//        System.out.println("all");
+//        print(all);
+
+        Map<String, String> setsAndIndexes = Info.request(infoPolicy, node, "namespaces",  "sets", "sindex-list:", "build", "edition");
+        System.out.println("sets, indexes");
+        print(setsAndIndexes);
+
+        //System.out.println(getInfo("sets").collect(Collectors.toList()));
+    }
+
+    private void print(Map<String, String> map) {
+        map.forEach((key, value) -> System.out.printf("%s -> %s\n", key, value));
+    }
+
+
+    private Stream<Properties> getInfo(String command) {
+        String newLine = System.lineSeparator();
+        InfoPolicy infoPolicy = new InfoPolicy();
+        return Arrays.stream(client.getNodes())
+                .map(node -> Info.request(infoPolicy, node, command))
+                .filter(Objects::nonNull)
+                .map(s -> s.split(";"))
+                .flatMap(Arrays::stream)
+                .map(s -> s.replace(":", newLine))
+                .map(s -> {
+                    Properties props = new Properties();
+                    return iosafe(() -> {props.load(new StringReader(s)); return props;});
+                }).distinct();
+    }
+
+    private <R> R iosafe(ThrowingSupplier<R, IOException> supplier) {
+        try {
+            return supplier.get();
+        } catch (IOException e) {
+            return SneakyThrower.sneakyThrow(new SQLException(e));
+        }
+    }
+
 
     //@Test
     @VisibleForPackage

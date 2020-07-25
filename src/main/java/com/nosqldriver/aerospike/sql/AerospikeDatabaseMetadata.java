@@ -28,9 +28,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.jar.Manifest;
@@ -64,26 +65,74 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     private final Properties clientInfo;
 
     private final Optional<Manifest> manifest;
-    private final Map<String, String> dbInfo;
-    private final IAerospikeClient client;
     private final Connection connection;
     private final InfoPolicy infoPolicy;
     private final int discoverMetadataLines;
     private final FunctionManager functionManager;
     private static final String newLine = System.lineSeparator();
+    private final String dbBuild;
+    private final String dbEdition;
+    private final List<String> catalogs;
+    private final Map<String, Collection<String>> tables = new HashMap<>();
+    private final Map<String, Collection<IndexInfo>> indices = new HashMap<>();
 
 
     public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client, Connection connection, AerospikePolicyProvider policyProvider, FunctionManager functionManager) {
         this.url = url;
         clientInfo = parser.clientInfo(url, info);
-        this.client = client;
         this.connection = connection;
         infoPolicy = policyProvider.getInfoPolicy();
         discoverMetadataLines = policyProvider.getDriverPolicy().discoverMetadataLines;
         this.functionManager = functionManager;
         manifest = manifest();
-        dbInfo = new HashMap<>();
-        Arrays.stream(client.getNodes()).forEach(node -> dbInfo.putAll(Info.request(infoPolicy, node)));
+
+        Collection<String> builds = new LinkedHashSet<>();
+        Collection<String> editions = new LinkedHashSet<>();
+        Collection<String> namespaces = new LinkedHashSet<>();
+        Arrays.stream(client.getNodes()).parallel()
+                .map(node -> Info.request(infoPolicy, node, "namespaces", "sets", "sindex-list:", "build", "edition"))
+                .forEach(r -> {
+                    builds.add(r.get("build"));
+                    editions.add(r.get("edition"));
+                    namespaces.addAll(Arrays.asList(getOrDefault(r, "namespaces", "").split(";")));
+                    streamOfSubProperties(r, "sets").forEach(p -> tables.computeIfAbsent(p.getProperty("ns"), s -> new HashSet<>()).add(p.getProperty("set")));
+                    streamOfSubProperties(r, "sindex-list:").forEach(p -> indices.computeIfAbsent(p.getProperty("ns"), s -> new HashSet<>())
+                            .add(new IndexInfo(p.getProperty("ns"), p.getProperty("set"), p.getProperty("indexname"), p.getProperty("bin"), p.getProperty("type"))));
+                });
+
+        dbBuild = join("N/A", ", ", builds);
+        dbEdition = join("Aerospike", ", ", editions);
+        catalogs = namespaces.stream().filter(n -> !"".equals(n)).collect(Collectors.toList());
+    }
+
+    private Properties initProperties(String lines) {
+        return iosafe(() -> {
+            Properties properties = new Properties();
+            properties.load(new StringReader(lines));
+            return properties;
+        });
+    }
+
+    private Stream<Properties> streamOfSubProperties(Map<String, String> map, String key) {
+        return Optional.ofNullable(map.get(key)).map(s -> Arrays.stream(s.split(";")).map(ns -> initProperties(ns.replace(":", newLine)))).orElse(Stream.empty());
+    }
+
+    /**
+     * Truly {@code getOrDefault()} - returns value from map only if it exists and is not {@code null}.
+     * Otherwise returns default value.
+     * @param map - the map
+     * @param key - the key
+     * @param defaultValue - the default value
+     * @param <K> - the key type
+     * @param <V> - the value type
+     * @return not null value or default value
+     */
+    private <K, V> V getOrDefault(Map<K, V> map, K key, V defaultValue) {
+        return Optional.ofNullable(map.getOrDefault(key, defaultValue)).orElse(defaultValue);
+    }
+
+    private String join(String defaultValue, String delimiter, Collection<String> elements) {
+        return elements.isEmpty() ? defaultValue : String.join(delimiter, elements);
     }
 
     @Override
@@ -133,12 +182,12 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public String getDatabaseProductName() {
-        return dbInfo.getOrDefault("edition", "Aerospike");
+        return dbEdition;
     }
 
     @Override
     public String getDatabaseProductVersion() {
-        return dbInfo.getOrDefault("build", "N/A");
+        return dbBuild;
     }
 
     @Override
@@ -704,17 +753,22 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) {
         Pattern tableNameRegex = tableNamePattern == null || "".equals(tableNamePattern) ? null : Pattern.compile(tableNamePattern.replace("%", ".*"));
 
-        Iterable<List<?>> tables =
-                getTablesData(catalog)
-                        .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
-                        .filter(p -> tableNameRegex == null || tableNameRegex.matcher(p.getProperty("set")).matches())
-                        .map(p -> asList("".equals(tableNamePattern) ? "" : p.getProperty("ns"), null, p.getProperty("set"), "TABLE", null, null, null, null, null, null))
-                        .collect(toList());
+        final Iterable<List<?>> tablesData;
+        if (catalog == null) {
+            tablesData = tables.entrySet().stream()
+                    .flatMap(p -> p.getValue().stream().map(t -> asList(p.getKey(), null, t, "TABLE", null, null, null, null, null, null)))
+                    .collect(toList());
+        } else {
+            tablesData = tables.getOrDefault(catalog, Collections.emptyList()).stream()
+                    .filter(t -> tableNameRegex == null || tableNameRegex.matcher(t).matches())
+                    .map(t -> asList(catalog, null, t, "TABLE", null, null, null, null, null, null))
+                    .collect(toList());
+        }
 
         String[] columns = new String[] {"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "TABLE_TYPE", "REMARKS", "TYPE_CAT", "TYPE_SCHEM", "TYPE_NAME", "SELF_REFERENCING_COL_NAME", "REF_GENERATION"};
         int[] sqlTypes = new int[columns.length];
         Arrays.fill(sqlTypes, VARCHAR);
-        return new ListRecordSet(null, "system", "tables", systemColumns(columns, sqlTypes), tables);
+        return new ListRecordSet(null, "system", "tables", systemColumns(columns, sqlTypes), tablesData);
     }
 
     @Override
@@ -729,14 +783,7 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     }
 
     public List<String> getCatalogNames() {
-        return Arrays.stream(client.getNodes())
-                .map(node -> Info.request(infoPolicy, node, "namespaces"))
-                .map(str -> str.split(";"))
-                .map(Arrays::asList)
-                .flatMap(Collection::stream)
-                .distinct()
-                .sorted()
-                .collect(toList());
+        return catalogs;
     }
 
     @Override
@@ -748,12 +795,18 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException {
         Pattern tableNameRegex = tableNamePattern == null || "".equals(tableNamePattern) ? null : Pattern.compile(tableNamePattern.replace("%", ".*"));
 
-        Iterable<ResultSetMetaData> mds =
-                getTablesData(catalog)
-                        .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
-                        .filter(p -> tableNameRegex == null || tableNameRegex.matcher(p.getProperty("set")).matches())
-                        .map(p -> getMetadata(p.getProperty("ns"), p.getProperty("set")))
-                        .collect(toList());
+
+        final Iterable<ResultSetMetaData> mds;
+        if (catalog == null) {
+            mds = tables.entrySet().stream()
+                    .flatMap(p -> p.getValue().stream().map(t -> getMetadata(p.getKey(), t)))
+                    .collect(toList());
+        } else {
+            mds = tables.getOrDefault(catalog, Collections.emptyList()).stream()
+                    .filter(t -> tableNameRegex == null || tableNameRegex.matcher(t).matches())
+                    .map(t -> getMetadata(catalog, t))
+                    .collect(toList());
+        }
 
         List<List<?>> result = new ArrayList<>();
         for(ResultSetMetaData md : mds) {
@@ -816,40 +869,30 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public ResultSet getPrimaryKeys(String catalog, String schema, String table) {
-        Iterable<List<?>> tables =
-                getTablesData(catalog)
-                        .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
-                        .filter(p -> table == null || table.equals(p.getProperty("set")))
-                        .map(p -> asList(p.getProperty("ns"), null, p.getProperty("set"), "PK", 1, "PK"))
-                        .collect(toList());
+        final Iterable<List<?>> tablesData;
+        if (catalog == null) {
+            tablesData = tables.entrySet().stream()
+                    .flatMap(p -> p.getValue().stream().map(t -> asList(p.getKey(), null, t, "PK", 1, "PK")))
+                    .collect(toList());
+        } else {
+            tablesData = tables.getOrDefault(catalog, Collections.emptyList()).stream()
+                    .filter(t -> table == null || table.equals(t))
+                    .map(t -> asList(catalog, null, t, "PK", 1, "PK"))
+                    .collect(toList());
+        }
 
         String[] columns = new String[]{"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "KEY_SEQ", "PK_NAME"};
         int[] sqlTypes = new int[]{VARCHAR,VARCHAR,VARCHAR,VARCHAR,SMALLINT,VARCHAR};
-        return new ListRecordSet(null, "system", "primary_keys", systemColumns(columns, sqlTypes), tables);
+        return new ListRecordSet(null, "system", "primary_keys", systemColumns(columns, sqlTypes), tablesData);
     }
 
     public List<String> getTableNames(String catalog) {
-        return getTablesData(catalog).filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
-                .map(p -> p.getProperty("set"))
-                .collect(Collectors.toList());
+        if (catalog == null) {
+            return tables.values().stream().flatMap(Collection::stream).collect(Collectors.toList());
+        }
+        return new ArrayList<>(tables.getOrDefault(catalog, Collections.emptyList()));
     }
 
-    private Stream<Properties> getTablesData(String catalog) {
-        return getInfo(catalog == null ? "sets" : format("sets/%s", catalog));
-    }
-
-    private Stream<Properties> getInfo(String command) {
-        return Arrays.stream(client.getNodes())
-                .map(node -> Info.request(infoPolicy, node, command))
-                .filter(Objects::nonNull)
-                .map(s -> s.split(";"))
-                .flatMap(Arrays::stream)
-                .map(s -> s.replace(":", newLine))
-                .map(s -> {
-                    Properties props = new Properties();
-                    return iosafe(() -> {props.load(new StringReader(s)); return props;});
-                }).distinct();
-    }
 
     @Override
     public ResultSet getImportedKeys(String catalog, String schema, String table) {
@@ -920,27 +963,24 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
 
     @Override
     public ResultSet getIndexInfo(String catalog, String schema, String table, boolean unique, boolean approximate) {
-        Iterable<List<?>> indexes =
-                getInfo("sindex-list:")
-                        .filter(p -> catalog == null || catalog.equals(p.getProperty("ns")))
-                        .filter(p -> table == null || table.equals(p.getProperty("set")))
-                        .map(p -> asList(p.getProperty("ns"), null, p.getProperty("set"), 0, null, p.getProperty("indexname"), tableIndexClustered, ordinal(getMetadata(p.getProperty("ns"), p.getProperty("set")), p.getProperty("bin")), p.getProperty("bin"), null, null /*TODO number of unique values in index: stat index returns relevant information */, 0, null))
-                        .collect(toList());
-
+        final Iterable<List<?>> indicesData;
+        if (catalog == null) {
+            indicesData = indices.entrySet().stream().flatMap(p -> p.getValue().stream()).map(IndexInfo::asList).collect(Collectors.toList());
+        } else {
+            indicesData = getOrDefault(indices, catalog, Collections.emptyList()).stream().map(IndexInfo::asList).collect(Collectors.toList());
+        }
 
         String[] columns = new String[]{"TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "NON_UNIQUE", "INDEX_QUALIFIER", "INDEX_NAME", "TYPE", "ORDINAL_POSITION", "COLUMN_NAME", "ASC_OR_DESC", "CARDINALITY", "PAGES", "FILTER_CONDITION"};
         int[] sqlTypes = new int[]{VARCHAR, VARCHAR, VARCHAR, TINYINT, VARCHAR, VARCHAR, SMALLINT, SMALLINT, VARCHAR, VARCHAR, BIGINT, BIGINT, VARCHAR};
-        return new ListRecordSet(null, "system", "index_info", systemColumns(columns, sqlTypes), indexes);
+        return new ListRecordSet(null, "system", "index_info", systemColumns(columns, sqlTypes), indicesData);
     }
 
     public List<List<?>> getIndexInfo() {
-        return getInfo("sindex-list:")
-                .map(p -> asList(p.getProperty("set"), p.getProperty("indexname"), p.getProperty("bin"), p.getProperty("type")))
-                .collect(toList());
+        return indices.entrySet().stream().flatMap(p -> p.getValue().stream()).map(i -> asList(i.set, i.name, i.bin, i.type)).collect(Collectors.toList());
     }
 
     private ResultSetMetaData getMetadata(String namespace, String table) {
-        return sqlsafe(() -> connection.createStatement().executeQuery(format("select * from %s.%s limit %d", namespace, table, discoverMetadataLines)).getMetaData());
+        return SneakyThrower.get(() -> connection.createStatement().executeQuery(format("select * from %s.%s limit %d", namespace, table, discoverMetadataLines)).getMetaData());
     }
 
     @Override
@@ -1223,12 +1263,24 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         }
     }
 
-    private <R> R sqlsafe(ThrowingSupplier<R, SQLException> supplier) {
-        try {
-            return supplier.get();
-        } catch (SQLException e) {
-            return SneakyThrower.sneakyThrow(e);
+    private class IndexInfo {
+        private final String namespace;
+        private final String set;
+        private final String name;
+        private final String bin;
+        private final String type;
+
+
+        private IndexInfo(String namespace, String set, String name, String bin, String type) {
+            this.namespace = namespace;
+            this.set = set;
+            this.name = name;
+            this.bin = bin;
+            this.type = type;
+        }
+
+        public List<?> asList() {
+            return Arrays.asList(namespace, null, set, 0, null, name, tableIndexClustered, ordinal(getMetadata(namespace, set), bin), bin, null, null /*TODO number of unique values in index: stat index returns relevant information */, 0, null);
         }
     }
-
 }

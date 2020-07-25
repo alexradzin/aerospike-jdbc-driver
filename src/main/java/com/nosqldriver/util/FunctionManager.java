@@ -9,14 +9,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static java.lang.String.format;
 
 public class FunctionManager {
     private final Map<String, Object> functions;
 
-    public FunctionManager(DatabaseMetaData databaseMetaData) {
-        this.functions = new StandardFunctions(databaseMetaData).getFunctions();
+    public FunctionManager(Supplier<DatabaseMetaData> mdSupplier) {
+        this.functions = new StandardFunctions(mdSupplier).getFunctions();
     }
 
     public void addFunction(String name, String className) {

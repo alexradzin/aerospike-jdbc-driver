@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AerospikeDatabaseMetadataTest {
-    private Connection testConn = getTestConnection();
+    private final Connection testConn = getTestConnection();
 
     @Test
     void trivialFlags() throws SQLException {
@@ -172,7 +172,7 @@ class AerospikeDatabaseMetadataTest {
         assertEquals("", md.getSQLKeywords());
         assertTrue(md.getNumericFunctions().contains("sum"));
         assertTrue(md.getStringFunctions().contains("concat"));
-        assertEquals("", md.getSystemFunctions());
+        assertEquals("version,user", md.getSystemFunctions());
         assertTrue(md.getTimeDateFunctions().contains("now"));
         assertEquals("\\", md.getSearchStringEscape());
         assertEquals("", md.getExtraNameCharacters());
@@ -180,7 +180,6 @@ class AerospikeDatabaseMetadataTest {
         assertEquals("lua script", md.getProcedureTerm());
         assertEquals("namespace", md.getCatalogTerm());
         assertEquals(".", md.getCatalogSeparator());
-
     }
 
     @Test

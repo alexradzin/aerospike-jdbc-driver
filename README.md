@@ -115,9 +115,18 @@ If keys should be always available the easiest way is to supply property `policy
 Even if we do not store or retrieve primary key we can read its digest. Use special field `PK_DIGEST` for this purpose.
 This feature can be enabled via parameter `policy.driver.sendKeyDigest=true`.   
 
-## Database schema
-Relational databases hold meta-data that describe the database structure (catalogs, schemas, tables, columns etc). Aerospike is a schema-less DB. Its tables are called sets and columns are called bins. Set holds any number of rows. Each row can hold any number of bins of any name and type. However, very often people just hold the DB schema in the application layer and in fact each row has the same bins.
+## Metadata
+Relational databases hold metadata that describe the database structure (catalogs, schemas, tables, columns etc). Aerospike is a schema-less DB. Its tables are called sets and columns are called bins. Set holds any number of rows. Each row can hold any number of bins of any name and type. However, very often people just hold the DB schema in the application layer and in fact each row has the same bins.
 
+JDBC standard operates with 2 types of metadata: 
+ - Database schema represented by interface `java.sql.DatabaseMetaData`
+ - Table schema represented by interface `java.sql.ResultSetMetaData`
+
+### Database schema
+Discovery of metadata of Aerospike cluster may be pretty heavy: it merges information retrieved from each node of the cluster. Various tools call method `Connection.getMetaData()` very often that can cause performance problems. The driver caches this information for certain time period that can be configured using property `policy.driver.databaseMetadataCacheTimeout` (default value is 60000 ms.)
+Execution of operation that can change the metadata (`INSERT`, `UPDATE`, `CREATE_INDEX`, `DROP_INDEX`) invalidates this cache.   
+
+### Table schema
 The Aerospike JDBC driver discovers schema dynamically using the first `N` rows of the set. This means that if other rows have additional bins they could be ignored when reading data using `select` statement. Number of rows used for the schema discovery can be configured using property `policy.driver.discoverMetadataLines`. Its default value is 1.  
 
 ## Export/Import

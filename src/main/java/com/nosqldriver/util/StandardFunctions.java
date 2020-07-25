@@ -17,6 +17,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -72,10 +73,10 @@ class StandardFunctions {
                     return ((CharSequence)o).length();
                 }
                 if (o instanceof Collection) {
-                    return ((Collection)o).size();
+                    return ((Collection<?>)o).size();
                 }
                 if (o instanceof Map) {
-                    return ((Map)o).size();
+                    return ((Map<?, ?>)o).size();
                 }
                 throw new IllegalArgumentException("function length() does not support " + o);
             }
@@ -217,7 +218,7 @@ class StandardFunctions {
         dataFunctions.put("coalesce", new @TypeGroup(Object.class) VarargsFunction<Object, Object>() {
             @Override
             public Object apply(Object... args) {
-                return Arrays.stream(args).filter(e -> e != null).findFirst().orElse(null);
+                return Arrays.stream(args).filter(Objects::nonNull).findFirst().orElse(null);
             }
         });
         dataFunctions.put("date", new @TypeGroup(Date.class) VarargsFunction<Object, Date>() {
@@ -490,19 +491,38 @@ class StandardFunctions {
         }
     }
 
-    public StandardFunctions(DatabaseMetaData databaseMetaData) {
+    public StandardFunctions(Supplier<DatabaseMetaData> mdSupplier) {
         connectionDependentFunctions = new HashMap<>(dataFunctions);
-        connectionDependentFunctions.put("version", new Supplier<String>() {
+
+        connectionDependentFunctions.put("version", new DataSupplier<>(new ThrowingFunction<DatabaseMetaData, String, SQLException>() {
             @Override
-            public String get() {
-                return SneakyThrower.get(databaseMetaData::getDatabaseProductVersion);
+            public String apply(DatabaseMetaData md) throws SQLException {
+                return md.getDatabaseProductVersion();
             }
-        });
-        connectionDependentFunctions.put("user", new Supplier<String>() {
+        }, mdSupplier));
+
+        connectionDependentFunctions.put("user", new DataSupplier<>(new ThrowingFunction<DatabaseMetaData, String, SQLException>() {
             @Override
-            public String get() {
-                return SneakyThrower.get(databaseMetaData::getUserName);
+            public String apply(DatabaseMetaData md) throws SQLException {
+                return md.getUserName();
             }
-        });
+        }, mdSupplier));
     }
+
+    @TypeGroup(System.class)
+    public static class DataSupplier<T> implements Supplier<T> {
+        private final ThrowingFunction<DatabaseMetaData, T, SQLException> getter;
+        private final Supplier<DatabaseMetaData> mdSupplier;
+
+        public DataSupplier(ThrowingFunction<DatabaseMetaData, T, SQLException> getter, Supplier<DatabaseMetaData> mdSupplier) {
+            this.getter = getter;
+            this.mdSupplier = mdSupplier;
+        }
+
+        @Override
+        public T get() {
+            return SneakyThrower.get(() -> getter.apply(mdSupplier.get()));
+        }
+    }
+
 }

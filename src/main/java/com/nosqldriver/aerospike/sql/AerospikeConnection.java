@@ -9,6 +9,9 @@ import com.nosqldriver.VisibleForPackage;
 import com.nosqldriver.sql.BasicArray;
 import com.nosqldriver.sql.ByteArrayBlob;
 import com.nosqldriver.sql.SimpleWrapper;
+import com.nosqldriver.sql.StatementEvent;
+import com.nosqldriver.sql.StatementEvent.StatementType;
+import com.nosqldriver.sql.StatementEventListener;
 import com.nosqldriver.sql.StringClob;
 import com.nosqldriver.sql.WarningsHolder;
 import com.nosqldriver.util.FunctionManager;
@@ -46,7 +49,7 @@ import static java.util.Arrays.stream;
 import static java.util.Collections.emptyMap;
 
 @VisibleForPackage
-class AerospikeConnection extends WarningsHolder implements Connection, SimpleWrapper {
+class AerospikeConnection extends WarningsHolder implements Connection, SimpleWrapper, StatementEventListener {
     private final String url;
     private final Properties props;
     private static final ConnectionParametersParser parser = new ConnectionParametersParser();
@@ -62,8 +65,15 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     private final FunctionManager functionManager;
     private static final String CUSTOM_FUNCTION_PREFIX = "custom.function.";
     private static final int CUSTOM_FUNCTION_PREFIX_LENGTH = CUSTOM_FUNCTION_PREFIX.length();
-    //private final boolean getPk;
     private final Collection<SpecialField> specialFields;
+    private volatile boolean closed = false;
+    private final Object metadataLock = new Object();
+    /**
+     * Retrieving of metadata may be very heavy, so we cache the value for period of 1 minutes.
+     */
+    private volatile DatabaseMetaData databaseMetaData;
+    private volatile long databaseMetadataLastUpdate = 0;
+    private final long databaseMetadataCacheTimeout;
 
     @VisibleForPackage
     AerospikeConnection(String url, Properties props) {
@@ -75,10 +85,11 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
         schema.set(parser.schema(url));
         policyProvider = new AerospikePolicyProvider(client, info);
         keyRecordFetcherFactory = new KeyRecordFetcherFactory(policyProvider.getQueryPolicy());
-        FunctionManager fm = new FunctionManager(getMetaData());
+        FunctionManager fm = new FunctionManager(() -> getMetaData());
         functionManager = init(fm, info);
         registerScript("stats", "distinct", "groupby");
         specialFields = SpecialField.specialFields(policyProvider);
+        databaseMetadataCacheTimeout = policyProvider.getDriverPolicy().databaseMetadataCacheTimeout;
     }
 
     private void registerScript(String ... names) {
@@ -133,15 +144,32 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     @Override
     public void close() throws SQLException {
         client.close();
+        closed = true;
     }
 
     @Override
     public boolean isClosed() throws SQLException {
-        return !client.isConnected();
+        return closed;
     }
 
     @Override
     public DatabaseMetaData getMetaData() {
+        if (databaseMetadataCacheTimeout < 0) {
+            return retrieveMetaData();
+        }
+
+        if (databaseMetaData == null || databaseMetadataLastUpdate < System.currentTimeMillis() - databaseMetadataCacheTimeout) {
+            synchronized (metadataLock) {
+                if (databaseMetaData == null || databaseMetadataLastUpdate < System.currentTimeMillis() - databaseMetadataCacheTimeout) {
+                    databaseMetaData = retrieveMetaData();
+                    databaseMetadataLastUpdate = System.currentTimeMillis();
+                }
+            }
+        }
+        return databaseMetaData;
+    }
+
+    public DatabaseMetaData retrieveMetaData() {
         return new AerospikeDatabaseMetadata(url, props, client, this, policyProvider, functionManager);
     }
 
@@ -249,13 +277,13 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
     @Override
     public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
         validateResultSetParameters(resultSetType, resultSetConcurrency, resultSetHoldability);
-        return new AerospikeStatement(client, this, schema, policyProvider, functionManager);
+        return new AerospikeStatement(client, this, this, schema, policyProvider, functionManager);
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
         validateResultSetParameters(resultSetType, resultSetConcurrency, resultSetHoldability);
-        return new AerospikePreparedStatement(client, this, schema, policyProvider, sql, keyRecordFetcherFactory, functionManager, specialFields);
+        return new AerospikePreparedStatement(client, this, this, schema, policyProvider, sql, keyRecordFetcherFactory, functionManager, specialFields);
     }
 
     @Override
@@ -396,5 +424,30 @@ class AerospikeConnection extends WarningsHolder implements Connection, SimpleWr
                 .filter(e -> ((String)e.getKey()).startsWith(CUSTOM_FUNCTION_PREFIX))
                 .forEach(e -> functionManager.addFunction(((String)e.getKey()).substring(CUSTOM_FUNCTION_PREFIX_LENGTH), (String)e.getValue()));
         return functionManager;
+    }
+
+    @Override
+    public void executed(StatementEvent event) {
+        invalidateMetadataCacheIfNeeded(event.getType());
+    }
+
+    @Override
+    public void updated(StatementEvent event) {
+        invalidateMetadataCacheIfNeeded(event.getType());
+    }
+
+    @Override
+    public void queried(StatementEvent event) {
+        invalidateMetadataCacheIfNeeded(event.getType());
+    }
+
+    private void invalidateMetadataCacheIfNeeded(StatementType statementType) {
+        switch (statementType) {
+            case INSERT:
+            case UPDATE:
+            case CREATE_INDEX:
+            case DROP_INDEX:
+                databaseMetaData = null;
+        }
     }
 }

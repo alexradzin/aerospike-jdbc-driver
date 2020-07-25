@@ -13,6 +13,7 @@ public class DriverPolicy extends Policy {
     public boolean sendGeneration;
     public boolean sendExpiration;
     public int discoverMetadataLines = 1;
+    public int databaseMetadataCacheTimeout = 60000;
 
     public Script getScript() {
         return script;

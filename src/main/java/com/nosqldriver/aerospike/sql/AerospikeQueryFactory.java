@@ -244,7 +244,7 @@ public class AerospikeQueryFactory {
 
                 @Override
                 public void visit(Drop drop) {
-                    set = drop.getName().getSchemaName();
+                    set = stripQuotes(drop.getName().getSchemaName());
                     String fullIndexName = format("%s.%s.%s", schema, set, stripQuotes(drop.getName().getName()));
                     indexes.add(fullIndexName);
                 }
@@ -305,7 +305,7 @@ public class AerospikeQueryFactory {
                              @Override
                              public void visit(Table tableName) {
                                  if (tableName.getSchemaName() != null) {
-                                     queries.setSchema(tableName.getSchemaName());
+                                     queries.setSchema(stripQuotes(tableName.getSchemaName()));
                                  }
                                  queries.setSetName(stripQuotes(tableName.getName()), ofNullable(tableName.getAlias()).map(a -> stripQuotes(a.getName())).orElse(null));
                                  set = stripQuotes(tableName.getName());
