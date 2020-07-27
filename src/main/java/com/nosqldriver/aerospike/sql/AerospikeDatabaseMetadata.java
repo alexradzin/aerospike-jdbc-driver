@@ -27,13 +27,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -56,6 +55,7 @@ import static java.sql.Types.VARCHAR;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
+import static java.util.Collections.synchronizedSet;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
@@ -73,8 +73,8 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
     private final String dbBuild;
     private final String dbEdition;
     private final List<String> catalogs;
-    private final Map<String, Collection<String>> tables = new HashMap<>();
-    private final Map<String, Collection<IndexInfo>> indices = new HashMap<>();
+    private final Map<String, Collection<String>> tables = new ConcurrentHashMap<>();
+    private final Map<String, Collection<IndexInfo>> indices = new ConcurrentHashMap<>();
 
 
     public AerospikeDatabaseMetadata(String url, Properties info, IAerospikeClient client, Connection connection, AerospikePolicyProvider policyProvider, FunctionManager functionManager) {
@@ -86,9 +86,9 @@ public class AerospikeDatabaseMetadata implements DatabaseMetaData, SimpleWrappe
         this.functionManager = functionManager;
         manifest = manifest();
 
-        Collection<String> builds = new LinkedHashSet<>();
-        Collection<String> editions = new LinkedHashSet<>();
-        Collection<String> namespaces = new LinkedHashSet<>();
+        Collection<String> builds = synchronizedSet(new HashSet<>());
+        Collection<String> editions = synchronizedSet(new HashSet<>());
+        Collection<String> namespaces = synchronizedSet(new HashSet<>());
         Arrays.stream(client.getNodes()).parallel()
                 .map(node -> Info.request(infoPolicy, node, "namespaces", "sets", "sindex-list:", "build", "edition"))
                 .forEach(r -> {
