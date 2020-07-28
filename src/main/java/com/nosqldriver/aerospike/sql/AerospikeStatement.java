@@ -12,6 +12,7 @@ import com.nosqldriver.sql.ChainedResultSetWrapper;
 import com.nosqldriver.sql.ListRecordSet;
 import com.nosqldriver.sql.PreparedStatementUtil;
 import com.nosqldriver.sql.SimpleWrapper;
+import com.nosqldriver.sql.SqlUtil;
 import com.nosqldriver.sql.StatementEvent;
 import com.nosqldriver.sql.StatementEventListener;
 import com.nosqldriver.sql.WarningsHolder;
@@ -62,7 +63,7 @@ public class AerospikeStatement extends WarningsHolder implements java.sql.State
             @Override
             ResultSet executeQuery(AerospikeStatement statement, String sql) throws SQLException {
                 AerospikeQueryFactory aqf = statement.createQueryFactory();
-                QueryContainer<ResultSet> plan = aqf.createQueryPlan(sql);
+                QueryContainer<ResultSet> plan = aqf.createQueryPlan(SqlUtil.fix(sql));
                 QueryHolder holder = (QueryHolder)plan;
                 holder.setParameters(statement, null);
                 Function<IAerospikeClient, ResultSet> query = plan.getQuery(statement);
