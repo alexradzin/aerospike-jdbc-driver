@@ -168,19 +168,19 @@ SQL identifier should follow the following rules: consist of Latin letters, digi
 
 For example:
 ```sql
-slect name1 from data
+select name1 from data
 ```
 Neither `name1` nor `data` should not be quoted. However:
 ```sql
-slect "first name" from "100"
+select "first name" from "100"
 ```
 Here `first name` is quoted because  it contains space while `100` is quoted because it starts with a digit. 
 
 Even empty identifiers can be used:
 ```sql
 insert into data_table (PK, "") values (1, 3.1415925)
-slect "" from data_table
-slect sin("") from data_table
+select "" from data_table
+select sin("") from data_table
 ```
 Consequent double quotes in the example above indicate empty identifier. 
 
