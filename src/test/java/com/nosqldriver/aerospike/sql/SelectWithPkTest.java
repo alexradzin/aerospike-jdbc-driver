@@ -13,6 +13,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -44,6 +45,7 @@ class SelectWithPkTest {
     private static Connection testConn;
     private static Connection writeKeyConn;
     private static Connection queryKeyDigestConn;
+    private static Connection readWriteKeyConn;
 
     @BeforeAll
     static void init() throws SQLException {
@@ -55,13 +57,16 @@ class SelectWithPkTest {
         queryKeyConn = DriverManager.getConnection(aerospikeTestUrl + "?policy.query.sendKey=true");
         writeKeyConn = DriverManager.getConnection(aerospikeTestUrl + "?policy.write.sendKey=true");
         queryKeyDigestConn = DriverManager.getConnection(aerospikeTestUrl + "?policy.driver.sendKeyDigest=true");
+        readWriteKeyConn = DriverManager.getConnection(aerospikeTestUrl + "?policy.*.sendKey=true");
         testConn = getTestConnection();
+        writeNumbers();
     }
 
     static void dropAll() {
         TestDataUtils.deleteAllRecords(NAMESPACE, PEOPLE);
         TestDataUtils.deleteAllRecords(NAMESPACE, INSTRUMENTS);
         TestDataUtils.deleteAllRecords(NAMESPACE, TestDataUtils.DATA);
+        TestDataUtils.deleteAllRecords(NAMESPACE, "numbers");
     }
 
     @AfterAll
@@ -332,5 +337,55 @@ class SelectWithPkTest {
         assertEquals(digestStr, rs.getString(1));
         assertEquals("01 02 03", rs.getString(2));
         assertFalse(rs.next());
+    }
+
+    @ParameterizedTest(name = ARGUMENTS_PLACEHOLDER)
+    @ValueSource(strings = {
+            "select number from numbers where PK LIKE '%_en';one,two,three",
+            "select number from numbers where PK LIKE '%_es';uno,dos,tres",
+            "select number from numbers where PK LIKE '%_fr';un,deux,trois",
+            "select number from numbers where PK LIKE '1%';one,un,uno",
+            "select number from numbers where PK LIKE '2%';two,dos,deux",
+            "select number from numbers where PK LIKE '3%';three,tres,trois",
+
+            "select number from numbers where PK LIKE '%_en%';one,two,three",
+            "select number from numbers where PK LIKE '%_es%';uno,dos,tres",
+            "select number from numbers where PK LIKE '%_fr%';un,deux,trois",
+            "select number from numbers where PK LIKE '%1%';one,un,uno",
+            "select number from numbers where PK LIKE '%2%';two,dos,deux",
+            "select number from numbers where PK LIKE '%3%';three,tres,trois",
+
+            "select number from numbers where PK LIKE '%_%';one,two,three,uno,dos,tres,un,deux,trois",
+    })
+    void stringPk(String conf) throws SQLException {
+        String[] parts = conf.split(";");
+        String query = parts[0];
+        Collection<String> expected = new HashSet<>(Arrays.asList(parts[1].split(",")));
+
+        Collection<String> actual = new HashSet<>();
+        try(ResultSet rs = readWriteKeyConn.createStatement().executeQuery(query)) {
+            while (rs.next()) {
+                actual.add(rs.getString(1));
+            }
+        }
+        assertEquals(expected, actual);
+    }
+
+    private static void writeNumbers() throws SQLException {
+        PreparedStatement ps = writeKeyConn.prepareStatement("insert into numbers (PK, number) values (?, ?)");
+        String[] en = new String[] {"one", "two", "three"};
+        String[] es = new String[] {"uno", "dos", "tres"};
+        String[] fr = new String[] {"un", "deux", "trois"};
+        fillValues(ps, "en", en);
+        fillValues(ps, "es", es);
+        fillValues(ps, "fr", fr);
+    }
+
+    private static void fillValues(PreparedStatement ps, String pkSuffix, String[] values) throws SQLException {
+        for (int i = 0; i < values.length; i++) {
+            ps.setString(1, format("%d_%s", i + 1, pkSuffix));
+            ps.setString(2, values[i]);
+            ps.executeUpdate();
+        }
     }
 }

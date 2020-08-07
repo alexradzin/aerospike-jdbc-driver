@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static com.aerospike.client.query.PredExp.integerBin;
@@ -56,6 +57,20 @@ public class BinaryOperation {
         @Override
         public boolean test(ResultSet rs) {
             return Boolean.TRUE.equals(SneakyThrower.get(() -> Objects.equals(key, rs.getObject("PK")) == eq));
+        }
+    }
+
+    @VisibleForPackage
+    static class PrimaryKeyMatchingPredicate implements Predicate<ResultSet> {
+        private final Pattern pattern;
+
+        PrimaryKeyMatchingPredicate(Pattern pattern) {
+            this.pattern = pattern;
+        }
+
+        @Override
+        public boolean test(ResultSet rs) {
+            return SneakyThrower.get(() -> pattern.matcher(rs.getString("PK")).find());
         }
     }
 
@@ -187,6 +202,24 @@ public class BinaryOperation {
                 return updateComparisonOperation(queries, operation, o -> asList(Long.MIN_VALUE, operation.values.get(0)));
             }
         },
+        LIKE("LIKE", null) {
+            @Override
+            public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
+                if (queries.isPkQuerySupported() && !operation.values.isEmpty() &&  "PK".equals(operation.column)) {
+                    String regex = (String)operation.values.get(0);
+                    if (regex.startsWith("%") && regex.endsWith("%")) {
+                        regex = ".*" + regex.substring(1, regex.length() - 1) + ".*";
+                    } else if (regex.startsWith("%")) {
+                        regex = ".*" + regex.substring(1) + "$";
+                    } else if (regex.endsWith("%")) {
+                        regex = "^" + regex.substring(0, regex.length() -1) + ".*";
+                    }
+                    queries.createScanQuery(operation.statement, createPkPredicate(regex, queries));
+                    return queries;
+                }
+                return queries;
+            }
+        },
         BETWEEN("BETWEEN", null) {
             @Override
             public QueryHolder update(QueryHolder queries, BinaryOperation operation) {
@@ -303,9 +336,11 @@ public class BinaryOperation {
         }
 
         protected Predicate<ResultSet> createPkPredicate(Object value, QueryHolder queries) {
-            return queries.isPkQuerySupported() ? new ComparableEqualityPredicate<>((Comparable<?>)value, eq) : new PrimaryKeyEqualityPredicate(createKey(value, queries, false), false);
+            if (queries.isPkQuerySupported()) {
+                return eq == null ? new PrimaryKeyMatchingPredicate(Pattern.compile((String)value)) : new ComparableEqualityPredicate<>((Comparable<?>)value, eq);
+            }
+            return new PrimaryKeyEqualityPredicate(createKey(value, queries, false), false);
         }
-
     }
 
     public void setStatement(Statement statement) {

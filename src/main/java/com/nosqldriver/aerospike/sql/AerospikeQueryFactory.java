@@ -473,10 +473,14 @@ public class AerospikeQueryFactory {
                                 }
                             });
 
+                            // This line is a patch. LIKE operation is implemented not as all other comparison operations.
+                            // The only exception is LIKE with PK that is implemented better.
+                            // So, this flag means "LIKE experssion that does not use PK"
+                            boolean notPkLikeExpr = Operator.LIKE.equals(operator.orElse(null)) && !("PK".equals(expr.getLeftExpression().toString()) || "PK".equals(expr.getRightExpression().toString()));
 
                             // [ is needed to support access to fields of serialized objects.
                             // TODO: this code does not work now for external select with where statement that does not use computation of access to object fields
-                            if (!operator.isPresent() || (operator.get().doesRequireColumn() && operation.getColumn() == null) || whereExpression.contains("[")) {
+                            if (!operator.isPresent() || notPkLikeExpr || (operator.get().doesRequireColumn() && operation.getColumn() == null) || whereExpression.contains("[")) {
                                 queries.queries(operation.getTable()).removeLastPredicates(4);
                                 ignoreNextOp.set(true);
                                 queries.setWhereExpression(whereExpression);
